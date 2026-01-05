@@ -1,0 +1,580 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ProductGrid from '@components/products/ProductGrid.astro';
+import { getCollection } from 'astro:content';
+import { type Lang, getTranslation } from '@i18n/utils';
+import categories from '@data/categories.json';
+
+export function getStaticPaths() {
+  const paths: { params: { lang: string; slug: string }; props: { category: typeof categories.categories[0] } }[] = [];
+
+  for (const category of categories.categories) {
+    paths.push({ params: { lang: 'es', slug: category.id }, props: { category } });
+    paths.push({ params: { lang: 'en', slug: category.id }, props: { category } });
+  }
+
+  return paths;
+}
+
+const { lang, slug } = Astro.params as { lang: Lang; slug: string };
+const { category } = Astro.props;
+
+// Validate lang parameter
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/categories/', 302);
+}
+
+// Handle missing category
+if (!category) {
+  return Astro.redirect(`/${lang}/categories/`, 302);
+}
+
+const t = getTranslation(lang);
+
+// Get products for this category
+const allProducts = await getCollection('products');
+const categoryProducts = allProducts
+  .filter(p => p.data.lang === lang && p.data.status === 'published' && p.data.category === category.id)
+  .sort((a, b) => {
+    // Featured products first, then by date
+    if (a.data.isFeatured && !b.data.isFeatured) return -1;
+    if (!a.data.isFeatured && b.data.isFeatured) return 1;
+    return b.data.publishedAt.getTime() - a.data.publishedAt.getTime();
+  })
+  .map(p => ({
+    productId: p.data.productId,
+    asin: p.data.asin,
+    title: p.data.title,
+    brand: p.data.brand,
+    price: p.data.price,
+    originalPrice: p.data.originalPrice,
+    currency: p.data.currency,
+    rating: p.data.rating,
+    featuredImage: p.data.featuredImage,
+    affiliateUrl: p.data.affiliateUrl,
+    isOnSale: p.data.isOnSale,
+    isFeatured: p.data.isFeatured,
+  }));
+
+// Get unique brands for filtering
+const brands = [...new Set(categoryProducts.map(p => p.brand))].sort();
+
+// Breadcrumb items
+const breadcrumbs = [
+  { label: lang === 'es' ? 'Inicio' : 'Home', href: `/${lang}/` },
+  { label: lang === 'es' ? 'Categorias' : 'Categories', href: `/${lang}/categories/` },
+  { label: category.name[lang], href: null },
+];
+
+// Icon mapping
+const iconMap: Record<string, string> = {
+  laptop: `<path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />`,
+  home: `<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />`,
+  gamepad: `<path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z" />`,
+  dumbbell: `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />`,
+};
+---
+
+<BaseLayout
+  title={`${category.name[lang]} - ${lang === 'es' ? 'Productos' : 'Products'}`}
+  description={category.description[lang]}
+  lang={lang}
+>
+  <div class="category-page">
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <div class="breadcrumbs-container">
+        <ol class="breadcrumbs-list">
+          {breadcrumbs.map((item, index) => (
+            <li class="breadcrumb-item">
+              {item.href ? (
+                <a href={item.href}>{item.label}</a>
+              ) : (
+                <span class="current">{item.label}</span>
+              )}
+              {index < breadcrumbs.length - 1 && (
+                <svg class="separator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <Fragment set:html={iconMap[category.icon] || iconMap.laptop} />
+          </svg>
+        </div>
+        <h1 class="hero-title">{category.name[lang]}</h1>
+        <p class="hero-description">{category.description[lang]}</p>
+        <div class="hero-stats">
+          <span class="stat">
+            <strong>{categoryProducts.length}</strong>
+            {lang === 'es' ? 'productos' : 'products'}
+          </span>
+          {brands.length > 0 && (
+            <>
+              <span class="stat-divider"></span>
+              <span class="stat">
+                <strong>{brands.length}</strong>
+                {lang === 'es' ? 'marcas' : 'brands'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products-section">
+      <div class="section-container">
+        {categoryProducts.length > 0 ? (
+          <>
+            <!-- Filters (optional - brands) -->
+            {brands.length > 1 && (
+              <div class="filters-bar">
+                <span class="filters-label">{lang === 'es' ? 'Marcas:' : 'Brands:'}</span>
+                <div class="filter-chips">
+                  <button class="filter-chip active" data-brand="all">
+                    {lang === 'es' ? 'Todas' : 'All'}
+                  </button>
+                  {brands.map(brand => (
+                    <button class="filter-chip" data-brand={brand}>
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <ProductGrid products={categoryProducts} lang={lang} columns={4} />
+          </>
+        ) : (
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+            </div>
+            <h2 class="empty-title">
+              {lang === 'es' ? 'Proximamente' : 'Coming soon'}
+            </h2>
+            <p class="empty-description">
+              {lang === 'es'
+                ? 'Estamos preparando productos increibles para esta categoria.'
+                : 'We are preparing amazing products for this category.'}
+            </p>
+            <a href={`/${lang}/products/`} class="empty-link">
+              {lang === 'es' ? 'Ver todos los productos' : 'View all products'}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <!-- Related Categories -->
+    <section class="related-section">
+      <div class="section-container">
+        <h2 class="related-title">
+          {lang === 'es' ? 'Otras categorias' : 'Other categories'}
+        </h2>
+        <div class="related-grid">
+          {categories.categories
+            .filter(c => c.id !== category.id)
+            .slice(0, 3)
+            .map(cat => (
+              <a href={`/${lang}/categories/${cat.id}`} class="related-card">
+                <div class="related-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <Fragment set:html={iconMap[cat.icon] || iconMap.laptop} />
+                  </svg>
+                </div>
+                <span class="related-name">{cat.name[lang]}</span>
+                <svg class="related-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </a>
+            ))}
+        </div>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .category-page {
+    min-height: 100vh;
+  }
+
+  /* Breadcrumbs */
+  .breadcrumbs {
+    background: var(--color-cream, #FDFBF7);
+    border-bottom: 1px solid var(--color-sand, #E8E4DD);
+  }
+
+  .breadcrumbs-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+  }
+
+  .breadcrumbs-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .breadcrumb-item a {
+    color: var(--color-stone, #6B6560);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb-item a:hover {
+    color: var(--color-honey-dark, #A67B5B);
+  }
+
+  .breadcrumb-item .current {
+    color: var(--color-ink, #1A1815);
+    font-weight: 500;
+  }
+
+  .separator {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-mist, #C4BFB8);
+  }
+
+  /* Hero Section */
+  .hero-section {
+    background: linear-gradient(180deg, var(--color-cream, #FDFBF7) 0%, var(--color-white, #FFFFFF) 100%);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .hero-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    background: var(--color-honey-muted, #E8D5C4);
+    color: var(--color-honey-dark, #A67B5B);
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-icon svg {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .hero-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 400;
+    color: var(--color-ink, #1A1815);
+    margin: 0 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-description {
+    font-size: 1.0625rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+  }
+
+  .hero-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 100px;
+  }
+
+  .stat {
+    font-size: 0.875rem;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .stat strong {
+    color: var(--color-ink, #1A1815);
+    font-weight: 600;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 1rem;
+    background: var(--color-sand, #E8E4DD);
+  }
+
+  /* Products Section */
+  .products-section {
+    background: var(--color-white, #FFFFFF);
+  }
+
+  .section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  /* Filters */
+  .filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-sand, #E8E4DD);
+    overflow-x: auto;
+  }
+
+  .filters-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-stone, #6B6560);
+    white-space: nowrap;
+  }
+
+  .filter-chips {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter-chip {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-stone, #6B6560);
+    background: var(--color-cream, #FDFBF7);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .filter-chip:hover {
+    border-color: var(--color-honey-muted, #E8D5C4);
+  }
+
+  .filter-chip.active {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+    border-color: var(--color-ink, #1A1815);
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 5rem;
+    height: 5rem;
+    color: var(--color-mist, #C4BFB8);
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .empty-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--color-ink, #1A1815);
+    margin: 0 0 0.5rem;
+  }
+
+  .empty-description {
+    font-size: 1rem;
+    color: var(--color-stone, #6B6560);
+    margin: 0 0 1.5rem;
+  }
+
+  .empty-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-honey-dark, #A67B5B);
+    text-decoration: none;
+    transition: gap 0.2s;
+  }
+
+  .empty-link:hover {
+    gap: 0.75rem;
+  }
+
+  .empty-link svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* Related Categories */
+  .related-section {
+    background: var(--color-cream, #FDFBF7);
+    border-top: 1px solid var(--color-sand, #E8E4DD);
+  }
+
+  .related-section .section-container {
+    padding: 3rem 1.5rem;
+  }
+
+  .related-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--color-ink, #1A1815);
+    margin: 0 0 1.5rem;
+    text-align: center;
+  }
+
+  .related-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .related-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .related-card:hover {
+    border-color: var(--color-honey-muted, #E8D5C4);
+    box-shadow: 0 4px 12px rgba(26, 24, 21, 0.06);
+  }
+
+  .related-icon {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-honey, #C8956C);
+  }
+
+  .related-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .related-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink, #1A1815);
+  }
+
+  .related-arrow {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-mist, #C4BFB8);
+    transition: all 0.2s;
+  }
+
+  .related-card:hover .related-arrow {
+    color: var(--color-honey, #C8956C);
+    transform: translateX(2px);
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .hero-section {
+      padding: 2rem 1rem;
+    }
+
+    .section-container {
+      padding: 2rem 1rem 3rem;
+    }
+
+    .filters-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .hero-stats {
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem 1.5rem;
+      border-radius: 16px;
+    }
+
+    .stat-divider {
+      width: 3rem;
+      height: 1px;
+    }
+  }
+</style>
+
+<script>
+  // Simple client-side filtering by brand
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const productCards = document.querySelectorAll('.product-card');
+
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const brand = chip.getAttribute('data-brand');
+
+        // Update active state
+        filterChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        // Filter products
+        productCards.forEach(card => {
+          const cardBrand = card.querySelector('.meta-brand')?.textContent?.trim();
+          if (brand === 'all' || cardBrand === brand) {
+            (card as HTMLElement).style.display = '';
+          } else {
+            (card as HTMLElement).style.display = 'none';
+          }
+        });
+      });
+    });
+  });
+</script>

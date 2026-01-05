@@ -14,6 +14,12 @@ export function getStaticPaths() {
 }
 
 const { lang } = Astro.params as { lang: Lang };
+
+// Validate lang parameter - redirect to default locale if invalid
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/', 302);
+}
 const t = getTranslation(lang);
 
 // Get featured products

@@ -1,28 +1,70 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
+import { clerkClient } from '@clerk/astro/server';
 
-// Rutas protegidas (requieren autenticacion)
-const isProtectedRoute = createRouteMatcher([
+// Admin emails from environment
+const getAdminEmails = (): string[] => {
+  const emails = import.meta.env.ADMIN_EMAILS || '';
+  return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
+};
+
+// Rutas que requieren ser ADMIN
+const isAdminRoute = createRouteMatcher([
   '/admin(.*)',
-  '/api/admin(.*)',
+  '/api/admin(.*)'
+]);
+
+// Rutas que requieren estar autenticado (usuario normal)
+const isUserRoute = createRouteMatcher([
   '/:lang/dashboard(.*)',
   '/api/user(.*)'
 ]);
 
 // Rutas publicas dentro del area de admin
 const isPublicAdminRoute = createRouteMatcher([
-  '/admin/login(.*)'
+  '/admin/login(.*)',
+  '/admin/sso-callback(.*)',
+  '/admin/unauthorized(.*)'
 ]);
 
-export const onRequest = clerkMiddleware((auth, context) => {
-  const { isAuthenticated, redirectToSignIn } = auth();
+export const onRequest = clerkMiddleware(async (auth, context) => {
+  const { userId, redirectToSignIn } = auth();
 
-  // Si es la pagina de login, permitir acceso
+  // Si es la pagina de login o unauthorized, permitir acceso
   if (isPublicAdminRoute(context.request)) {
     return;
   }
 
-  // Si es ruta protegida y no esta autenticado, redirigir a login
-  if (isProtectedRoute(context.request) && !isAuthenticated) {
-    return redirectToSignIn();
+  // Si es ruta de admin
+  if (isAdminRoute(context.request)) {
+    // Si no esta autenticado, redirigir a login
+    if (!userId) {
+      return redirectToSignIn();
+    }
+
+    // Verificar si es admin
+    try {
+      const client = clerkClient(context);
+      const user = await client.users.getUser(userId);
+      const userEmail = user.emailAddresses[0]?.emailAddress?.toLowerCase() || '';
+      const adminEmails = getAdminEmails();
+
+      if (!adminEmails.includes(userEmail)) {
+        // No es admin, redirigir a pagina de no autorizado
+        return context.redirect('/admin/unauthorized');
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return context.redirect('/admin/unauthorized');
+    }
+
+    return;
+  }
+
+  // Si es ruta de usuario normal (dashboard, etc.)
+  if (isUserRoute(context.request)) {
+    if (!userId) {
+      return redirectToSignIn();
+    }
+    return;
   }
 });

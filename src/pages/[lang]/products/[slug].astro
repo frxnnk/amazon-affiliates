@@ -24,6 +24,12 @@ export async function getStaticPaths() {
 }
 
 const { product } = Astro.props;
+
+// Handle case where product doesn't exist (invalid slug)
+if (!product) {
+  return Astro.redirect('/es/products/', 302);
+}
+
 const { data } = product;
 const { Content } = await render(product);
 const lang = data.lang as Lang;
