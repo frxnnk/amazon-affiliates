@@ -1,0 +1,202 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ProductGrid from '@components/products/ProductGrid.astro';
+import Button from '@components/ui/Button.astro';
+import { getCollection } from 'astro:content';
+import { type Lang, getTranslation } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+const t = getTranslation(lang);
+
+// Get featured products
+const allProducts = await getCollection('products');
+const featuredProducts = allProducts
+  .filter(p => p.data.lang === lang && p.data.status === 'published')
+  .slice(0, 6)
+  .map(p => ({
+    productId: p.data.productId,
+    asin: p.data.asin,
+    title: p.data.title,
+    brand: p.data.brand,
+    price: p.data.price,
+    originalPrice: p.data.originalPrice,
+    currency: p.data.currency,
+    rating: p.data.rating,
+    featuredImage: p.data.featuredImage,
+    affiliateUrl: p.data.affiliateUrl,
+    isOnSale: p.data.isOnSale,
+    isFeatured: p.data.isFeatured,
+  }));
+
+// Get latest reviews
+const allReviews = await getCollection('reviews');
+const latestReviews = allReviews
+  .filter(r => r.data.lang === lang && r.data.status === 'published')
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+  .slice(0, 3);
+
+// Get latest lists (only public)
+const allLists = await getCollection('lists');
+const latestLists = allLists
+  .filter(l => l.data.lang === lang && l.data.status === 'published' && l.data.visibility === 'public')
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+  .slice(0, 3);
+---
+
+<BaseLayout
+  title={siteConfig.site.tagline[lang]}
+  lang={lang}
+>
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+        {siteConfig.site.name}
+      </h1>
+      <p class="text-xl md:text-2xl text-primary-100 mb-8 max-w-2xl mx-auto">
+        {siteConfig.site.tagline[lang]}
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <Button href={`/${lang}/products`} variant="secondary" size="lg">
+          {t('nav.products')}
+        </Button>
+        <Button href={`/${lang}/deals`} variant="outline" size="lg" class="border-white text-white hover:bg-white/10">
+          {t('nav.deals')}
+        </Button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products -->
+  <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+          {lang === 'es' ? 'Productos Destacados' : 'Featured Products'}
+        </h2>
+        <Button href={`/${lang}/products`} variant="ghost">
+          {t('common.seeAll')} &rarr;
+        </Button>
+      </div>
+
+      {featuredProducts.length > 0 ? (
+        <ProductGrid products={featuredProducts} lang={lang} columns={3} />
+      ) : (
+        <div class="text-center py-12 text-gray-500">
+          <p>{lang === 'es' ? 'Proximamente productos destacados' : 'Featured products coming soon'}</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Latest Reviews -->
+  <section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+          {lang === 'es' ? 'Ultimas Reviews' : 'Latest Reviews'}
+        </h2>
+        <Button href={`/${lang}/reviews`} variant="ghost">
+          {t('common.seeAll')} &rarr;
+        </Button>
+      </div>
+
+      {latestReviews.length > 0 ? (
+        <div class="grid md:grid-cols-3 gap-6">
+          {latestReviews.map((review) => (
+            <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <img
+                src={review.data.featuredImage.url}
+                alt={review.data.featuredImage.alt}
+                class="w-full h-48 object-cover"
+              />
+              <div class="p-6">
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="text-2xl font-bold text-primary-600">{review.data.overallScore}/10</span>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">
+                  <a href={`/${lang}/reviews/${review.data.reviewId}`} class="hover:text-primary-600">
+                    {review.data.title}
+                  </a>
+                </h3>
+                <p class="text-gray-600 text-sm line-clamp-2">{review.data.excerpt}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12 text-gray-500">
+          <p>{lang === 'es' ? 'Proximamente reviews' : 'Reviews coming soon'}</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Latest Lists -->
+  <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+          {lang === 'es' ? 'Guias y Comparativas' : 'Guides & Comparisons'}
+        </h2>
+        <Button href={`/${lang}/lists`} variant="ghost">
+          {t('common.seeAll')} &rarr;
+        </Button>
+      </div>
+
+      {latestLists.length > 0 ? (
+        <div class="grid md:grid-cols-3 gap-6">
+          {latestLists.map((list) => (
+            <article class="bg-gray-50 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors">
+              <img
+                src={list.data.featuredImage.url}
+                alt={list.data.featuredImage.alt}
+                class="w-full h-48 object-cover"
+              />
+              <div class="p-6">
+                <span class="text-xs font-medium text-primary-600 uppercase tracking-wide">
+                  {list.data.listType.replace('-', ' ')}
+                </span>
+                <h3 class="font-semibold text-lg mt-2 mb-2">
+                  <a href={`/${lang}/lists/${list.data.listId}`} class="hover:text-primary-600">
+                    {list.data.title}
+                  </a>
+                </h3>
+                <p class="text-gray-600 text-sm line-clamp-2">{list.data.excerpt}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12 text-gray-500">
+          <p>{lang === 'es' ? 'Proximamente guias' : 'Guides coming soon'}</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gray-900 text-white">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="text-2xl md:text-3xl font-bold mb-4">
+        {lang === 'es' ? 'Encuentra el producto perfecto' : 'Find the perfect product'}
+      </h2>
+      <p class="text-gray-400 mb-8">
+        {lang === 'es'
+          ? 'Comparamos y analizamos los mejores productos para que puedas tomar la mejor decision.'
+          : 'We compare and analyze the best products so you can make the best decision.'}
+      </p>
+      <Button href={`/${lang}/products`} size="lg">
+        {lang === 'es' ? 'Explorar Productos' : 'Explore Products'}
+      </Button>
+    </div>
+  </section>
+</BaseLayout>

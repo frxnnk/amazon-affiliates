@@ -1,0 +1,54 @@
+---
+import { type Lang, getTranslation } from '@i18n/utils';
+
+interface Props {
+  pros: string[];
+  cons: string[];
+  lang: Lang;
+}
+
+const { pros, cons, lang } = Astro.props;
+const t = getTranslation(lang);
+---
+
+<div class="grid md:grid-cols-2 gap-6">
+  <!-- Pros -->
+  <div class="bg-green-50 rounded-xl p-6">
+    <h3 class="flex items-center gap-2 font-semibold text-green-800 mb-4">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {t('product.pros')}
+    </h3>
+    <ul class="space-y-2">
+      {pros.map((pro) => (
+        <li class="flex items-start gap-2 text-green-700">
+          <svg class="w-4 h-4 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+          <span>{pro}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <!-- Cons -->
+  <div class="bg-red-50 rounded-xl p-6">
+    <h3 class="flex items-center gap-2 font-semibold text-red-800 mb-4">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {t('product.cons')}
+    </h3>
+    <ul class="space-y-2">
+      {cons.map((con) => (
+        <li class="flex items-start gap-2 text-red-700">
+          <svg class="w-4 h-4 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>{con}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>

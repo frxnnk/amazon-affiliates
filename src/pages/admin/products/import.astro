@@ -1,0 +1,529 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+---
+
+<AdminLayout title="Importar Producto">
+  <style>
+    .import-container {
+      max-width: 800px;
+    }
+    .import-card {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .import-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .import-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 0.5rem;
+    }
+    .import-header p {
+      color: #8b949e;
+      font-size: 0.95rem;
+    }
+    .url-input-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .url-input {
+      flex: 1;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.875rem 1rem;
+      color: #f0f6fc;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .url-input:focus {
+      outline: none;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+    .url-input::placeholder {
+      color: #6e7681;
+    }
+    .parse-btn {
+      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .parse-btn:hover {
+      background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+      transform: translateY(-1px);
+    }
+    .parse-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Extracted Data Section */
+    .extracted-data {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .extracted-data.visible {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .data-preview {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #21262d;
+    }
+    .data-row:last-child {
+      border-bottom: none;
+    }
+    .data-label {
+      color: #8b949e;
+      font-size: 0.875rem;
+    }
+    .data-value {
+      color: #f0f6fc;
+      font-weight: 500;
+      font-family: monospace;
+    }
+    .data-value.title {
+      font-family: inherit;
+      max-width: 400px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    /* Form Section */
+    .product-form {
+      display: grid;
+      gap: 1.25rem;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+    .form-group label .required {
+      color: #f85149;
+    }
+    .form-input, .form-select, .form-textarea {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 0.75rem;
+      color: #f0f6fc;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: #58a6ff;
+    }
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    /* Actions */
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #30363d;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem 2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.875rem 1.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #21262d;
+    }
+
+    /* Status Messages */
+    .status-message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .status-message.error {
+      display: block;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.4);
+      color: #f85149;
+    }
+    .status-message.success {
+      display: block;
+      background: rgba(46, 160, 67, 0.1);
+      border: 1px solid rgba(46, 160, 67, 0.4);
+      color: #3fb950;
+    }
+
+    /* Tips */
+    .tips-section {
+      background: rgba(56, 139, 253, 0.1);
+      border: 1px solid rgba(56, 139, 253, 0.3);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+    .tips-section h4 {
+      color: #58a6ff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .tips-section ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: #8b949e;
+      font-size: 0.85rem;
+    }
+    .tips-section li {
+      margin-bottom: 0.25rem;
+    }
+  </style>
+
+  <div class="import-container">
+    <div class="import-card">
+      <div class="import-header">
+        <h2>Importar desde Amazon</h2>
+        <p>Pega un link de Amazon para extraer automáticamente la información del producto</p>
+      </div>
+
+      <div id="statusMessage" class="status-message"></div>
+
+      <div class="url-input-group">
+        <input
+          type="text"
+          id="amazonUrl"
+          class="url-input"
+          placeholder="https://www.amazon.es/dp/B0XXXXXXXXX o pega el link completo..."
+        />
+        <button type="button" id="parseBtn" class="parse-btn">Extraer Datos</button>
+      </div>
+
+      <div class="tips-section">
+        <h4>Formatos soportados:</h4>
+        <ul>
+          <li>URL completa: https://www.amazon.es/Nombre-Producto/dp/B0XXXXXXXXX</li>
+          <li>URL corta: https://www.amazon.es/dp/B0XXXXXXXXX</li>
+          <li>ASIN directo: B0XXXXXXXXX</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="extractedData" class="extracted-data">
+      <div class="import-card">
+        <h3 style="color: #f0f6fc; margin-bottom: 1rem; font-size: 1.125rem;">Datos Extraídos</h3>
+
+        <div class="data-preview">
+          <div class="data-row">
+            <span class="data-label">ASIN</span>
+            <span class="data-value" id="previewAsin">-</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Marketplace</span>
+            <span class="data-value" id="previewMarketplace">-</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">URL Afiliado</span>
+            <span class="data-value" id="previewUrl" style="font-size: 0.8rem;">-</span>
+          </div>
+          <div class="data-row" id="suggestedTitleRow" style="display: none;">
+            <span class="data-label">Título Sugerido</span>
+            <span class="data-value title" id="previewTitle">-</span>
+          </div>
+        </div>
+
+        <form id="productForm" class="product-form">
+          <input type="hidden" id="formAsin" name="asin" />
+          <input type="hidden" id="formAffiliateUrl" name="affiliateUrl" />
+          <input type="hidden" id="formLang" name="lang" value="es" />
+
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Título <span class="required">*</span></label>
+              <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Marca <span class="required">*</span></label>
+              <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Ej: Samsung, Sony, Apple" />
+            </div>
+            <div class="form-group">
+              <label>Modelo</label>
+              <input type="text" id="formModel" name="model" class="form-input" placeholder="Ej: Galaxy S24, A95K" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Precio <span class="required">*</span></label>
+              <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label>Precio Original (si hay descuento)</label>
+              <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="0.00" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Categoría</label>
+              <select id="formCategory" name="category" class="form-select">
+                <option value="electronics">Electrónica</option>
+                <option value="computers">Computadoras</option>
+                <option value="smartphones">Smartphones</option>
+                <option value="audio">Audio</option>
+                <option value="tv">TV & Video</option>
+                <option value="gaming">Gaming</option>
+                <option value="home">Hogar</option>
+                <option value="kitchen">Cocina</option>
+                <option value="sports">Deportes</option>
+                <option value="fashion">Moda</option>
+                <option value="beauty">Belleza</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="formStatus" name="status" class="form-select">
+                <option value="draft">Borrador</option>
+                <option value="published">Publicado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Descripción Corta</label>
+            <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Breve descripción del producto (1-2 oraciones)"></textarea>
+          </div>
+
+          <div class="form-group full-width">
+            <label>URL de Imagen Principal</label>
+            <input type="url" id="formImage" name="featuredImage" class="form-input" placeholder="https://..." />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Crear Producto</button>
+            <button type="button" id="resetBtn" class="btn-secondary">Limpiar</button>
+            <a href="/admin/products/new" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center;">Formulario Completo</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const amazonUrlInput = document.getElementById('amazonUrl') as HTMLInputElement;
+    const parseBtn = document.getElementById('parseBtn') as HTMLButtonElement;
+    const extractedDataSection = document.getElementById('extractedData')!;
+    const statusMessage = document.getElementById('statusMessage')!;
+    const productForm = document.getElementById('productForm') as HTMLFormElement;
+    const resetBtn = document.getElementById('resetBtn')!;
+
+    // Preview elements
+    const previewAsin = document.getElementById('previewAsin')!;
+    const previewMarketplace = document.getElementById('previewMarketplace')!;
+    const previewUrl = document.getElementById('previewUrl')!;
+    const previewTitle = document.getElementById('previewTitle')!;
+    const suggestedTitleRow = document.getElementById('suggestedTitleRow')!;
+
+    // Form elements
+    const formAsin = document.getElementById('formAsin') as HTMLInputElement;
+    const formAffiliateUrl = document.getElementById('formAffiliateUrl') as HTMLInputElement;
+    const formLang = document.getElementById('formLang') as HTMLInputElement;
+    const formTitle = document.getElementById('formTitle') as HTMLInputElement;
+
+    function showStatus(message: string, type: 'error' | 'success') {
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message ${type}`;
+    }
+
+    function hideStatus() {
+      statusMessage.className = 'status-message';
+    }
+
+    async function parseAmazonUrl() {
+      const input = amazonUrlInput.value.trim();
+      if (!input) {
+        showStatus('Por favor ingresa una URL de Amazon o un ASIN', 'error');
+        return;
+      }
+
+      hideStatus();
+      parseBtn.disabled = true;
+      parseBtn.textContent = 'Extrayendo...';
+
+      try {
+        // Determinar si es ASIN o URL
+        const isAsin = /^[A-Z0-9]{10}$/i.test(input);
+
+        const response = await fetch('/api/admin/parse-amazon-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          showStatus(result.error || 'Error al procesar la URL', 'error');
+          return;
+        }
+
+        const data = result.data;
+
+        // Update preview
+        previewAsin.textContent = data.asin;
+        previewMarketplace.textContent = `amazon.${data.marketplace}`;
+        previewUrl.textContent = data.affiliateUrl;
+
+        if (data.suggestedTitle) {
+          previewTitle.textContent = data.suggestedTitle;
+          suggestedTitleRow.style.display = 'flex';
+          formTitle.value = data.suggestedTitle;
+        } else {
+          suggestedTitleRow.style.display = 'none';
+        }
+
+        // Update hidden form fields
+        formAsin.value = data.asin;
+        formAffiliateUrl.value = data.affiliateUrl;
+        formLang.value = data.lang;
+
+        // Show extracted data section
+        extractedDataSection.classList.add('visible');
+        showStatus('Datos extraídos correctamente', 'success');
+
+      } catch (error) {
+        showStatus('Error de conexión. Intenta de nuevo.', 'error');
+        console.error(error);
+      } finally {
+        parseBtn.disabled = false;
+        parseBtn.textContent = 'Extraer Datos';
+      }
+    }
+
+    parseBtn.addEventListener('click', parseAmazonUrl);
+    amazonUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        parseAmazonUrl();
+      }
+    });
+
+    productForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideStatus();
+
+      const formData = new FormData(productForm);
+      const data: Record<string, any> = {};
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+
+      // Format featured image
+      if (data.featuredImage) {
+        data.featuredImage = {
+          url: data.featuredImage,
+          alt: data.title,
+        };
+      }
+
+      try {
+        const response = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          showStatus(result.error || 'Error al crear el producto', 'error');
+          return;
+        }
+
+        showStatus(`Producto "${data.title}" creado exitosamente!`, 'success');
+
+        // Reset after success
+        setTimeout(() => {
+          window.location.href = '/admin/products';
+        }, 1500);
+
+      } catch (error) {
+        showStatus('Error de conexión. Intenta de nuevo.', 'error');
+        console.error(error);
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      amazonUrlInput.value = '';
+      productForm.reset();
+      extractedDataSection.classList.remove('visible');
+      hideStatus();
+    });
+  </script>
+</AdminLayout>

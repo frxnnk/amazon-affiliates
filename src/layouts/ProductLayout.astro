@@ -1,0 +1,22 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import AffiliateDisclosure from '@components/affiliate/AffiliateDisclosure.astro';
+import { type Lang } from '@i18n/utils';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang: Lang;
+  image?: string;
+}
+
+const { title, description, lang, image } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} lang={lang} image={image}>
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <AffiliateDisclosure lang={lang} variant="full" />
+
+    <slot />
+  </div>
+</BaseLayout>

@@ -1,0 +1,171 @@
+---
+import LegalLayout from '@layouts/LegalLayout.astro';
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+const content = {
+  es: {
+    title: 'Politica de Privacidad',
+    description: 'Informacion sobre como recopilamos y usamos tus datos'
+  },
+  en: {
+    title: 'Privacy Policy',
+    description: 'Information about how we collect and use your data'
+  }
+};
+---
+
+<LegalLayout
+  title={content[lang].title}
+  description={content[lang].description}
+  lang={lang}
+  updatedAt={new Date()}
+>
+  {lang === 'es' ? (
+    <>
+      <p>
+        En {siteConfig.site.name} nos tomamos muy en serio tu privacidad. Esta politica describe
+        que informacion recopilamos, como la usamos y tus derechos respecto a ella.
+      </p>
+
+      <h2>Informacion que Recopilamos</h2>
+      <h3>Informacion de navegacion</h3>
+      <p>
+        Recopilamos automaticamente cierta informacion cuando visitas nuestro sitio, incluyendo:
+      </p>
+      <ul>
+        <li>Direccion IP</li>
+        <li>Tipo de navegador y dispositivo</li>
+        <li>Paginas visitadas y tiempo de permanencia</li>
+        <li>Sitio de referencia</li>
+      </ul>
+
+      <h3>Cookies</h3>
+      <p>
+        Usamos cookies para mejorar tu experiencia, analizar el trafico del sitio y personalizar
+        el contenido. Puedes configurar tu navegador para rechazar cookies, aunque esto puede
+        afectar la funcionalidad del sitio.
+      </p>
+
+      <h2>Como Usamos tu Informacion</h2>
+      <ul>
+        <li>Mejorar nuestro sitio web y contenido</li>
+        <li>Analizar el trafico y comportamiento de usuarios</li>
+        <li>Personalizar tu experiencia</li>
+        <li>Cumplir con obligaciones legales</li>
+      </ul>
+
+      <h2>Terceros</h2>
+      <h3>Amazon Associates</h3>
+      <p>
+        Somos participantes del Programa de Afiliados de Amazon EU. Amazon puede recopilar
+        informacion cuando haces clic en nuestros enlaces de afiliado. Te recomendamos revisar
+        la politica de privacidad de Amazon.
+      </p>
+
+      <h3>Google Analytics</h3>
+      <p>
+        Usamos Google Analytics para analizar el trafico de nuestro sitio. Google puede recopilar
+        informacion sobre tu uso del sitio. Puedes optar por no participar instalando el
+        complemento de navegador de exclusion de Google Analytics.
+      </p>
+
+      <h2>Tus Derechos</h2>
+      <p>Tienes derecho a:</p>
+      <ul>
+        <li>Acceder a tus datos personales</li>
+        <li>Rectificar datos inexactos</li>
+        <li>Solicitar la eliminacion de tus datos</li>
+        <li>Oponerte al procesamiento de tus datos</li>
+      </ul>
+
+      <h2>Contacto</h2>
+      <p>
+        Si tienes preguntas sobre esta politica de privacidad, contactanos a traves de nuestro
+        formulario de contacto.
+      </p>
+
+      <h2>Cambios a esta Politica</h2>
+      <p>
+        Podemos actualizar esta politica periodicamente. Te notificaremos cualquier cambio
+        publicando la nueva politica en esta pagina.
+      </p>
+    </>
+  ) : (
+    <>
+      <p>
+        At {siteConfig.site.name}, we take your privacy seriously. This policy describes what
+        information we collect, how we use it, and your rights regarding it.
+      </p>
+
+      <h2>Information We Collect</h2>
+      <h3>Browsing Information</h3>
+      <p>
+        We automatically collect certain information when you visit our site, including:
+      </p>
+      <ul>
+        <li>IP address</li>
+        <li>Browser and device type</li>
+        <li>Pages visited and time spent</li>
+        <li>Referring site</li>
+      </ul>
+
+      <h3>Cookies</h3>
+      <p>
+        We use cookies to improve your experience, analyze site traffic, and personalize content.
+        You can configure your browser to reject cookies, although this may affect site functionality.
+      </p>
+
+      <h2>How We Use Your Information</h2>
+      <ul>
+        <li>Improve our website and content</li>
+        <li>Analyze traffic and user behavior</li>
+        <li>Personalize your experience</li>
+        <li>Comply with legal obligations</li>
+      </ul>
+
+      <h2>Third Parties</h2>
+      <h3>Amazon Associates</h3>
+      <p>
+        We are participants in the Amazon Associates Program. Amazon may collect information
+        when you click on our affiliate links. We recommend reviewing Amazon's privacy policy.
+      </p>
+
+      <h3>Google Analytics</h3>
+      <p>
+        We use Google Analytics to analyze our site traffic. Google may collect information
+        about your use of the site. You can opt out by installing the Google Analytics opt-out
+        browser add-on.
+      </p>
+
+      <h2>Your Rights</h2>
+      <p>You have the right to:</p>
+      <ul>
+        <li>Access your personal data</li>
+        <li>Rectify inaccurate data</li>
+        <li>Request deletion of your data</li>
+        <li>Object to the processing of your data</li>
+      </ul>
+
+      <h2>Contact</h2>
+      <p>
+        If you have questions about this privacy policy, contact us through our contact form.
+      </p>
+
+      <h2>Changes to This Policy</h2>
+      <p>
+        We may update this policy periodically. We will notify you of any changes by posting
+        the new policy on this page.
+      </p>
+    </>
+  )}
+</LegalLayout>

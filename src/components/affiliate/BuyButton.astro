@@ -1,0 +1,42 @@
+---
+import AffiliateLink from './AffiliateLink.astro';
+import { type Lang, getTranslation } from '@i18n/utils';
+
+interface Props {
+  productId: string;
+  asin: string;
+  affiliateUrl: string;
+  lang: Lang;
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
+}
+
+const {
+  productId,
+  asin,
+  affiliateUrl,
+  lang,
+  size = 'md',
+  fullWidth = false
+} = Astro.props;
+
+const t = getTranslation(lang);
+
+const sizeClasses = {
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-6 py-3 text-base',
+  lg: 'px-8 py-4 text-lg'
+};
+---
+
+<AffiliateLink
+  productId={productId}
+  asin={asin}
+  affiliateUrl={affiliateUrl}
+  lang={lang}
+  variant="button"
+  trackingLabel="buy-button"
+  class:list={[sizeClasses[size], fullWidth && 'w-full']}
+>
+  {t('common.viewOnAmazon')}
+</AffiliateLink>

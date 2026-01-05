@@ -1,0 +1,42 @@
+---
+import { type Lang, formatPrice } from '@i18n/utils';
+import { calculateDiscount } from '@utils/affiliate';
+
+interface Props {
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  lang: Lang;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { price, originalPrice, currency, lang, size = 'md' } = Astro.props;
+
+const discount = originalPrice ? calculateDiscount(originalPrice, price) : 0;
+const formattedPrice = formatPrice(price, currency, lang);
+const formattedOriginalPrice = originalPrice ? formatPrice(originalPrice, currency, lang) : null;
+
+const sizeClasses = {
+  sm: { price: 'text-lg', original: 'text-sm' },
+  md: { price: 'text-2xl', original: 'text-base' },
+  lg: { price: 'text-3xl', original: 'text-lg' }
+};
+---
+
+<div class="price-display flex items-baseline gap-2 flex-wrap">
+  <span class:list={['font-bold text-gray-900', sizeClasses[size].price]}>
+    {formattedPrice}
+  </span>
+
+  {formattedOriginalPrice && (
+    <span class:list={['text-gray-400 line-through', sizeClasses[size].original]}>
+      {formattedOriginalPrice}
+    </span>
+  )}
+
+  {discount > 0 && (
+    <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 text-sm font-medium rounded">
+      -{discount}%
+    </span>
+  )}
+</div>

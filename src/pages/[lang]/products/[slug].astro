@@ -1,0 +1,158 @@
+---
+import ProductLayout from '@layouts/ProductLayout.astro';
+import BuyButton from '@components/affiliate/BuyButton.astro';
+import PriceDisplay from '@components/affiliate/PriceDisplay.astro';
+import ProductRating from '@components/products/ProductRating.astro';
+import ProsConsList from '@components/products/ProsConsList.astro';
+import ProductGrid from '@components/products/ProductGrid.astro';
+import { getCollection, render } from 'astro:content';
+import { type Lang, getTranslation, formatDate } from '@i18n/utils';
+
+export async function getStaticPaths() {
+  const products = await getCollection('products');
+
+  return products.map((product) => ({
+    params: {
+      lang: product.data.lang,
+      slug: product.data.productId
+    },
+    props: { product }
+  }));
+}
+
+const { product } = Astro.props;
+const { data } = product;
+const { Content } = await render(product);
+const lang = data.lang as Lang;
+const t = getTranslation(lang);
+
+// Get related products
+const allProducts = await getCollection('products');
+const relatedProducts = data.relatedProducts
+  ? allProducts
+      .filter(p => data.relatedProducts?.includes(p.data.productId) && p.data.lang === lang)
+      .map(p => ({
+        productId: p.data.productId,
+        asin: p.data.asin,
+        title: p.data.title,
+        brand: p.data.brand,
+        price: p.data.price,
+        originalPrice: p.data.originalPrice,
+        currency: p.data.currency,
+        rating: p.data.rating,
+        featuredImage: p.data.featuredImage,
+        affiliateUrl: p.data.affiliateUrl,
+        isOnSale: p.data.isOnSale,
+        isFeatured: p.data.isFeatured,
+      }))
+  : [];
+---
+
+<ProductLayout
+  title={data.title}
+  description={data.shortDescription}
+  lang={lang}
+  image={data.featuredImage.url}
+>
+  <article class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="grid lg:grid-cols-2 gap-8 p-6 lg:p-8">
+      <!-- Product Image -->
+      <div class="space-y-4">
+        <div class="aspect-square bg-gray-50 rounded-xl overflow-hidden">
+          <img
+            src={data.featuredImage.url}
+            alt={data.featuredImage.alt}
+            class="w-full h-full object-contain p-8"
+          />
+        </div>
+
+        {data.gallery && data.gallery.length > 0 && (
+          <div class="grid grid-cols-4 gap-2">
+            {data.gallery.slice(0, 4).map((img) => (
+              <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
+                <img
+                  src={img.url}
+                  alt={img.alt}
+                  class="w-full h-full object-contain p-2"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- Product Info -->
+      <div class="space-y-6">
+        <div>
+          <p class="text-sm text-gray-500 uppercase tracking-wide mb-2">{data.brand}</p>
+          <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">{data.title}</h1>
+
+          <div class="flex items-center gap-4 mb-4">
+            <ProductRating rating={data.rating} totalReviews={data.totalReviews} size="md" />
+            {data.ourRating && (
+              <span class="px-3 py-1 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
+                {lang === 'es' ? 'Nuestra puntuacion' : 'Our score'}: {data.ourRating}/10
+              </span>
+            )}
+          </div>
+        </div>
+
+        <PriceDisplay
+          price={data.price}
+          originalPrice={data.originalPrice}
+          currency={data.currency}
+          lang={lang}
+          size="lg"
+        />
+
+        <p class="text-gray-600">{data.description}</p>
+
+        <BuyButton
+          productId={data.productId}
+          asin={data.asin}
+          affiliateUrl={data.affiliateUrl}
+          lang={lang}
+          size="lg"
+          fullWidth
+        />
+
+        <p class="text-xs text-gray-400">
+          {t('product.lastUpdated')}: {formatDate(data.updatedAt, lang)}
+        </p>
+      </div>
+    </div>
+
+    <!-- Pros and Cons -->
+    <div class="p-6 lg:p-8 border-t">
+      <ProsConsList pros={data.pros} cons={data.cons} lang={lang} />
+    </div>
+
+    <!-- Specifications -->
+    {data.specifications && Object.keys(data.specifications).length > 0 && (
+      <div class="p-6 lg:p-8 border-t">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">{t('product.specifications')}</h2>
+        <div class="grid sm:grid-cols-2 gap-4">
+          {Object.entries(data.specifications).map(([key, value]) => (
+            <div class="flex justify-between py-2 border-b border-gray-100">
+              <span class="text-gray-600">{key}</span>
+              <span class="font-medium text-gray-900">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Content -->
+    <div class="p-6 lg:p-8 border-t prose prose-gray max-w-none">
+      <Content />
+    </div>
+  </article>
+
+  <!-- Related Products -->
+  {relatedProducts.length > 0 && (
+    <section class="mt-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">{t('product.relatedProducts')}</h2>
+      <ProductGrid products={relatedProducts} lang={lang} columns={4} />
+    </section>
+  )}
+</ProductLayout>

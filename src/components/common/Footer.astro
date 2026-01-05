@@ -1,0 +1,85 @@
+---
+import { type Lang, getTranslation } from '@i18n/utils';
+import AffiliateDisclosure from '@components/affiliate/AffiliateDisclosure.astro';
+import siteConfig from '@data/site-config.json';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getTranslation(lang);
+const currentYear = new Date().getFullYear();
+
+const footerLinks = [
+  { href: `/${lang}/about`, label: t('footer.about') },
+  { href: `/${lang}/privacy-policy`, label: t('footer.privacy') },
+  { href: `/${lang}/terms-of-service`, label: t('footer.terms') },
+];
+---
+
+<footer class="bg-gray-900 text-gray-300">
+  <div class="max-w-7xl mx-auto px-4 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Brand -->
+      <div>
+        <h3 class="text-xl font-bold text-white mb-4">{siteConfig.site.name}</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          {siteConfig.site.tagline[lang]}
+        </p>
+      </div>
+
+      <!-- Links -->
+      <div>
+        <h4 class="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          {lang === 'es' ? 'Enlaces' : 'Links'}
+        </h4>
+        <ul class="space-y-2">
+          {footerLinks.map((link) => (
+            <li>
+              <a href={link.href} class="text-sm text-gray-400 hover:text-white transition-colors">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- Categories -->
+      <div>
+        <h4 class="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          {lang === 'es' ? 'Categorias' : 'Categories'}
+        </h4>
+        <ul class="space-y-2">
+          <li>
+            <a href={`/${lang}/category/electronics`} class="text-sm text-gray-400 hover:text-white transition-colors">
+              {lang === 'es' ? 'Electronica' : 'Electronics'}
+            </a>
+          </li>
+          <li>
+            <a href={`/${lang}/category/home-kitchen`} class="text-sm text-gray-400 hover:text-white transition-colors">
+              {lang === 'es' ? 'Hogar y Cocina' : 'Home & Kitchen'}
+            </a>
+          </li>
+          <li>
+            <a href={`/${lang}/category/gaming`} class="text-sm text-gray-400 hover:text-white transition-colors">
+              Gaming
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Affiliate Disclosure -->
+    <div class="mt-8 pt-8 border-t border-gray-800">
+      <AffiliateDisclosure lang={lang} variant="footer" />
+    </div>
+
+    <!-- Copyright -->
+    <div class="mt-8 pt-8 border-t border-gray-800 text-center">
+      <p class="text-sm text-gray-500">
+        &copy; {currentYear} {siteConfig.site.name}. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
+      </p>
+    </div>
+  </div>
+</footer>
