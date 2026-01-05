@@ -1,15 +1,24 @@
 import type { APIRoute } from 'astro';
 import { generateProductMarkdown, generateProductFilename, slugify } from '@utils/markdown';
+import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async (context) => {
+  const { request, locals } = context;
   const userId = locals.auth?.userId;
+
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+
+  // Verify admin role
+  const isAdmin = await isUserAdmin(userId, context);
+  if (!isAdmin) {
+    return unauthorizedResponse('Admin access required');
   }
 
   try {

@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
 import { failPayoutRequest } from '@lib/db';
+import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async (context) => {
+  const { request, locals } = context;
+
   try {
     const auth = locals.auth();
     if (!auth.userId) {
@@ -11,7 +14,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // TODO: Add proper admin role check
+    // Verify admin role
+    const isAdmin = await isUserAdmin(auth.userId, context);
+    if (!isAdmin) {
+      return unauthorizedResponse('Admin access required');
+    }
 
     const body = await request.json();
     const { payoutId, notes } = body;
