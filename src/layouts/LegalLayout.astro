@@ -1,0 +1,34 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { type Lang, formatDate } from '@i18n/utils';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang: Lang;
+  updatedAt?: Date;
+}
+
+const { title, description, lang, updatedAt } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} lang={lang}>
+  <div class="max-w-3xl mx-auto px-4 py-12">
+    <article class="bg-white rounded-xl shadow-sm p-8 md:p-12">
+      <header class="mb-8 pb-8 border-b border-gray-200">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          {title}
+        </h1>
+        {updatedAt && (
+          <p class="text-sm text-gray-500">
+            {lang === 'es' ? 'Ultima actualizacion:' : 'Last updated:'} {formatDate(updatedAt, lang)}
+          </p>
+        )}
+      </header>
+
+      <div class="prose prose-gray max-w-none prose-headings:font-semibold prose-a:text-primary-600 hover:prose-a:text-primary-700">
+        <slot />
+      </div>
+    </article>
+  </div>
+</BaseLayout>

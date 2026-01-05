@@ -1,0 +1,169 @@
+import type { APIRoute } from 'astro';
+import { generateProductMarkdown, generateProductFilename, slugify } from '@utils/markdown';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { getCollection } from 'astro:content';
+
+export const PUT: APIRoute = async ({ request, locals, params }) => {
+  const userId = locals.auth?.userId;
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const productId = params.id;
+    if (!productId) {
+      return new Response(
+        JSON.stringify({ error: 'Product ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const data = await request.json();
+
+    // Validate required fields
+    if (!data.title || !data.asin || !data.brand) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: title, asin, brand' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const lang = data.lang || 'es';
+    const now = new Date().toISOString().split('T')[0];
+
+    // Find existing product to get publishedAt
+    let publishedAt = now;
+    try {
+      const products = await getCollection('products');
+      const existing = products.find(p => p.data.productId === productId && p.data.lang === lang);
+      if (existing) {
+        publishedAt = existing.data.publishedAt || now;
+      }
+    } catch {}
+
+    const frontmatter = {
+      productId,
+      asin: data.asin,
+      lang,
+      title: data.title,
+      brand: data.brand,
+      model: data.model || undefined,
+      description: data.description || '',
+      shortDescription: data.shortDescription || '',
+      category: data.category || 'electronics',
+      subcategory: data.subcategory || undefined,
+      tags: data.tags || [],
+      price: parseFloat(data.price) || 0,
+      originalPrice: data.originalPrice ? parseFloat(data.originalPrice) : undefined,
+      currency: data.currency || 'EUR',
+      affiliateUrl: data.affiliateUrl || `https://www.amazon.${lang === 'en' ? 'com' : 'es'}/dp/${data.asin}`,
+      rating: parseFloat(data.rating) || 0,
+      totalReviews: data.totalReviews ? parseInt(data.totalReviews) : undefined,
+      ourRating: data.ourRating ? parseFloat(data.ourRating) : undefined,
+      pros: data.pros || [],
+      cons: data.cons || [],
+      specifications: data.specifications || undefined,
+      featuredImage: data.featuredImage || { url: '', alt: data.title },
+      gallery: data.gallery || undefined,
+      status: data.status || 'draft',
+      isFeatured: Boolean(data.isFeatured),
+      isOnSale: Boolean(data.isOnSale),
+      publishedAt,
+      updatedAt: now,
+      relatedProducts: data.relatedProducts || undefined,
+    };
+
+    const markdownContent = generateProductMarkdown(frontmatter as any, data.content || '');
+    const relativePath = generateProductFilename(productId, lang);
+
+    // Write file locally
+    const absolutePath = path.join(process.cwd(), relativePath);
+    const dir = path.dirname(absolutePath);
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(absolutePath, markdownContent, 'utf-8');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        productId,
+        filePath: relativePath,
+        message: 'Product updated successfully.',
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('[Update Product Error]', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to update product: ' + (error as Error).message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+};
+
+export const DELETE: APIRoute = async ({ locals, params }) => {
+  const userId = locals.auth?.userId;
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const productId = params.id;
+    if (!productId) {
+      return new Response(
+        JSON.stringify({ error: 'Product ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Find and delete product files for all languages
+    const products = await getCollection('products');
+    const productFiles = products.filter(p => p.data.productId === productId);
+
+    if (productFiles.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Product not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const deletedFiles: string[] = [];
+    for (const product of productFiles) {
+      const relativePath = generateProductFilename(productId, product.data.lang);
+      const absolutePath = path.join(process.cwd(), relativePath);
+
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+        deletedFiles.push(relativePath);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        productId,
+        deletedFiles,
+        message: 'Product deleted successfully.',
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('[Delete Product Error]', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to delete product: ' + (error as Error).message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+};
+
+export const prerender = false;

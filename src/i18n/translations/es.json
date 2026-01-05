@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "products": "Productos",
+    "reviews": "Reviews",
+    "lists": "Guias",
+    "deals": "Ofertas",
+    "search": "Buscar"
+  },
+  "common": {
+    "viewOnAmazon": "Ver en Amazon",
+    "buyNow": "Comprar ahora",
+    "readMore": "Leer mas",
+    "featured": "Destacado",
+    "bestSeller": "Mas vendido",
+    "ourPick": "Nuestra eleccion",
+    "seeAll": "Ver todos",
+    "searchPlaceholder": "Buscar productos...",
+    "noResults": "No se encontraron resultados",
+    "loading": "Cargando...",
+    "priceFrom": "Desde",
+    "offDiscount": "de descuento"
+  },
+  "product": {
+    "price": "Precio",
+    "rating": "Valoracion",
+    "specifications": "Especificaciones",
+    "pros": "Ventajas",
+    "cons": "Desventajas",
+    "relatedProducts": "Productos relacionados",
+    "lastUpdated": "Actualizado el",
+    "reviews": "opiniones"
+  },
+  "review": {
+    "verdict": "Veredicto",
+    "score": "Puntuacion",
+    "writtenBy": "Escrito por",
+    "quality": "Calidad",
+    "value": "Relacion calidad-precio",
+    "features": "Funcionalidades",
+    "easeOfUse": "Facilidad de uso"
+  },
+  "deal": {
+    "expires": "Expira",
+    "discount": "Descuento",
+    "limitedTime": "Oferta limitada",
+    "expired": "Oferta expirada",
+    "daysLeft": "dias restantes",
+    "hoursLeft": "horas restantes"
+  },
+  "footer": {
+    "about": "Sobre nosotros",
+    "privacy": "Politica de privacidad",
+    "terms": "Terminos de servicio",
+    "contact": "Contacto",
+    "affiliateDisclosure": "Como participante del Programa de Afiliados de Amazon EU, obtenemos ingresos por las compras adscritas que cumplen los requisitos aplicables."
+  },
+  "meta": {
+    "siteTitle": "Las mejores ofertas y reviews de productos",
+    "siteDescription": "Encuentra los mejores productos con nuestras reviews detalladas, comparativas y ofertas exclusivas de Amazon."
+  }
+}

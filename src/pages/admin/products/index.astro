@@ -1,0 +1,160 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getCollection } from 'astro:content';
+
+const allProducts = await getCollection('products');
+const products = allProducts.sort((a, b) =>
+  new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime()
+);
+---
+
+<AdminLayout title="Productos">
+  <style>
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .btn-primary {
+      background: #fbbf24;
+      color: #1f2937;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover {
+      background: #f59e0b;
+    }
+    .table-container {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    td {
+      color: #1f2937;
+    }
+    .product-title {
+      font-weight: 500;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-published {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .badge-draft {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .badge-archived {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .badge-lang {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .actions a {
+      color: #6b7280;
+      text-decoration: none;
+      margin-right: 1rem;
+    }
+    .actions a:hover {
+      color: #1f2937;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6b7280;
+    }
+    .empty-state h3 {
+      font-size: 1.25rem;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+
+  <div class="toolbar">
+    <p style="color: #6b7280;">{products.length} productos</p>
+    <a href="/admin/products/new" class="btn-primary">+ Nuevo Producto</a>
+  </div>
+
+  <div class="table-container">
+    {products.length > 0 ? (
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Marca</th>
+            <th>Precio</th>
+            <th>Idioma</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <tr>
+              <td>
+                <span class="product-title">{product.data.title}</span>
+                <br />
+                <small style="color: #6b7280;">ASIN: {product.data.asin}</small>
+              </td>
+              <td>{product.data.brand}</td>
+              <td>{product.data.price} {product.data.currency}</td>
+              <td>
+                <span class="badge badge-lang">{product.data.lang.toUpperCase()}</span>
+              </td>
+              <td>
+                <span class={`badge badge-${product.data.status}`}>
+                  {product.data.status === 'published' ? 'Publicado' :
+                   product.data.status === 'draft' ? 'Borrador' : 'Archivado'}
+                </span>
+              </td>
+              <td class="actions">
+                <a href={`/admin/products/${product.data.productId}`}>Editar</a>
+                <a href={`/${product.data.lang}/products/${product.data.productId}`} target="_blank">Ver</a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <div class="empty-state">
+        <h3>No hay productos</h3>
+        <p>Crea tu primer producto para comenzar.</p>
+        <a href="/admin/products/new" class="btn-primary" style="display: inline-block; margin-top: 1rem;">
+          + Nuevo Producto
+        </a>
+      </div>
+    )}
+  </div>
+</AdminLayout>

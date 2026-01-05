@@ -9,6 +9,17 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.16.6"
+    "@astrojs/sitemap": "^3.6.0",
+    "@astrojs/vercel": "^9.0.2",
+    "@clerk/astro": "^2.16.10",
+    "@octokit/rest": "^22.0.1",
+    "@tailwindcss/vite": "^4.1.18",
+    "astro": "^5.16.6",
+    "fuse.js": "^7.1.0",
+    "js-yaml": "^4.1.1",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
   }
 }

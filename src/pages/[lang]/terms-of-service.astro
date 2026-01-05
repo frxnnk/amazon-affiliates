@@ -1,0 +1,158 @@
+---
+import LegalLayout from '@layouts/LegalLayout.astro';
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+const content = {
+  es: {
+    title: 'Terminos de Servicio',
+    description: 'Terminos y condiciones de uso del sitio'
+  },
+  en: {
+    title: 'Terms of Service',
+    description: 'Terms and conditions of use of the site'
+  }
+};
+---
+
+<LegalLayout
+  title={content[lang].title}
+  description={content[lang].description}
+  lang={lang}
+  updatedAt={new Date()}
+>
+  {lang === 'es' ? (
+    <>
+      <p>
+        Al acceder y utilizar {siteConfig.site.name}, aceptas cumplir con estos terminos de servicio.
+        Por favor, leelos detenidamente.
+      </p>
+
+      <h2>Uso del Sitio</h2>
+      <p>
+        Este sitio proporciona informacion, reviews y recomendaciones de productos. El contenido
+        es solo para fines informativos y no constituye asesoramiento profesional.
+      </p>
+
+      <h2>Enlaces de Afiliado</h2>
+      <p>
+        {siteConfig.site.name} participa en el Programa de Afiliados de Amazon EU. Esto significa que:
+      </p>
+      <ul>
+        <li>Podemos ganar comisiones por compras realizadas a traves de nuestros enlaces</li>
+        <li>Los precios mostrados pueden variar en Amazon</li>
+        <li>No controlamos los precios, disponibilidad o politicas de Amazon</li>
+      </ul>
+
+      <h2>Precision del Contenido</h2>
+      <p>
+        Nos esforzamos por proporcionar informacion precisa y actualizada. Sin embargo:
+      </p>
+      <ul>
+        <li>Los precios y disponibilidad pueden cambiar sin previo aviso</li>
+        <li>Las especificaciones de productos pueden variar</li>
+        <li>Las opiniones expresadas son subjetivas</li>
+      </ul>
+
+      <h2>Propiedad Intelectual</h2>
+      <p>
+        Todo el contenido de este sitio, incluyendo textos, imagenes y diseno, esta protegido
+        por derechos de autor. No puedes reproducir, distribuir o modificar el contenido sin
+        nuestro permiso expreso.
+      </p>
+
+      <h2>Limitacion de Responsabilidad</h2>
+      <p>
+        {siteConfig.site.name} no se hace responsable de:
+      </p>
+      <ul>
+        <li>Decisiones de compra basadas en nuestro contenido</li>
+        <li>Problemas con productos comprados a traves de nuestros enlaces</li>
+        <li>Inexactitudes en la informacion proporcionada</li>
+        <li>Danos directos o indirectos derivados del uso del sitio</li>
+      </ul>
+
+      <h2>Cambios en los Terminos</h2>
+      <p>
+        Nos reservamos el derecho de modificar estos terminos en cualquier momento. Los cambios
+        entraran en vigor inmediatamente despues de su publicacion en el sitio.
+      </p>
+
+      <h2>Contacto</h2>
+      <p>
+        Para cualquier pregunta sobre estos terminos, contactanos a traves de nuestro
+        formulario de contacto.
+      </p>
+    </>
+  ) : (
+    <>
+      <p>
+        By accessing and using {siteConfig.site.name}, you agree to comply with these terms of service.
+        Please read them carefully.
+      </p>
+
+      <h2>Use of the Site</h2>
+      <p>
+        This site provides information, reviews, and product recommendations. The content is
+        for informational purposes only and does not constitute professional advice.
+      </p>
+
+      <h2>Affiliate Links</h2>
+      <p>
+        {siteConfig.site.name} participates in the Amazon Associates Program. This means that:
+      </p>
+      <ul>
+        <li>We may earn commissions on purchases made through our links</li>
+        <li>Prices shown may vary on Amazon</li>
+        <li>We do not control Amazon's prices, availability, or policies</li>
+      </ul>
+
+      <h2>Content Accuracy</h2>
+      <p>
+        We strive to provide accurate and up-to-date information. However:
+      </p>
+      <ul>
+        <li>Prices and availability may change without notice</li>
+        <li>Product specifications may vary</li>
+        <li>Opinions expressed are subjective</li>
+      </ul>
+
+      <h2>Intellectual Property</h2>
+      <p>
+        All content on this site, including text, images, and design, is protected by copyright.
+        You may not reproduce, distribute, or modify the content without our express permission.
+      </p>
+
+      <h2>Limitation of Liability</h2>
+      <p>
+        {siteConfig.site.name} is not responsible for:
+      </p>
+      <ul>
+        <li>Purchase decisions based on our content</li>
+        <li>Problems with products purchased through our links</li>
+        <li>Inaccuracies in the information provided</li>
+        <li>Direct or indirect damages arising from the use of the site</li>
+      </ul>
+
+      <h2>Changes to Terms</h2>
+      <p>
+        We reserve the right to modify these terms at any time. Changes will take effect
+        immediately after their publication on the site.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        For any questions about these terms, contact us through our contact form.
+      </p>
+    </>
+  )}
+</LegalLayout>

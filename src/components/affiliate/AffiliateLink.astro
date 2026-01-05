@@ -1,0 +1,73 @@
+---
+import { getAmazonUrl, getAmazonTag, type Lang } from '@utils/affiliate';
+
+interface Props {
+  productId: string;
+  asin: string;
+  affiliateUrl: string;
+  lang: Lang;
+  variant?: 'button' | 'text' | 'card';
+  class?: string;
+  trackingLabel?: string;
+}
+
+const {
+  productId,
+  asin,
+  affiliateUrl,
+  lang,
+  variant = 'button',
+  class: className,
+  trackingLabel
+} = Astro.props;
+
+const amazonTag = getAmazonTag(lang);
+const finalUrl = getAmazonUrl(affiliateUrl, amazonTag, lang);
+
+const trackingData = JSON.stringify({
+  productId,
+  asin,
+  lang,
+  label: trackingLabel,
+  timestamp: Date.now()
+});
+
+const variantClasses = {
+  button: 'inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-colors duration-200',
+  text: 'text-primary-600 hover:text-primary-700 underline',
+  card: 'block w-full text-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors duration-200'
+};
+---
+
+<a
+  href={finalUrl}
+  target="_blank"
+  rel="nofollow noopener sponsored"
+  class:list={[variantClasses[variant], className]}
+  data-tracking={trackingData}
+  data-product-id={productId}
+>
+  <slot />
+  {variant === 'button' && (
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  )}
+</a>
+
+<script>
+  document.querySelectorAll('[data-tracking]').forEach(link => {
+    link.addEventListener('click', () => {
+      const trackingData = JSON.parse((link as HTMLElement).dataset.tracking || '{}');
+
+      // Send tracking data (fire and forget)
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/track-click', JSON.stringify({
+          ...trackingData,
+          url: window.location.href,
+          referrer: document.referrer
+        }));
+      }
+    });
+  });
+</script>

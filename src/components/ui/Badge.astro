@@ -1,0 +1,31 @@
+---
+interface Props {
+  variant?: 'default' | 'featured' | 'sale' | 'new' | 'bestseller';
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+const { variant = 'default', size = 'sm', class: className } = Astro.props;
+
+const variantClasses = {
+  default: 'bg-gray-100 text-gray-800',
+  featured: 'bg-primary-100 text-primary-800',
+  sale: 'bg-red-100 text-red-800',
+  new: 'bg-blue-100 text-blue-800',
+  bestseller: 'bg-amber-100 text-amber-800'
+};
+
+const sizeClasses = {
+  sm: 'px-2 py-1 text-xs',
+  md: 'px-3 py-1.5 text-sm'
+};
+---
+
+<span class:list={[
+  'inline-flex items-center font-medium rounded-full',
+  variantClasses[variant],
+  sizeClasses[size],
+  className
+]}>
+  <slot />
+</span>

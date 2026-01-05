@@ -1,0 +1,45 @@
+---
+import { type Lang, getTranslation } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+  variant?: 'full' | 'compact' | 'footer';
+}
+
+const { lang, variant = 'compact' } = Astro.props;
+const t = getTranslation(lang);
+
+const disclosures = {
+  es: {
+    full: 'Como participante del Programa de Afiliados de Amazon EU, obtenemos ingresos por las compras adscritas que cumplen los requisitos aplicables. Los precios y disponibilidad de los productos estan sujetos a cambios.',
+    compact: 'Este sitio participa en el Programa de Afiliados de Amazon EU.',
+    footer: 'Participante del Programa de Afiliados de Amazon EU'
+  },
+  en: {
+    full: 'As an Amazon Associate, we earn from qualifying purchases. Prices and availability are subject to change.',
+    compact: 'This site is a participant in the Amazon Associates Program.',
+    footer: 'Amazon Associates Program Participant'
+  }
+};
+---
+
+{variant === 'full' && (
+  <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-6">
+    <p class="text-sm text-amber-800">
+      <span class="font-semibold">Disclosure: </span>
+      {disclosures[lang][variant]}
+    </p>
+  </div>
+)}
+
+{variant === 'compact' && (
+  <p class="text-sm text-gray-500 italic">
+    {disclosures[lang][variant]}
+  </p>
+)}
+
+{variant === 'footer' && (
+  <p class="text-xs text-gray-500">
+    {disclosures[lang][variant]}
+  </p>
+)}

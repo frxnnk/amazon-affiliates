@@ -1,0 +1,104 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { type Lang, getTranslation, formatDate } from '@i18n/utils';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+const t = getTranslation(lang);
+
+const allLists = await getCollection('lists');
+const lists = allLists
+  .filter(l => l.data.lang === lang && l.data.status === 'published' && l.data.visibility === 'public')
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
+
+const listTypeLabels = {
+  es: {
+    'best-of': 'Mejores',
+    'comparison': 'Comparativa',
+    'guide': 'Guia',
+    'top-picks': 'Top Picks'
+  },
+  en: {
+    'best-of': 'Best Of',
+    'comparison': 'Comparison',
+    'guide': 'Guide',
+    'top-picks': 'Top Picks'
+  }
+};
+---
+
+<BaseLayout
+  title={t('nav.lists')}
+  description={lang === 'es' ? 'Guias, comparativas y listas curadas de productos' : 'Guides, comparisons and curated product lists'}
+  lang={lang}
+>
+  <div class="max-w-7xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        {t('nav.lists')}
+      </h1>
+      <p class="text-gray-600">
+        {lang === 'es'
+          ? 'Comparativas, guias y selecciones de los mejores productos'
+          : 'Comparisons, guides and selections of the best products'}
+      </p>
+    </div>
+
+    {lists.length > 0 ? (
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {lists.map((list) => (
+          <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <a href={`/${lang}/lists/${list.data.listId}`}>
+              <img
+                src={list.data.featuredImage.url}
+                alt={list.data.featuredImage.alt}
+                class="w-full h-48 object-cover"
+              />
+            </a>
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-3">
+                <span class="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full uppercase">
+                  {listTypeLabels[lang][list.data.listType]}
+                </span>
+                <span class="text-xs text-gray-500">{formatDate(list.data.publishedAt, lang)}</span>
+              </div>
+              <h2 class="font-semibold text-lg mb-2">
+                <a href={`/${lang}/lists/${list.data.listId}`} class="hover:text-primary-600">
+                  {list.data.title}
+                </a>
+              </h2>
+              {list.data.subtitle && (
+                <p class="text-sm text-gray-500 mb-2">{list.data.subtitle}</p>
+              )}
+              <p class="text-gray-600 text-sm line-clamp-2">{list.data.excerpt}</p>
+              <div class="mt-4 text-sm text-gray-500">
+                {list.data.products.length} {lang === 'es' ? 'productos' : 'products'}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-16">
+        <div class="text-gray-400 mb-4">
+          <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">
+          {lang === 'es' ? 'Aun no hay guias' : 'No guides yet'}
+        </h2>
+        <p class="text-gray-500">
+          {lang === 'es' ? 'Estamos preparando guias utiles. Vuelve pronto!' : 'We are preparing useful guides. Come back soon!'}
+        </p>
+      </div>
+    )}
+  </div>
+</BaseLayout>

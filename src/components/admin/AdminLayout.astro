@@ -1,0 +1,132 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+
+const navItems = [
+  { href: '/admin', label: 'Dashboard', icon: 'home' },
+  { href: '/admin/products', label: 'Productos', icon: 'box' },
+  { href: '/admin/lists', label: 'Listas', icon: 'list' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title} | Admin Panel</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #f3f4f6;
+      min-height: 100vh;
+    }
+    .admin-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 250px;
+      background: #1f2937;
+      color: white;
+      padding: 1.5rem;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: #fbbf24;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      color: #9ca3af;
+      text-decoration: none;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+    .nav-item:hover {
+      background: #374151;
+      color: white;
+    }
+    .nav-item.active {
+      background: #fbbf24;
+      color: #1f2937;
+    }
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 2rem;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    .dev-badge {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">BestDeals Admin</div>
+      <nav>
+        {navItems.map((item) => (
+          <a
+            href={item.href}
+            class={`nav-item ${currentPath === item.href || (item.href !== '/admin' && currentPath.startsWith(item.href)) ? 'active' : ''}`}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div style="position: absolute; bottom: 1.5rem; left: 1.5rem;">
+        <a href="/" style="color: #9ca3af; text-decoration: none; font-size: 0.875rem;">
+          &larr; Ver sitio
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="header">
+        <h1>{title}</h1>
+        <span class="dev-badge">Modo Desarrollo</span>
+      </header>
+      <slot />
+    </main>
+  </div>
+</body>
+</html>

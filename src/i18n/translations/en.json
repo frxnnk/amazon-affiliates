@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "reviews": "Reviews",
+    "lists": "Guides",
+    "deals": "Deals",
+    "search": "Search"
+  },
+  "common": {
+    "viewOnAmazon": "View on Amazon",
+    "buyNow": "Buy now",
+    "readMore": "Read more",
+    "featured": "Featured",
+    "bestSeller": "Best Seller",
+    "ourPick": "Our Pick",
+    "seeAll": "See all",
+    "searchPlaceholder": "Search products...",
+    "noResults": "No results found",
+    "loading": "Loading...",
+    "priceFrom": "From",
+    "offDiscount": "off"
+  },
+  "product": {
+    "price": "Price",
+    "rating": "Rating",
+    "specifications": "Specifications",
+    "pros": "Pros",
+    "cons": "Cons",
+    "relatedProducts": "Related Products",
+    "lastUpdated": "Last updated",
+    "reviews": "reviews"
+  },
+  "review": {
+    "verdict": "Verdict",
+    "score": "Score",
+    "writtenBy": "Written by",
+    "quality": "Quality",
+    "value": "Value for money",
+    "features": "Features",
+    "easeOfUse": "Ease of use"
+  },
+  "deal": {
+    "expires": "Expires",
+    "discount": "Discount",
+    "limitedTime": "Limited time",
+    "expired": "Expired",
+    "daysLeft": "days left",
+    "hoursLeft": "hours left"
+  },
+  "footer": {
+    "about": "About us",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact",
+    "affiliateDisclosure": "As an Amazon Associate, we earn from qualifying purchases."
+  },
+  "meta": {
+    "siteTitle": "Best deals and product reviews",
+    "siteDescription": "Find the best products with our detailed reviews, comparisons and exclusive Amazon deals."
+  }
+}

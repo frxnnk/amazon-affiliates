@@ -1,0 +1,106 @@
+---
+import LegalLayout from '@layouts/LegalLayout.astro';
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+const content = {
+  es: {
+    title: 'Sobre Nosotros',
+    description: 'Conoce mas sobre nuestro equipo y mision'
+  },
+  en: {
+    title: 'About Us',
+    description: 'Learn more about our team and mission'
+  }
+};
+---
+
+<LegalLayout
+  title={content[lang].title}
+  description={content[lang].description}
+  lang={lang}
+  updatedAt={new Date()}
+>
+  {lang === 'es' ? (
+    <>
+      <h2>Nuestra Mision</h2>
+      <p>
+        En {siteConfig.site.name}, nuestra mision es ayudarte a encontrar los mejores productos
+        al mejor precio. Analizamos, comparamos y revisamos cientos de productos para que puedas
+        tomar decisiones de compra informadas.
+      </p>
+
+      <h2>Que Hacemos</h2>
+      <p>
+        Dedicamos horas a investigar, probar y analizar productos en diversas categorias.
+        Nuestros expertos crean reviews detalladas, guias de compra y comparativas para
+        facilitarte la eleccion.
+      </p>
+
+      <h2>Nuestro Compromiso</h2>
+      <ul>
+        <li><strong>Honestidad:</strong> Ofrecemos opiniones sinceras, destacando tanto pros como contras.</li>
+        <li><strong>Calidad:</strong> Solo recomendamos productos que cumplen con nuestros estandares.</li>
+        <li><strong>Transparencia:</strong> Somos claros sobre como ganamos dinero (ver disclosure de afiliados).</li>
+      </ul>
+
+      <h2>Como Funcionamos</h2>
+      <p>
+        Somos participantes del Programa de Afiliados de Amazon EU. Esto significa que cuando
+        compras un producto a traves de nuestros enlaces, recibimos una pequena comision sin
+        coste adicional para ti. Esta comision nos ayuda a mantener el sitio y seguir creando
+        contenido de calidad.
+      </p>
+
+      <h2>Contacto</h2>
+      <p>
+        Si tienes preguntas, sugerencias o quieres colaborar con nosotros, no dudes en contactarnos.
+        Valoramos la opinion de nuestros lectores y estamos siempre buscando mejorar.
+      </p>
+    </>
+  ) : (
+    <>
+      <h2>Our Mission</h2>
+      <p>
+        At {siteConfig.site.name}, our mission is to help you find the best products at the
+        best prices. We analyze, compare, and review hundreds of products so you can make
+        informed purchasing decisions.
+      </p>
+
+      <h2>What We Do</h2>
+      <p>
+        We dedicate hours to researching, testing, and analyzing products across various categories.
+        Our experts create detailed reviews, buying guides, and comparisons to make your choice easier.
+      </p>
+
+      <h2>Our Commitment</h2>
+      <ul>
+        <li><strong>Honesty:</strong> We offer sincere opinions, highlighting both pros and cons.</li>
+        <li><strong>Quality:</strong> We only recommend products that meet our standards.</li>
+        <li><strong>Transparency:</strong> We are clear about how we make money (see affiliate disclosure).</li>
+      </ul>
+
+      <h2>How We Work</h2>
+      <p>
+        We are participants in the Amazon Associates Program. This means that when you purchase
+        a product through our links, we receive a small commission at no additional cost to you.
+        This commission helps us maintain the site and continue creating quality content.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        If you have questions, suggestions, or want to collaborate with us, feel free to contact us.
+        We value our readers' opinions and are always looking to improve.
+      </p>
+    </>
+  )}
+</LegalLayout>

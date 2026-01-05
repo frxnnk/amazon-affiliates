@@ -1,0 +1,85 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { type Lang, getTranslation, formatDate } from '@i18n/utils';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+const t = getTranslation(lang);
+
+const allReviews = await getCollection('reviews');
+const reviews = allReviews
+  .filter(r => r.data.lang === lang && r.data.status === 'published')
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
+---
+
+<BaseLayout
+  title={t('nav.reviews')}
+  description={lang === 'es' ? 'Reviews detalladas y analisis de productos' : 'Detailed product reviews and analysis'}
+  lang={lang}
+>
+  <div class="max-w-7xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        {t('nav.reviews')}
+      </h1>
+      <p class="text-gray-600">
+        {lang === 'es'
+          ? 'Analisis detallados para ayudarte a tomar la mejor decision'
+          : 'Detailed analysis to help you make the best decision'}
+      </p>
+    </div>
+
+    {reviews.length > 0 ? (
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {reviews.map((review) => (
+          <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <a href={`/${lang}/reviews/${review.data.reviewId}`}>
+              <img
+                src={review.data.featuredImage.url}
+                alt={review.data.featuredImage.alt}
+                class="w-full h-48 object-cover"
+              />
+            </a>
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-3xl font-bold text-primary-600">{review.data.overallScore}/10</span>
+                <span class="text-xs text-gray-500">{formatDate(review.data.publishedAt, lang)}</span>
+              </div>
+              <h2 class="font-semibold text-lg mb-2">
+                <a href={`/${lang}/reviews/${review.data.reviewId}`} class="hover:text-primary-600">
+                  {review.data.title}
+                </a>
+              </h2>
+              <p class="text-gray-600 text-sm line-clamp-2 mb-4">{review.data.excerpt}</p>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">{t('review.writtenBy')}</span>
+                <span class="text-xs font-medium text-gray-700">{review.data.author.name}</span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-16">
+        <div class="text-gray-400 mb-4">
+          <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">
+          {lang === 'es' ? 'Aun no hay reviews' : 'No reviews yet'}
+        </h2>
+        <p class="text-gray-500">
+          {lang === 'es' ? 'Estamos preparando analisis detallados. Vuelve pronto!' : 'We are preparing detailed analysis. Come back soon!'}
+        </p>
+      </div>
+    )}
+  </div>
+</BaseLayout>

@@ -1,0 +1,32 @@
+{
+  "site": {
+    "name": "BestDeals Hub",
+    "tagline": {
+      "es": "Las mejores ofertas y reviews de productos",
+      "en": "Best deals and product reviews"
+    },
+    "url": "https://amazon-affiliates.vercel.app",
+    "defaultLocale": "es",
+    "locales": ["es", "en"]
+  },
+  "amazon": {
+    "associates": {
+      "es": {
+        "tag": "tutienda-21",
+        "marketplace": "amazon.es"
+      },
+      "en": {
+        "tag": "yourstore-20",
+        "marketplace": "amazon.com"
+      }
+    }
+  },
+  "seo": {
+    "titleTemplate": "%s | BestDeals Hub",
+    "defaultImage": "/images/og/default.jpg"
+  },
+  "social": {
+    "twitter": "@bestdealshub",
+    "facebook": "bestdealshub"
+  }
+}

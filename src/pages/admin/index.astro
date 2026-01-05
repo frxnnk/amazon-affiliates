@@ -1,0 +1,171 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getCollection } from 'astro:content';
+
+let allProducts: any[] = [];
+let allLists: any[] = [];
+
+try {
+  allProducts = await getCollection('products');
+} catch { /* colección vacía */ }
+
+try {
+  allLists = await getCollection('lists');
+} catch { /* colección vacía */ }
+
+const stats = {
+  products: {
+    total: allProducts.length,
+    published: allProducts.filter(p => p.data.status === 'published').length,
+    drafts: allProducts.filter(p => p.data.status === 'draft').length,
+  },
+  lists: {
+    total: allLists.length,
+    published: allLists.filter(l => l.data.status === 'published').length,
+    drafts: allLists.filter(l => l.data.status === 'draft').length,
+  }
+};
+---
+
+<AdminLayout title="Dashboard">
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-card h3 {
+      font-size: 0.875rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    .stat-meta {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      margin-top: 0.5rem;
+    }
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .action-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .action-icon {
+      width: 48px;
+      height: 48px;
+      background: #fef3c7;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    .action-text h4 {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .action-text p {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 1rem;
+    }
+  </style>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>Productos</h3>
+      <div class="stat-value">{stats.products.total}</div>
+      <div class="stat-meta">
+        {stats.products.published} publicados, {stats.products.drafts} borradores
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <h3>Listas</h3>
+      <div class="stat-value">{stats.lists.total}</div>
+      <div class="stat-meta">
+        {stats.lists.published} publicadas, {stats.lists.drafts} borradores
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Acciones rapidas</h2>
+
+  <div class="quick-actions">
+    <a href="/admin/products/import" class="action-card" style="background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);">
+      <div class="action-icon" style="background: rgba(0,0,0,0.2);">&#128279;</div>
+      <div class="action-text">
+        <h4 style="color: #000;">Importar de Amazon</h4>
+        <p style="color: rgba(0,0,0,0.7);">Pegar link y auto-generar</p>
+      </div>
+    </a>
+
+    <a href="/admin/products/new" class="action-card">
+      <div class="action-icon">+</div>
+      <div class="action-text">
+        <h4>Nuevo Producto</h4>
+        <p>Agregar un producto</p>
+      </div>
+    </a>
+
+    <a href="/admin/lists/new" class="action-card">
+      <div class="action-icon">+</div>
+      <div class="action-text">
+        <h4>Nueva Lista</h4>
+        <p>Crear una wishlist</p>
+      </div>
+    </a>
+
+    <a href="/admin/products" class="action-card">
+      <div class="action-icon">&#128230;</div>
+      <div class="action-text">
+        <h4>Ver Productos</h4>
+        <p>Gestionar productos</p>
+      </div>
+    </a>
+
+    <a href="/admin/lists" class="action-card">
+      <div class="action-icon">&#128203;</div>
+      <div class="action-text">
+        <h4>Ver Listas</h4>
+        <p>Gestionar wishlists</p>
+      </div>
+    </a>
+  </div>
+</AdminLayout>

@@ -1,0 +1,60 @@
+---
+import { getAlternateLanguages, languages, type Lang } from '@i18n/utils';
+
+interface Props {
+  currentLang: Lang;
+  currentPath: string;
+}
+
+const { currentLang, currentPath } = Astro.props;
+const alternates = getAlternateLanguages(currentPath, currentLang);
+---
+
+<div class="language-switcher relative">
+  <button
+    type="button"
+    class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition-colors"
+    aria-label="Change language"
+    id="lang-toggle"
+  >
+    <span class="uppercase">{currentLang}</span>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+
+  <div id="lang-dropdown" class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+    <a
+      href={`/${currentLang}${currentPath.replace(/^\/(es|en)/, '')}`}
+      class="flex items-center gap-2 px-4 py-2 text-sm text-primary-600 bg-primary-50"
+    >
+      <span class="uppercase font-medium">{currentLang}</span>
+      <span>{languages[currentLang].name}</span>
+    </a>
+    {alternates.map(({ lang, url }) => (
+      <a
+        href={url}
+        class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        hreflang={lang}
+      >
+        <span class="uppercase font-medium">{lang}</span>
+        <span>{languages[lang].name}</span>
+      </a>
+    ))}
+  </div>
+</div>
+
+<script>
+  const toggle = document.getElementById('lang-toggle');
+  const dropdown = document.getElementById('lang-dropdown');
+
+  toggle?.addEventListener('click', () => {
+    dropdown?.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!toggle?.contains(e.target as Node) && !dropdown?.contains(e.target as Node)) {
+      dropdown?.classList.add('hidden');
+    }
+  });
+</script>
