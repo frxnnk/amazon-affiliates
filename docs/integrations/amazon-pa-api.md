@@ -83,7 +83,7 @@ Navigate Amazon's category tree.
    AMAZON_PA_API_ACCESS_KEY=xxx
    AMAZON_PA_API_SECRET_KEY=xxx
    AMAZON_PA_API_PARTNER_TAG_ES=tutienda-21
-   AMAZON_PA_API_PARTNER_TAG_EN=yourstore-20
+   AMAZON_PA_API_PARTNER_TAG_EN=bestdeal0ee40-20
    ```
 
 2. **Create API Client** (`src/lib/amazon-pa-api.ts`)
@@ -215,7 +215,7 @@ async function signRequest(
 
 ```typescript
 const payload = {
-  PartnerTag: 'yourstore-20',
+  PartnerTag: 'bestdeal0ee40-20',
   PartnerType: 'Associates',
   Marketplace: 'www.amazon.com',
   ItemIds: ['B0EXAMPLE1'],
