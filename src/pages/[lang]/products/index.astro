@@ -13,6 +13,13 @@ export function getStaticPaths() {
 }
 
 const { lang } = Astro.params as { lang: Lang };
+
+// Validate lang parameter - redirect to default locale if invalid
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/products/', 302);
+}
+
 const t = getTranslation(lang);
 
 const allProducts = await getCollection('products');
@@ -63,7 +70,7 @@ const products = allProducts
       </a>
       {categories.categories.map((cat) => (
         <a
-          href={`/${lang}/category/${cat.id}`}
+          href={`/${lang}/categories/${cat.id}`}
           class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition-colors"
         >
           {cat.name[lang]}
