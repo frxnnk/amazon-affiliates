@@ -1,0 +1,401 @@
+---
+import { type Lang, getTranslation } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getTranslation(lang);
+
+const placeholderText = lang === 'es' ? 'Buscar productos...' : 'Search products...';
+const noResultsText = lang === 'es' ? 'No se encontraron resultados' : 'No results found';
+const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
+---
+
+<div id="search-modal" class="search-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="search-backdrop"></div>
+  <div class="search-container">
+    <div class="search-header">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder={placeholderText}
+          autocomplete="off"
+          autofocus
+        />
+        <button type="button" id="search-close" class="search-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="search-results" class="search-results">
+      <div class="search-empty" id="search-empty">
+        <p>{lang === 'es' ? 'Escribe para buscar productos' : 'Type to search products'}</p>
+      </div>
+      <div class="search-loading hidden" id="search-loading">
+        <div class="spinner"></div>
+        <p>{searchingText}</p>
+      </div>
+      <div class="search-no-results hidden" id="search-no-results">
+        <p>{noResultsText}</p>
+      </div>
+      <div id="search-results-list" class="search-results-list"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10vh;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+  }
+
+  .search-modal[aria-hidden="false"] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .search-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 24, 21, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .search-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 1rem;
+    background: var(--color-white, #FFFFFF);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(26, 24, 21, 0.2);
+    overflow: hidden;
+    transform: translateY(-20px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .search-modal[aria-hidden="false"] .search-container {
+    transform: translateY(0);
+  }
+
+  .search-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-sand, #E8E4DD);
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .search-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--color-stone, #6B6560);
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 1.125rem;
+    font-family: inherit;
+    color: var(--color-ink, #1A1815);
+    background: transparent;
+  }
+
+  .search-input::placeholder {
+    color: var(--color-mist, #C4BFB8);
+  }
+
+  .search-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: var(--color-cream, #FDFBF7);
+    border: none;
+    border-radius: 8px;
+    color: var(--color-stone, #6B6560);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .search-close:hover {
+    background: var(--color-sand, #E8E4DD);
+    color: var(--color-ink, #1A1815);
+  }
+
+  .search-close svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .search-results {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .search-empty,
+  .search-loading,
+  .search-no-results {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .search-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--color-sand, #E8E4DD);
+    border-top-color: var(--color-honey, #C8956C);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .search-results-list {
+    padding: 0.5rem;
+  }
+
+  .search-results-list:empty {
+    display: none;
+  }
+
+  /* Result item styles - will be added dynamically */
+  :global(.search-result-item) {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: background 0.2s;
+  }
+
+  :global(.search-result-item:hover) {
+    background: var(--color-cream, #FDFBF7);
+  }
+
+  :global(.search-result-image) {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--color-cream-dark, #F7F4EE);
+    border-radius: 8px;
+    object-fit: contain;
+    padding: 0.25rem;
+  }
+
+  :global(.search-result-content) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.search-result-brand) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-stone, #6B6560);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.search-result-title) {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink, #1A1815);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.search-result-price) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-honey-dark, #A67B5B);
+  }
+</style>
+
+<script>
+  import Fuse from 'fuse.js';
+
+  interface Product {
+    productId: string;
+    title: string;
+    brand: string;
+    price: number;
+    currency: string;
+    featuredImage: { url: string; alt: string };
+    lang: string;
+  }
+
+  let fuse: Fuse<Product> | null = null;
+  let products: Product[] = [];
+  let currentLang = document.documentElement.lang || 'es';
+
+  const modal = document.getElementById('search-modal');
+  const trigger = document.getElementById('search-trigger');
+  const closeBtn = document.getElementById('search-close');
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const resultsContainer = document.getElementById('search-results-list');
+  const emptyState = document.getElementById('search-empty');
+  const loadingState = document.getElementById('search-loading');
+  const noResultsState = document.getElementById('search-no-results');
+
+  // Fetch products and initialize Fuse
+  async function initSearch() {
+    try {
+      const response = await fetch(`/api/search/products?lang=${currentLang}`);
+      products = await response.json();
+
+      fuse = new Fuse(products, {
+        keys: ['title', 'brand'],
+        threshold: 0.4,
+        includeScore: true,
+      });
+    } catch (error) {
+      console.error('Failed to load search index:', error);
+    }
+  }
+
+  function openModal() {
+    modal?.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    input?.focus();
+
+    if (!fuse) {
+      initSearch();
+    }
+  }
+
+  function closeModal() {
+    modal?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (input) input.value = '';
+    showState('empty');
+    if (resultsContainer) resultsContainer.innerHTML = '';
+  }
+
+  function showState(state: 'empty' | 'loading' | 'no-results' | 'results') {
+    emptyState?.classList.toggle('hidden', state !== 'empty');
+    loadingState?.classList.toggle('hidden', state !== 'loading');
+    noResultsState?.classList.toggle('hidden', state !== 'no-results');
+  }
+
+  function formatPrice(price: number, currency: string): string {
+    return new Intl.NumberFormat(currentLang === 'es' ? 'es-ES' : 'en-US', {
+      style: 'currency',
+      currency,
+    }).format(price);
+  }
+
+  function performSearch(query: string) {
+    if (!query.trim()) {
+      showState('empty');
+      if (resultsContainer) resultsContainer.innerHTML = '';
+      return;
+    }
+
+    if (!fuse) {
+      showState('loading');
+      return;
+    }
+
+    const results = fuse.search(query, { limit: 8 });
+
+    if (results.length === 0) {
+      showState('no-results');
+      if (resultsContainer) resultsContainer.innerHTML = '';
+      return;
+    }
+
+    showState('results');
+
+    if (resultsContainer) {
+      resultsContainer.innerHTML = results
+        .map(({ item }) => `
+          <a href="/${item.lang}/products/${item.productId}" class="search-result-item">
+            <img
+              src="${item.featuredImage?.url || '/placeholder.jpg'}"
+              alt="${item.featuredImage?.alt || item.title}"
+              class="search-result-image"
+              loading="lazy"
+            />
+            <div class="search-result-content">
+              <span class="search-result-brand">${item.brand}</span>
+              <h4 class="search-result-title">${item.title}</h4>
+            </div>
+            <span class="search-result-price">${formatPrice(item.price, item.currency)}</span>
+          </a>
+        `)
+        .join('');
+    }
+  }
+
+  // Event listeners
+  trigger?.addEventListener('click', openModal);
+  closeBtn?.addEventListener('click', closeModal);
+
+  modal?.querySelector('.search-backdrop')?.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.getAttribute('aria-hidden') === 'false') {
+      closeModal();
+    }
+    // Cmd/Ctrl + K to open search
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      openModal();
+    }
+  });
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  input?.addEventListener('input', (e) => {
+    const query = (e.target as HTMLInputElement).value;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => performSearch(query), 150);
+  });
+
+  // Handle navigation from search results
+  resultsContainer?.addEventListener('click', (e) => {
+    const link = (e.target as HTMLElement).closest('a');
+    if (link) {
+      closeModal();
+    }
+  });
+</script>
