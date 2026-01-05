@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
 import clerk from '@clerk/astro';
+import db from '@astrojs/db';
 
 // https://astro.build/config
 export default defineConfig({
@@ -26,6 +27,7 @@ export default defineConfig({
   adapter: vercel(),
 
   integrations: [
+    db(),
     clerk(),
     sitemap({
       filter: (page) => !page.includes('/admin'),

@@ -2,6 +2,8 @@
 import '../styles/global.css';
 import Header from '@components/common/Header.astro';
 import Footer from '@components/common/Footer.astro';
+import OrganizationSchema from '@components/seo/OrganizationSchema.astro';
+import WebSiteSchema from '@components/seo/WebSiteSchema.astro';
 import { type Lang, getTranslation } from '@i18n/utils';
 import siteConfig from '@data/site-config.json';
 
@@ -61,10 +63,14 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <link rel="alternate" hreflang="en" href={new URL(`/en${Astro.url.pathname.replace(/^\/(es|en)/, '')}`, Astro.site)} />
     <link rel="alternate" hreflang="x-default" href={new URL('/es' + Astro.url.pathname.replace(/^\/(es|en)/, ''), Astro.site)} />
 
-    <!-- Fonts -->
+    <!-- Fonts: Fraunces (display) + DM Sans (body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet" />
+
+    <!-- Structured Data -->
+    <OrganizationSchema lang={lang} />
+    <WebSiteSchema lang={lang} />
   </head>
   <body class="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
     <Header lang={lang} currentPath={Astro.url.pathname} />

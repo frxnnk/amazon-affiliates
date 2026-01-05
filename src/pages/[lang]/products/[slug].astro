@@ -5,8 +5,11 @@ import PriceDisplay from '@components/affiliate/PriceDisplay.astro';
 import ProductRating from '@components/products/ProductRating.astro';
 import ProsConsList from '@components/products/ProsConsList.astro';
 import ProductGrid from '@components/products/ProductGrid.astro';
+import ProductSchema from '@components/seo/ProductSchema.astro';
+import BreadcrumbSchema from '@components/seo/BreadcrumbSchema.astro';
 import { getCollection, render } from 'astro:content';
 import { type Lang, getTranslation, formatDate } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
 
 export async function getStaticPaths() {
   const products = await getCollection('products');
@@ -46,7 +49,42 @@ const relatedProducts = data.relatedProducts
         isFeatured: p.data.isFeatured,
       }))
   : [];
+
+// Build URLs for schema
+const siteUrl = siteConfig.site.url;
+const productUrl = `${siteUrl}/${lang}/products/${data.productId}`;
+const productsUrl = `${siteUrl}/${lang}/products`;
+const homeUrl = `${siteUrl}/${lang}`;
+
+// Breadcrumb items
+const breadcrumbItems = [
+  { name: lang === 'es' ? 'Inicio' : 'Home', url: homeUrl },
+  { name: lang === 'es' ? 'Productos' : 'Products', url: productsUrl },
+  { name: data.title, url: productUrl },
+];
+
+// Product images for schema
+const productImages = [data.featuredImage.url];
+if (data.gallery) {
+  productImages.push(...data.gallery.map(img => img.url));
+}
 ---
+
+<ProductSchema
+  name={data.title}
+  description={data.shortDescription || data.description}
+  image={productImages}
+  brand={data.brand}
+  sku={data.asin}
+  price={data.price}
+  originalPrice={data.originalPrice}
+  currency={data.currency}
+  rating={data.rating}
+  reviewCount={data.totalReviews}
+  url={productUrl}
+/>
+
+<BreadcrumbSchema items={breadcrumbItems} />
 
 <ProductLayout
   title={data.title}

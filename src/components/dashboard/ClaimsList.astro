@@ -1,0 +1,365 @@
+---
+import { formatCurrency } from '@lib/db';
+
+interface Claim {
+  id: number;
+  amazonOrderId: string;
+  productTitle: string;
+  claimedAmount: number;
+  status: string;
+  createdAt: Date;
+  adminNotes?: string | null;
+}
+
+interface Props {
+  claims: Claim[];
+  lang: string;
+}
+
+const { claims, lang } = Astro.props;
+
+const labels = {
+  en: {
+    title: 'Your Claims',
+    empty: 'No claims yet. Submit a purchase claim to start earning cashback!',
+    submitClaim: 'Submit Claim',
+    orderId: 'Order',
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  },
+  es: {
+    title: 'Tus Reclamos',
+    empty: 'Sin reclamos aun. Envia un reclamo de compra para empezar a ganar cashback!',
+    submitClaim: 'Enviar Reclamo',
+    orderId: 'Orden',
+    pending: 'Pendiente',
+    approved: 'Aprobado',
+    rejected: 'Rechazado',
+  },
+};
+
+const t = labels[lang as keyof typeof labels] || labels.en;
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(date));
+}
+---
+
+<div class="claims-card">
+  <div class="claims-header">
+    <h3 class="claims-title">{t.title}</h3>
+    <a href={`/${lang}/dashboard/claim`} class="submit-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      {t.submitClaim}
+    </a>
+  </div>
+
+  {claims.length === 0 ? (
+    <div class="claims-empty">
+      <div class="empty-illustration">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <p>{t.empty}</p>
+      <a href={`/${lang}/dashboard/claim`} class="empty-cta">
+        {t.submitClaim}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  ) : (
+    <div class="claims-list">
+      {claims.map((claim) => (
+        <div class:list={['claim-item', `status-${claim.status}`]}>
+          <div class="claim-main">
+            <div class="claim-product">{claim.productTitle}</div>
+            <div class="claim-meta">
+              <span class="claim-order">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                {claim.amazonOrderId}
+              </span>
+              <span class="claim-date">{formatDate(claim.createdAt)}</span>
+            </div>
+          </div>
+          <div class="claim-status-section">
+            <span class="claim-amount">{formatCurrency(claim.claimedAmount)}</span>
+            <span class:list={['claim-status', claim.status]}>
+              {claim.status === 'pending' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+              )}
+              {claim.status === 'approved' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              )}
+              {claim.status === 'rejected' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              )}
+              {t[claim.status as keyof typeof t] || claim.status}
+            </span>
+            {claim.adminNotes && claim.status === 'rejected' && (
+              <span class="claim-notes">{claim.adminNotes}</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+<style>
+  .claims-card {
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 20px;
+    padding: 1.5rem;
+  }
+
+  .claims-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-sand, #E8E4DD);
+  }
+
+  .claims-title {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-ink, #1A1815);
+    margin: 0;
+  }
+
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-honey, #C8956C);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .submit-btn:hover {
+    background: var(--color-honey-dark, #A67B5B);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(200, 149, 108, 0.3);
+  }
+
+  /* Empty State */
+  .claims-empty {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+  }
+
+  .empty-illustration {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    color: var(--color-mist, #C4BFB8);
+  }
+
+  .empty-illustration svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .claims-empty p {
+    font-size: 0.9375rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0 0 1.5rem;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .empty-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .empty-cta:hover {
+    background: var(--color-ink-light, #2D2926);
+    transform: translateY(-2px);
+  }
+
+  /* Claims List */
+  .claims-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .claim-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    background: var(--color-cream, #FDFBF7);
+    border-radius: 12px;
+    border-left: 3px solid transparent;
+    gap: 1rem;
+    transition: all 0.2s;
+  }
+
+  .claim-item:hover {
+    background: var(--color-cream-dark, #F7F4EE);
+  }
+
+  .claim-item.status-pending {
+    border-left-color: var(--color-honey, #C8956C);
+  }
+
+  .claim-item.status-approved {
+    border-left-color: var(--color-sage, #7D8B6A);
+  }
+
+  .claim-item.status-rejected {
+    border-left-color: var(--color-terra, #C17B5E);
+  }
+
+  .claim-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .claim-product {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink, #1A1815);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .claim-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--color-stone-light, #9C9690);
+  }
+
+  .claim-order {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: var(--font-mono, 'SF Mono', monospace);
+    letter-spacing: 0.02em;
+  }
+
+  .claim-status-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .claim-amount {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--color-ink, #1A1815);
+  }
+
+  .claim-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .claim-status.pending {
+    background: rgba(200, 149, 108, 0.15);
+    color: var(--color-honey-dark, #A67B5B);
+  }
+
+  .claim-status.approved {
+    background: rgba(125, 139, 106, 0.15);
+    color: #5A6B4D;
+  }
+
+  .claim-status.rejected {
+    background: rgba(193, 123, 94, 0.15);
+    color: #A66B4E;
+  }
+
+  .claim-notes {
+    font-size: 0.6875rem;
+    color: var(--color-terra, #C17B5E);
+    max-width: 150px;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .claims-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1rem;
+    }
+
+    .submit-btn {
+      justify-content: center;
+    }
+
+    .claim-item {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .claim-status-section {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .claim-notes {
+      text-align: left;
+      max-width: none;
+    }
+  }
+</style>

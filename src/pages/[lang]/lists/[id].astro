@@ -2,8 +2,11 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import ProductCard from '@components/products/ProductCard.astro';
 import Badge from '@components/ui/Badge.astro';
+import ItemListSchema from '@components/seo/ItemListSchema.astro';
+import BreadcrumbSchema from '@components/seo/BreadcrumbSchema.astro';
 import { getCollection, render } from 'astro:content';
 import { type Lang, getTranslation, formatDate } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
 
 // Obtener parametros de la URL
 const { lang, id } = Astro.params as { lang: Lang; id: string };
@@ -57,7 +60,37 @@ const listTypeLabels = {
   'guide': { es: 'Guia', en: 'Guide' },
   'top-picks': { es: 'Top Picks', en: 'Top Picks' }
 };
+
+// Build URLs for schema
+const siteUrl = siteConfig.site.url;
+const listUrl = `${siteUrl}/${lang}/lists/${id}`;
+const listsUrl = `${siteUrl}/${lang}/lists`;
+const homeUrl = `${siteUrl}/${lang}`;
+
+// Breadcrumb items
+const breadcrumbItems = [
+  { name: lang === 'es' ? 'Inicio' : 'Home', url: homeUrl },
+  { name: lang === 'es' ? 'Listas' : 'Lists', url: listsUrl },
+  { name: data.title, url: listUrl },
+];
+
+// ItemList schema items
+const itemListItems = listProducts.map((item, index) => ({
+  name: item.product?.title || '',
+  url: `${siteUrl}/${lang}/products/${item.product?.productId}`,
+  image: item.product?.featuredImage?.url,
+  position: index + 1,
+})).filter(item => item.name);
 ---
+
+<ItemListSchema
+  name={data.title}
+  description={data.excerpt}
+  items={itemListItems}
+  url={listUrl}
+/>
+
+<BreadcrumbSchema items={breadcrumbItems} />
 
 <BaseLayout
   title={data.title}

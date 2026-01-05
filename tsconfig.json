@@ -10,7 +10,9 @@
       "@utils/*": ["src/utils/*"],
       "@i18n/*": ["src/i18n/*"],
       "@data/*": ["src/data/*"],
-      "@content/*": ["src/content/*"]
+      "@content/*": ["src/content/*"],
+      "@lib/*": ["src/lib/*"],
+      "@db/*": ["src/db/*"]
     }
   }
 }

@@ -1,0 +1,41 @@
+---
+/**
+ * ItemList Schema Component
+ * Generates JSON-LD structured data for product lists/collections
+ * https://developers.google.com/search/docs/appearance/structured-data/carousel
+ */
+
+interface ListItem {
+  name: string;
+  url: string;
+  image?: string;
+  position: number;
+}
+
+interface Props {
+  name: string;
+  description?: string;
+  items: ListItem[];
+  url: string;
+}
+
+const { name, description, items, url } = Astro.props;
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name,
+  description,
+  url,
+  numberOfItems: items.length,
+  itemListElement: items.map((item, index) => ({
+    '@type': 'ListItem',
+    position: item.position || index + 1,
+    name: item.name,
+    url: item.url,
+    ...(item.image && { image: item.image }),
+  })),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />

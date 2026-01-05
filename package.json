@@ -9,6 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/db": "^0.18.3",
     "@astrojs/sitemap": "^3.6.0",
     "@astrojs/vercel": "^9.0.2",
     "@clerk/astro": "^2.16.10",
@@ -20,6 +21,9 @@
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@astrojs/check": "^0.9.6",
+    "@playwright/test": "^1.57.0",
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "^5.9.3"
   }
 }

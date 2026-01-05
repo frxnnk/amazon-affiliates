@@ -49,6 +49,47 @@ const latestLists = allLists
   .filter(l => l.data.lang === lang && l.data.status === 'published' && l.data.visibility === 'public')
   .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
   .slice(0, 3);
+
+const heroContent = {
+  es: {
+    headline: 'Compra inteligente.',
+    subheadline: 'Gana cashback.',
+    description: 'Descubre productos cuidadosamente seleccionados y gana dinero con cada compra en Amazon. Simple, transparente, sin trucos.',
+    cta1: 'Explorar productos',
+    cta2: 'Como funciona',
+  },
+  en: {
+    headline: 'Shop smarter.',
+    subheadline: 'Earn cashback.',
+    description: 'Discover curated products and earn money on every Amazon purchase. Simple, transparent, no gimmicks.',
+    cta1: 'Explore products',
+    cta2: 'How it works',
+  },
+};
+
+const howItWorksContent = {
+  es: {
+    title: 'Como funciona',
+    steps: [
+      { number: '01', title: 'Explora', description: 'Encuentra productos de calidad en nuestras guias y reviews.' },
+      { number: '02', title: 'Compra', description: 'Haz clic y compra en Amazon como siempre.' },
+      { number: '03', title: 'Reclama', description: 'Envia tu numero de pedido para verificacion.' },
+      { number: '04', title: 'Gana', description: 'Recibe tu cashback cuando alcances el minimo.' },
+    ],
+  },
+  en: {
+    title: 'How it works',
+    steps: [
+      { number: '01', title: 'Explore', description: 'Find quality products in our guides and reviews.' },
+      { number: '02', title: 'Purchase', description: 'Click through and buy on Amazon as usual.' },
+      { number: '03', title: 'Claim', description: 'Submit your order number for verification.' },
+      { number: '04', title: 'Earn', description: 'Receive your cashback when you hit the minimum.' },
+    ],
+  },
+};
+
+const hero = heroContent[lang];
+const howItWorks = howItWorksContent[lang];
 ---
 
 <BaseLayout
@@ -56,41 +97,107 @@ const latestLists = allLists
   lang={lang}
 >
   <!-- Hero Section -->
-  <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
-    <div class="max-w-7xl mx-auto px-4 text-center">
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-        {siteConfig.site.name}
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-gradient"></div>
+      <div class="hero-pattern"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge animate-in" style="--delay: 0ms;">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span>{lang === 'es' ? 'Hasta 10% de cashback' : 'Up to 10% cashback'}</span>
+      </div>
+
+      <h1 class="hero-headline animate-in" style="--delay: 100ms;">
+        <span class="headline-main">{hero.headline}</span>
+        <span class="headline-accent">{hero.subheadline}</span>
       </h1>
-      <p class="text-xl md:text-2xl text-primary-100 mb-8 max-w-2xl mx-auto">
-        {siteConfig.site.tagline[lang]}
+
+      <p class="hero-description animate-in" style="--delay: 200ms;">
+        {hero.description}
       </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <Button href={`/${lang}/products`} variant="secondary" size="lg">
-          {t('nav.products')}
+
+      <div class="hero-actions animate-in" style="--delay: 300ms;">
+        <Button href={`/${lang}/products`} variant="primary" size="lg">
+          {hero.cta1}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         </Button>
-        <Button href={`/${lang}/deals`} variant="outline" size="lg" class="border-white text-white hover:bg-white/10">
-          {t('nav.deals')}
+        <Button href="#how-it-works" variant="outline" size="lg">
+          {hero.cta2}
         </Button>
+      </div>
+
+      <div class="hero-stats animate-in" style="--delay: 400ms;">
+        <div class="stat">
+          <span class="stat-value">2%</span>
+          <span class="stat-label">{lang === 'es' ? 'Cashback base' : 'Base cashback'}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">$15</span>
+          <span class="stat-label">{lang === 'es' ? 'Minimo de retiro' : 'Min. payout'}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">24h</span>
+          <span class="stat-label">{lang === 'es' ? 'Verificacion' : 'Verification'}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="how-it-works">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-eyebrow">{lang === 'es' ? 'Proceso simple' : 'Simple process'}</span>
+        <h2 class="section-title">{howItWorks.title}</h2>
+      </div>
+
+      <div class="steps-grid">
+        {howItWorks.steps.map((step, index) => (
+          <div class="step-card" style={`--step-delay: ${index * 100}ms;`}>
+            <span class="step-number">{step.number}</span>
+            <h3 class="step-title">{step.title}</h3>
+            <p class="step-description">{step.description}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
 
   <!-- Featured Products -->
-  <section class="py-16 bg-white">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-          {lang === 'es' ? 'Productos Destacados' : 'Featured Products'}
-        </h2>
-        <Button href={`/${lang}/products`} variant="ghost">
-          {t('common.seeAll')} &rarr;
-        </Button>
+  <section class="products-section">
+    <div class="section-container">
+      <div class="section-header-row">
+        <div>
+          <span class="section-eyebrow">{lang === 'es' ? 'Seleccion curada' : 'Curated selection'}</span>
+          <h2 class="section-title">
+            {lang === 'es' ? 'Productos destacados' : 'Featured products'}
+          </h2>
+        </div>
+        <a href={`/${lang}/products`} class="see-all-link">
+          {t('common.seeAll')}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
 
       {featuredProducts.length > 0 ? (
         <ProductGrid products={featuredProducts} lang={lang} columns={3} />
       ) : (
-        <div class="text-center py-12 text-gray-500">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
           <p>{lang === 'es' ? 'Proximamente productos destacados' : 'Featured products coming soon'}</p>
         </div>
       )}
@@ -98,85 +205,118 @@ const latestLists = allLists
   </section>
 
   <!-- Latest Reviews -->
-  <section class="py-16 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-          {lang === 'es' ? 'Ultimas Reviews' : 'Latest Reviews'}
-        </h2>
-        <Button href={`/${lang}/reviews`} variant="ghost">
-          {t('common.seeAll')} &rarr;
-        </Button>
+  <section class="reviews-section">
+    <div class="section-container">
+      <div class="section-header-row">
+        <div>
+          <span class="section-eyebrow">{lang === 'es' ? 'Analisis experto' : 'Expert analysis'}</span>
+          <h2 class="section-title">
+            {lang === 'es' ? 'Ultimas reviews' : 'Latest reviews'}
+          </h2>
+        </div>
+        <a href={`/${lang}/reviews`} class="see-all-link">
+          {t('common.seeAll')}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
 
       {latestReviews.length > 0 ? (
-        <div class="grid md:grid-cols-3 gap-6">
-          {latestReviews.map((review) => (
-            <article class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              <img
-                src={review.data.featuredImage.url}
-                alt={review.data.featuredImage.alt}
-                class="w-full h-48 object-cover"
-              />
-              <div class="p-6">
-                <div class="flex items-center gap-2 mb-3">
-                  <span class="text-2xl font-bold text-primary-600">{review.data.overallScore}/10</span>
+        <div class="reviews-grid">
+          {latestReviews.map((review, index) => (
+            <article class="review-card" style={`--card-delay: ${index * 100}ms;`}>
+              <a href={`/${lang}/reviews/${review.data.reviewId}`} class="review-image-link">
+                <div class="review-image">
+                  <img
+                    src={review.data.featuredImage.url}
+                    alt={review.data.featuredImage.alt}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div class="review-score">
+                    <span class="score-value">{review.data.overallScore}</span>
+                    <span class="score-max">/10</span>
+                  </div>
                 </div>
-                <h3 class="font-semibold text-lg mb-2">
-                  <a href={`/${lang}/reviews/${review.data.reviewId}`} class="hover:text-primary-600">
+              </a>
+              <div class="review-content">
+                <h3 class="review-title">
+                  <a href={`/${lang}/reviews/${review.data.reviewId}`}>
                     {review.data.title}
                   </a>
                 </h3>
-                <p class="text-gray-600 text-sm line-clamp-2">{review.data.excerpt}</p>
+                <p class="review-excerpt">{review.data.excerpt}</p>
               </div>
             </article>
           ))}
         </div>
       ) : (
-        <div class="text-center py-12 text-gray-500">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
           <p>{lang === 'es' ? 'Proximamente reviews' : 'Reviews coming soon'}</p>
         </div>
       )}
     </div>
   </section>
 
-  <!-- Latest Lists -->
-  <section class="py-16 bg-white">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-          {lang === 'es' ? 'Guias y Comparativas' : 'Guides & Comparisons'}
-        </h2>
-        <Button href={`/${lang}/lists`} variant="ghost">
-          {t('common.seeAll')} &rarr;
-        </Button>
+  <!-- Latest Lists/Guides -->
+  <section class="lists-section">
+    <div class="section-container">
+      <div class="section-header-row">
+        <div>
+          <span class="section-eyebrow">{lang === 'es' ? 'Comparativas' : 'Comparisons'}</span>
+          <h2 class="section-title">
+            {lang === 'es' ? 'Guias y comparativas' : 'Guides & comparisons'}
+          </h2>
+        </div>
+        <a href={`/${lang}/lists`} class="see-all-link">
+          {t('common.seeAll')}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
 
       {latestLists.length > 0 ? (
-        <div class="grid md:grid-cols-3 gap-6">
-          {latestLists.map((list) => (
-            <article class="bg-gray-50 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors">
-              <img
-                src={list.data.featuredImage.url}
-                alt={list.data.featuredImage.alt}
-                class="w-full h-48 object-cover"
-              />
-              <div class="p-6">
-                <span class="text-xs font-medium text-primary-600 uppercase tracking-wide">
+        <div class="lists-grid">
+          {latestLists.map((list, index) => (
+            <article class="list-card" style={`--card-delay: ${index * 100}ms;`}>
+              <a href={`/${lang}/lists/${list.data.listId}`} class="list-image-link">
+                <div class="list-image">
+                  <img
+                    src={list.data.featuredImage.url}
+                    alt={list.data.featuredImage.alt}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </a>
+              <div class="list-content">
+                <span class="list-type">
                   {list.data.listType.replace('-', ' ')}
                 </span>
-                <h3 class="font-semibold text-lg mt-2 mb-2">
-                  <a href={`/${lang}/lists/${list.data.listId}`} class="hover:text-primary-600">
+                <h3 class="list-title">
+                  <a href={`/${lang}/lists/${list.data.listId}`}>
                     {list.data.title}
                   </a>
                 </h3>
-                <p class="text-gray-600 text-sm line-clamp-2">{list.data.excerpt}</p>
+                <p class="list-excerpt">{list.data.excerpt}</p>
               </div>
             </article>
           ))}
         </div>
       ) : (
-        <div class="text-center py-12 text-gray-500">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
           <p>{lang === 'es' ? 'Proximamente guias' : 'Guides coming soon'}</p>
         </div>
       )}
@@ -184,19 +324,676 @@ const latestLists = allLists
   </section>
 
   <!-- CTA Section -->
-  <section class="py-16 bg-gray-900 text-white">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <h2 class="text-2xl md:text-3xl font-bold mb-4">
-        {lang === 'es' ? 'Encuentra el producto perfecto' : 'Find the perfect product'}
-      </h2>
-      <p class="text-gray-400 mb-8">
-        {lang === 'es'
-          ? 'Comparamos y analizamos los mejores productos para que puedas tomar la mejor decision.'
-          : 'We compare and analyze the best products so you can make the best decision.'}
-      </p>
-      <Button href={`/${lang}/products`} size="lg">
-        {lang === 'es' ? 'Explorar Productos' : 'Explore Products'}
-      </Button>
+  <section class="cta-section">
+    <div class="cta-container">
+      <div class="cta-content">
+        <h2 class="cta-title">
+          {lang === 'es' ? 'Empieza a ganar hoy' : 'Start earning today'}
+        </h2>
+        <p class="cta-description">
+          {lang === 'es'
+            ? 'Crea tu cuenta gratis y comienza a recibir cashback en cada compra. Sin costes ocultos, sin complicaciones.'
+            : 'Create your free account and start earning cashback on every purchase. No hidden fees, no hassle.'}
+        </p>
+        <div class="cta-actions">
+          <Button href={`/${lang}/dashboard`} variant="secondary" size="lg">
+            {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
+          </Button>
+          <span class="cta-note">
+            {lang === 'es' ? 'Sin tarjeta de credito' : 'No credit card required'}
+          </span>
+        </div>
+      </div>
+      <div class="cta-visual">
+        <div class="cashback-illustration">
+          <div class="coin coin-1">$</div>
+          <div class="coin coin-2">$</div>
+          <div class="coin coin-3">$</div>
+        </div>
+      </div>
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  /* Hero Section */
+  .hero {
+    position: relative;
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .hero-gradient {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, var(--color-honey-muted, #E8D5C4) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 80%, var(--color-sage-muted, #D8DFD0) 0%, transparent 50%),
+      var(--color-cream, #FDFBF7);
+  }
+
+  .hero-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--color-sand, #E8E4DD) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.4;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 6rem 1.5rem;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-honey, #C8956C);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 100px;
+    margin-bottom: 2rem;
+  }
+
+  .hero-headline {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin: 0 0 1.5rem;
+    color: var(--color-ink, #1A1815);
+  }
+
+  .headline-main {
+    display: block;
+  }
+
+  .headline-accent {
+    display: block;
+    color: var(--color-honey, #C8956C);
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .hero-description {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: var(--color-stone, #6B6560);
+    max-width: 540px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 3rem;
+  }
+
+  .hero-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 1.5rem 2rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--color-ink, #1A1815);
+    letter-spacing: -0.02em;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--color-stone, #6B6560);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 2.5rem;
+    background: var(--color-sand, #E8E4DD);
+  }
+
+  /* Animation */
+  .animate-in {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Section Styles */
+  .section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-header-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .section-eyebrow {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-honey, #C8956C);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 400;
+    color: var(--color-ink, #1A1815);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .see-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-stone, #6B6560);
+    text-decoration: none;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+
+  .see-all-link:hover {
+    color: var(--color-ink, #1A1815);
+  }
+
+  .see-all-link svg {
+    transition: transform 0.2s;
+  }
+
+  .see-all-link:hover svg {
+    transform: translateX(3px);
+  }
+
+  /* How It Works */
+  .how-it-works {
+    background: var(--color-white, #FFFFFF);
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .step-card {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: var(--color-cream, #FDFBF7);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .step-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
+  }
+
+  .step-number {
+    display: block;
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--color-honey, #C8956C);
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+
+  .step-title {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-ink, #1A1815);
+    margin: 0 0 0.5rem;
+  }
+
+  .step-description {
+    font-size: 0.875rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Products Section */
+  .products-section {
+    background: var(--color-cream, #FDFBF7);
+  }
+
+  /* Reviews Section */
+  .reviews-section {
+    background: var(--color-white, #FFFFFF);
+  }
+
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .review-card {
+    background: var(--color-cream, #FDFBF7);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .review-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
+  }
+
+  .review-image-link {
+    display: block;
+  }
+
+  .review-image {
+    position: relative;
+    aspect-ratio: 16/10;
+    background: var(--color-sand, #E8E4DD);
+    overflow: hidden;
+  }
+
+  .review-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .review-card:hover .review-image img {
+    transform: scale(1.05);
+  }
+
+  .review-score {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+    border-radius: 8px;
+  }
+
+  .score-value {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .score-max {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .review-content {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .review-title {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0 0 0.5rem;
+  }
+
+  .review-title a {
+    color: var(--color-ink, #1A1815);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .review-title a:hover {
+    color: var(--color-honey-dark, #A67B5B);
+  }
+
+  .review-excerpt {
+    font-size: 0.875rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Lists Section */
+  .lists-section {
+    background: var(--color-cream, #FDFBF7);
+  }
+
+  .lists-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .list-card {
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .list-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
+  }
+
+  .list-image-link {
+    display: block;
+  }
+
+  .list-image {
+    aspect-ratio: 16/10;
+    background: var(--color-sand, #E8E4DD);
+    overflow: hidden;
+  }
+
+  .list-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .list-card:hover .list-image img {
+    transform: scale(1.05);
+  }
+
+  .list-content {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .list-type {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-sage, #7D8B6A);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .list-title {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0.5rem 0;
+  }
+
+  .list-title a {
+    color: var(--color-ink, #1A1815);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .list-title a:hover {
+    color: var(--color-honey-dark, #A67B5B);
+  }
+
+  .list-excerpt {
+    font-size: 0.875rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    color: var(--color-mist, #C4BFB8);
+  }
+
+  .empty-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* CTA Section */
+  .cta-section {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+    overflow: hidden;
+  }
+
+  .cta-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4rem;
+  }
+
+  .cta-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 400;
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .cta-description {
+    font-size: 1.125rem;
+    color: var(--color-stone-light, #9C9690);
+    line-height: 1.6;
+    max-width: 480px;
+    margin: 0 0 2rem;
+  }
+
+  .cta-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .cta-note {
+    font-size: 0.8125rem;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .cta-visual {
+    display: none;
+  }
+
+  .cashback-illustration {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+
+  .coin {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: var(--color-honey, #C8956C);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: white;
+    box-shadow: 0 8px 24px rgba(200, 149, 108, 0.4);
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .coin-1 {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    animation-delay: 0s;
+  }
+
+  .coin-2 {
+    bottom: 20px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+    animation-delay: 0.5s;
+  }
+
+  .coin-3 {
+    bottom: 30px;
+    right: 20px;
+    width: 45px;
+    height: 45px;
+    font-size: 1.125rem;
+    animation-delay: 1s;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .steps-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .reviews-grid,
+    .lists-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .cta-visual {
+      display: block;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-stats {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stat-divider {
+      width: 3rem;
+      height: 1px;
+    }
+
+    .section-header-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .cta-container {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .cta-actions {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .hero-content {
+      padding: 4rem 1rem;
+    }
+
+    .steps-grid,
+    .reviews-grid,
+    .lists-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-container {
+      padding: 3rem 1rem;
+    }
+  }
+</style>

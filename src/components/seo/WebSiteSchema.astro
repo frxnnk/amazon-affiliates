@@ -1,0 +1,38 @@
+---
+/**
+ * WebSite Schema Component
+ * Generates JSON-LD structured data for the website with search action
+ * https://developers.google.com/search/docs/appearance/structured-data/sitelinks-searchbox
+ */
+
+import siteConfig from '@data/site-config.json';
+
+interface Props {
+  lang?: 'es' | 'en';
+}
+
+const { lang = 'es' } = Astro.props;
+
+const siteUrl = siteConfig.site.url;
+const siteName = siteConfig.site.name;
+const tagline = siteConfig.site.tagline[lang];
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  description: tagline,
+  url: siteUrl,
+  inLanguage: lang === 'es' ? 'es-ES' : 'en-US',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${siteUrl}/${lang}/products?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />
