@@ -19,18 +19,19 @@ const isUserRoute = createRouteMatcher([
   '/api/user(.*)'
 ]);
 
-// Rutas publicas dentro del area de admin
-const isPublicAdminRoute = createRouteMatcher([
+// Rutas publicas (login, callbacks)
+const isPublicAuthRoute = createRouteMatcher([
   '/admin/login(.*)',
   '/admin/sso-callback(.*)',
-  '/admin/unauthorized(.*)'
+  '/admin/unauthorized(.*)',
+  '/:lang/login(.*)'
 ]);
 
 export const onRequest = clerkMiddleware(async (auth, context) => {
   const { userId, redirectToSignIn } = auth();
 
   // Si es la pagina de login o unauthorized, permitir acceso
-  if (isPublicAdminRoute(context.request)) {
+  if (isPublicAuthRoute(context.request)) {
     return;
   }
 

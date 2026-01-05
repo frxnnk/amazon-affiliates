@@ -2,7 +2,7 @@
 import { type Lang, getTranslation } from '@i18n/utils';
 import LanguageSwitcher from './LanguageSwitcher.astro';
 import siteConfig from '@data/site-config.json';
-import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/astro/components';
+import { SignedIn, SignedOut, UserButton } from '@clerk/astro/components';
 
 interface Props {
   lang: Lang;
@@ -69,9 +69,7 @@ function isActive(href: string, exact?: boolean) {
       <!-- Auth -->
       <div class="auth-section">
         <SignedOut>
-          <SignInButton mode="modal">
-            <button class="btn-login">{t('nav.login')}</button>
-          </SignInButton>
+          <a href={`/${lang}/login`} class="btn-login">{t('nav.login')}</a>
         </SignedOut>
         <SignedIn>
           <a href={`/${lang}/dashboard`} class="btn-dashboard">
