@@ -3,13 +3,6 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 import { type Lang, getTranslation } from '@i18n/utils';
 import categories from '@data/categories.json';
 
-export function getStaticPaths() {
-  return [
-    { params: { lang: 'es' } },
-    { params: { lang: 'en' } }
-  ];
-}
-
 const { lang } = Astro.params as { lang: Lang };
 
 // Validate lang parameter
