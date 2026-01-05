@@ -3,7 +3,9 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
 // Rutas protegidas (requieren autenticacion)
 const isProtectedRoute = createRouteMatcher([
   '/admin(.*)',
-  '/api/admin(.*)'
+  '/api/admin(.*)',
+  '/:lang/dashboard(.*)',
+  '/api/user(.*)'
 ]);
 
 // Rutas publicas dentro del area de admin

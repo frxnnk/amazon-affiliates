@@ -2,9 +2,7 @@
 import PriceDisplay from '@components/affiliate/PriceDisplay.astro';
 import AffiliateLink from '@components/affiliate/AffiliateLink.astro';
 import ProductRating from './ProductRating.astro';
-import Badge from '@components/ui/Badge.astro';
 import { type Lang, getTranslation } from '@i18n/utils';
-import { getAmazonTag } from '@utils/affiliate';
 
 interface Props {
   product: {
@@ -25,52 +23,48 @@ interface Props {
     category?: string;
   };
   lang: Lang;
-  variant?: 'grid' | 'list' | 'featured' | 'compact';
-  badge?: string;
+  variant?: 'default' | 'featured' | 'compact';
+  showCashback?: boolean;
 }
 
-const { product, lang, variant = 'grid', badge } = Astro.props;
+const { product, lang, variant = 'default', showCashback = true } = Astro.props;
 const t = getTranslation(lang);
-const amazonTag = getAmazonTag(lang);
-
-const getScoreClass = (score: number) => {
-  if (score >= 9) return 'excellent';
-  if (score >= 7) return 'good';
-  if (score >= 5) return 'average';
-  if (score >= 3) return 'below-average';
-  return 'poor';
-};
 
 const discount = product.originalPrice
   ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
   : 0;
+
+// Estimated cashback (2% of price as example)
+const estimatedCashback = (product.price * 0.02).toFixed(2);
 ---
 
-<article class:list={['product-card', `product-card--${variant}`]}>
-  <!-- Badges -->
-  {badge && <span class="product-badge badge-custom">{badge}</span>}
-  {!badge && product.isFeatured && (
-    <Badge variant="featured" class="product-badge">
+<article class:list={['product-card', `variant-${variant}`]}>
+  <!-- Badge -->
+  {product.isFeatured && (
+    <span class="card-badge badge-featured">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
       {t('common.featured')}
-    </Badge>
+    </span>
   )}
-  {!badge && !product.isFeatured && product.isOnSale && discount > 0 && (
-    <span class="product-badge badge-sale">-{discount}%</span>
+  {!product.isFeatured && product.isOnSale && discount > 0 && (
+    <span class="card-badge badge-sale">-{discount}%</span>
   )}
 
   <!-- Image -->
-  <a href={`/${lang}/products/${product.productId}`} class="product-image-link">
-    <div class="product-image-wrapper">
+  <a href={`/${lang}/products/${product.productId}`} class="card-image-link">
+    <div class="card-image">
       {product.featuredImage?.url ? (
         <img
           src={product.featuredImage.url}
           alt={product.featuredImage.alt || product.title}
-          class="product-image"
           loading="lazy"
+          decoding="async"
         />
       ) : (
-        <div class="product-image-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <div class="image-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
             <path d="M21 15l-5-5L5 21" />
@@ -81,56 +75,52 @@ const discount = product.originalPrice
   </a>
 
   <!-- Content -->
-  <div class="product-content">
-    <!-- Meta -->
-    <div class="product-meta">
-      <span class="product-brand">{product.brand}</span>
+  <div class="card-content">
+    <!-- Brand & Category -->
+    <div class="card-meta">
+      <span class="meta-brand">{product.brand}</span>
       {product.category && (
         <>
-          <span class="meta-dot">·</span>
-          <span class="product-category">{product.category}</span>
+          <span class="meta-separator">/</span>
+          <span class="meta-category">{product.category}</span>
         </>
       )}
     </div>
 
     <!-- Title -->
-    <h3 class="product-title">
+    <h3 class="card-title">
       <a href={`/${lang}/products/${product.productId}`}>
         {product.title}
       </a>
     </h3>
 
-    <!-- Description -->
+    <!-- Description (non-compact only) -->
     {variant !== 'compact' && product.shortDescription && (
-      <p class="product-description">{product.shortDescription}</p>
+      <p class="card-description">{product.shortDescription}</p>
     )}
 
-    <!-- Ratings -->
-    <div class="product-ratings">
-      {product.ourRating && (
-        <div class="our-rating">
-          <span class={`score-badge score-badge--${getScoreClass(product.ourRating)}`}>
-            {product.ourRating.toFixed(1)}
-          </span>
-          <span class="score-label">Score</span>
-        </div>
-      )}
+    <!-- Rating -->
+    <div class="card-rating">
       <ProductRating rating={product.rating} size="sm" />
     </div>
 
-    <!-- Price -->
-    <div class="product-price-section">
-      <PriceDisplay
-        price={product.price}
-        originalPrice={product.originalPrice}
-        currency={product.currency}
-        lang={lang}
-        size={variant === 'compact' ? 'sm' : 'md'}
-      />
-    </div>
+    <!-- Price & Cashback -->
+    <div class="card-footer">
+      <div class="price-section">
+        <PriceDisplay
+          price={product.price}
+          originalPrice={product.originalPrice}
+          currency={product.currency}
+          lang={lang}
+          size="md"
+        />
+        {showCashback && (
+          <span class="cashback-hint">
+            +${estimatedCashback} cashback
+          </span>
+        )}
+      </div>
 
-    <!-- CTA -->
-    <div class="product-cta">
       <AffiliateLink
         productId={product.productId}
         asin={product.asin}
@@ -139,7 +129,10 @@ const discount = product.originalPrice
         variant="card"
         trackingLabel="product-card"
       >
-        {t('common.viewOnAmazon')}
+        <span class="cta-text">{t('common.viewOnAmazon')}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cta-arrow">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
       </AffiliateLink>
     </div>
   </div>
@@ -148,122 +141,115 @@ const discount = product.originalPrice
 <style>
   .product-card {
     position: relative;
-    background: white;
-    border-radius: 0.875rem;
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .product-card:hover {
+    border-color: var(--color-honey-muted, #E8D5C4);
+    box-shadow: 0 8px 32px rgba(26, 24, 21, 0.08);
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.12);
-  }
-
-  /* List variant */
-  .product-card--list {
-    flex-direction: row;
-    padding: 1.5rem;
-    gap: 1.5rem;
-  }
-
-  .product-card--list .product-image-link {
-    width: 200px;
-    flex-shrink: 0;
-  }
-
-  .product-card--list .product-image-wrapper {
-    aspect-ratio: 1;
   }
 
   /* Featured variant */
-  .product-card--featured {
-    border: 2px solid #f97316;
-    box-shadow: 0 0 0 4px #fff7ed;
+  .variant-featured {
+    border: 2px solid var(--color-honey, #C8956C);
+    background: linear-gradient(180deg, var(--color-honey-muted, #E8D5C4) 0%, var(--color-white, #FFFFFF) 40%);
+  }
+
+  .variant-featured:hover {
+    box-shadow: 0 12px 40px rgba(200, 149, 108, 0.2);
   }
 
   /* Compact variant */
-  .product-card--compact .product-content {
-    padding: 0.875rem;
+  .variant-compact .card-content {
+    padding: 1rem;
     gap: 0.375rem;
   }
 
-  /* Badges */
-  .product-badge {
+  .variant-compact .card-title {
+    font-size: 0.875rem;
+  }
+
+  /* Badge */
+  .card-badge {
     position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
+    top: 1rem;
+    left: 1rem;
     z-index: 10;
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.625rem;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
     font-size: 0.6875rem;
-    font-weight: 700;
-    border-radius: 0.25rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    border-radius: 6px;
+  }
+
+  .badge-featured {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
   }
 
   .badge-sale {
-    background: #dc2626;
-    color: white;
-  }
-
-  .badge-custom {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: var(--color-terra, #C17B5E);
     color: white;
   }
 
   /* Image */
-  .product-image-link {
+  .card-image-link {
     display: block;
   }
 
-  .product-image-wrapper {
+  .card-image {
     aspect-ratio: 4/3;
-    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    background: var(--color-cream-dark, #F7F4EE);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
   }
 
-  .product-card--grid .product-image-wrapper,
-  .product-card--compact .product-image-wrapper {
-    aspect-ratio: 1;
+  .card-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(26, 24, 21, 0.02) 100%);
+    pointer-events: none;
   }
 
-  .product-image {
+  .card-image img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    padding: 1rem;
-    transition: transform 0.3s ease;
+    padding: 1.5rem;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .product-card:hover .product-image {
+  .product-card:hover .card-image img {
     transform: scale(1.05);
   }
 
-  .product-image-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #d4d4d4;
+  .image-placeholder {
+    color: var(--color-mist, #C4BFB8);
   }
 
-  .product-image-placeholder svg {
+  .image-placeholder svg {
     width: 3rem;
     height: 3rem;
   }
 
   /* Content */
-  .product-content {
-    padding: 1.25rem;
+  .card-content {
+    padding: 1.25rem 1.5rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
@@ -271,32 +257,33 @@ const discount = product.originalPrice
   }
 
   /* Meta */
-  .product-meta {
+  .card-meta {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.5rem;
     font-size: 0.6875rem;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
-  .product-brand {
-    font-weight: 700;
-    color: #525252;
+  .meta-brand {
+    font-weight: 600;
+    color: var(--color-stone, #6B6560);
   }
 
-  .meta-dot {
-    color: #d4d4d4;
+  .meta-separator {
+    color: var(--color-sand-dark, #D4CFC6);
   }
 
-  .product-category {
-    color: #737373;
+  .meta-category {
+    color: var(--color-stone-light, #9C9690);
   }
 
   /* Title */
-  .product-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
+  .card-title {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 1rem;
+    font-weight: 500;
     line-height: 1.4;
     margin: 0;
     display: -webkit-box;
@@ -305,20 +292,20 @@ const discount = product.originalPrice
     overflow: hidden;
   }
 
-  .product-title a {
-    color: #171717;
+  .card-title a {
+    color: var(--color-ink, #1A1815);
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color 0.2s;
   }
 
-  .product-title a:hover {
-    color: #ea580c;
+  .card-title a:hover {
+    color: var(--color-honey-dark, #A67B5B);
   }
 
   /* Description */
-  .product-description {
+  .card-description {
     font-size: 0.8125rem;
-    color: #525252;
+    color: var(--color-stone, #6B6560);
     line-height: 1.5;
     margin: 0;
     display: -webkit-box;
@@ -327,68 +314,86 @@ const discount = product.originalPrice
     overflow: hidden;
   }
 
-  /* Ratings */
-  .product-ratings {
+  /* Rating */
+  .card-rating {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
-  .our-rating {
+  /* Footer */
+  .card-footer {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .price-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cashback-hint {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-sage, #7D8B6A);
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
   }
 
-  .score-badge {
-    display: inline-flex;
+  .cashback-hint::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--color-sage, #7D8B6A);
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+
+  /* CTA Button styling override */
+  .card-footer :global(a) {
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 2rem;
-    height: 1.75rem;
-    padding: 0 0.375rem;
-    border-radius: 0.3rem;
-    font-weight: 700;
-    font-size: 0.8125rem;
-    color: white;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #FF9900;
+    color: #0F1111;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .score-badge--excellent {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  .card-footer :global(a:hover) {
+    background: #FFB030;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(255, 153, 0, 0.3);
   }
 
-  .score-badge--good {
-    background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%);
+  .cta-arrow {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s;
   }
 
-  .score-badge--average {
-    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  .card-footer :global(a:hover) .cta-arrow {
+    transform: translateX(2px);
   }
 
-  .score-badge--below-average {
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  }
+  /* Responsive */
+  @media (max-width: 640px) {
+    .card-content {
+      padding: 1rem 1.25rem 1.25rem;
+    }
 
-  .score-badge--poor {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  }
-
-  .score-label {
-    font-size: 0.6875rem;
-    color: #737373;
-    font-weight: 500;
-    text-transform: uppercase;
-  }
-
-  /* Price */
-  .product-price-section {
-    margin-top: auto;
-    padding-top: 0.5rem;
-  }
-
-  /* CTA */
-  .product-cta {
-    margin-top: 0.75rem;
+    .card-image img {
+      padding: 1rem;
+    }
   }
 </style>

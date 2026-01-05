@@ -1,0 +1,86 @@
+[
+  {
+    "id": "bootstrap_meta_files",
+    "name": "Bootstrap Meta Files",
+    "description": "Create CLAUDE.md, features.json, progress.md, and /docs structure for project documentation and tracking.",
+    "tests": "Verify all files exist and are properly formatted. No automated tests required.",
+    "status": true
+  },
+  {
+    "id": "setup_astro_db",
+    "name": "Setup Astro DB",
+    "description": "Configure Astro DB with schema for users, cashback_transactions, purchase_claims, and payout_requests tables.",
+    "tests": "npm run dev starts without DB errors. Can insert/query test records.",
+    "status": true
+  },
+  {
+    "id": "user_dashboard",
+    "name": "User Dashboard",
+    "description": "Create user profile page showing: current balance, pending cashback, transaction history, and loyalty tier.",
+    "tests": "npx playwright test tests/user-dashboard.spec.ts - User can view their dashboard when logged in.",
+    "status": true
+  },
+  {
+    "id": "purchase_claim_flow",
+    "name": "Purchase Claim Flow",
+    "description": "User submits purchase claim with Amazon order ID and product. Creates pending claim for admin review.",
+    "tests": "npx playwright test tests/purchase-claim.spec.ts - User can submit claim, sees it in pending state.",
+    "status": true
+  },
+  {
+    "id": "admin_claim_verification",
+    "name": "Admin Claim Verification",
+    "description": "Admin panel to view pending claims, approve/reject with notes. Approved claims credit user balance.",
+    "tests": "npx playwright test tests/admin-claims.spec.ts - Admin can approve claim, user balance updates.",
+    "status": true
+  },
+  {
+    "id": "cashback_calculation",
+    "name": "Cashback Calculation",
+    "description": "Calculate cashback amount based on commission percentage and user loyalty tier. Tiers: Bronze (base), Silver (+5%), Gold (+10%).",
+    "tests": "Unit tests for calculation logic. Verify tier bonuses apply correctly.",
+    "status": true
+  },
+  {
+    "id": "payout_request",
+    "name": "Payout Request System",
+    "description": "User requests payout when balance >= $15. Choose PayPal or Crypto. Admin processes and marks complete.",
+    "tests": "npx playwright test tests/payout.spec.ts - User can request payout, admin can process it.",
+    "status": true
+  },
+  {
+    "id": "seo_structured_data",
+    "name": "SEO Structured Data",
+    "description": "Add JSON-LD schema markup for products (Product schema), lists (ItemList), breadcrumbs, and organization.",
+    "tests": "Validate with Google Rich Results Test. Check product pages have correct schema.",
+    "status": true
+  },
+  {
+    "id": "blog_content_type",
+    "name": "Blog Content Type",
+    "description": "Add blog/articles content collection. Create blog index page, article detail page, and admin CRUD.",
+    "tests": "npx playwright test tests/blog.spec.ts - Can view blog index, read articles.",
+    "status": true
+  },
+  {
+    "id": "click_tracking_users",
+    "name": "User Click Tracking",
+    "description": "Associate affiliate link clicks with logged-in users. Store in DB for purchase claim correlation.",
+    "tests": "Logged-in user clicks link, click is recorded with user ID in database.",
+    "status": true
+  },
+  {
+    "id": "product_detail_refinement",
+    "name": "Product Detail Page Refinement",
+    "description": "Enhance product pages with better layout, image gallery, pros/cons display, and related products.",
+    "tests": "npx playwright test tests/product-detail.spec.ts - Product page displays all sections correctly.",
+    "status": true
+  },
+  {
+    "id": "homepage_redesign",
+    "name": "Homepage Redesign",
+    "description": "Design compelling homepage with featured products, popular lists, value proposition, and CTA for registration.",
+    "tests": "npx playwright test tests/homepage.spec.ts - Homepage loads with all sections.",
+    "status": true
+  }
+]

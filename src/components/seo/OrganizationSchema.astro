@@ -1,0 +1,34 @@
+---
+/**
+ * Organization Schema Component
+ * Generates JSON-LD structured data for the website/organization
+ * https://developers.google.com/search/docs/appearance/structured-data/organization
+ */
+
+import siteConfig from '@data/site-config.json';
+
+interface Props {
+  lang?: 'es' | 'en';
+}
+
+const { lang = 'es' } = Astro.props;
+
+const siteUrl = siteConfig.site.url;
+const siteName = siteConfig.site.name;
+const tagline = siteConfig.site.tagline[lang];
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: siteName,
+  description: tagline,
+  url: siteUrl,
+  logo: `${siteUrl}/logo.png`,
+  sameAs: [
+    siteConfig.social?.twitter ? `https://twitter.com/${siteConfig.social.twitter.replace('@', '')}` : null,
+    siteConfig.social?.facebook ? `https://facebook.com/${siteConfig.social.facebook}` : null,
+  ].filter(Boolean),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />

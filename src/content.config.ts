@@ -190,10 +190,46 @@ const pagesCollection = defineCollection({
   }),
 });
 
+// Schema para Blog/Articulos
+const blogCollection = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/blog" }),
+  schema: z.object({
+    articleId: z.string(),
+    lang: z.enum(["es", "en"]),
+
+    title: z.string(),
+    excerpt: z.string(),
+
+    author: z.object({
+      name: z.string(),
+      avatar: z.string().optional(),
+      bio: z.string().optional(),
+    }),
+
+    featuredImage: z.object({
+      url: z.string(),
+      alt: z.string(),
+    }),
+
+    category: z.string(),
+    tags: z.array(z.string()),
+
+    status: z.enum(["draft", "published"]).default("published"),
+    isFeatured: z.boolean().default(false),
+    publishedAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+
+    readingTime: z.number().optional(), // in minutes
+    relatedArticles: z.array(z.string()).optional(),
+    relatedProducts: z.array(z.string()).optional(),
+  }),
+});
+
 export const collections = {
   products: productsCollection,
   reviews: reviewsCollection,
   lists: listsCollection,
   deals: dealsCollection,
   pages: pagesCollection,
+  blog: blogCollection,
 };

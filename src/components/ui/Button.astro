@@ -1,6 +1,6 @@
 ---
 interface Props {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'amazon';
   size?: 'sm' | 'md' | 'lg';
   href?: string;
   type?: 'button' | 'submit' | 'reset';
@@ -18,37 +18,118 @@ const {
   fullWidth = false,
   class: className
 } = Astro.props;
-
-const variantClasses = {
-  primary: 'bg-primary-500 hover:bg-primary-600 text-white',
-  secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-800',
-  outline: 'border-2 border-primary-500 text-primary-600 hover:bg-primary-50',
-  ghost: 'text-gray-600 hover:bg-gray-100'
-};
-
-const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg'
-};
-
-const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
-
-const classes = [
-  baseClasses,
-  variantClasses[variant],
-  sizeClasses[size],
-  fullWidth && 'w-full',
-  className
-];
 ---
 
 {href ? (
-  <a href={href} class:list={classes}>
+  <a href={href} class:list={['btn', `btn-${variant}`, `btn-${size}`, fullWidth && 'btn-full', className]}>
     <slot />
   </a>
 ) : (
-  <button type={type} disabled={disabled} class:list={classes}>
+  <button type={type} disabled={disabled} class:list={['btn', `btn-${variant}`, `btn-${size}`, fullWidth && 'btn-full', className]}>
     <slot />
   </button>
 )}
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-weight: 500;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Sizes */
+  .btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .btn-md {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+  }
+
+  .btn-full {
+    width: 100%;
+  }
+
+  /* Primary - Dark ink button */
+  .btn-primary {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-ink-light, #2D2926);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26, 24, 21, 0.2);
+  }
+
+  /* Secondary - Warm honey button */
+  .btn-secondary {
+    background: var(--color-honey, #C8956C);
+    color: white;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--color-honey-dark, #A67B5B);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(200, 149, 108, 0.3);
+  }
+
+  /* Outline */
+  .btn-outline {
+    background: transparent;
+    border: 2px solid var(--color-ink, #1A1815);
+    color: var(--color-ink, #1A1815);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+    transform: translateY(-2px);
+  }
+
+  /* Ghost */
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-stone, #6B6560);
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--color-ink, #1A1815);
+    background: var(--color-sand, #E8E4DD);
+  }
+
+  /* Amazon - Orange CTA */
+  .btn-amazon {
+    background: #FF9900;
+    color: #0F1111;
+    font-weight: 600;
+  }
+
+  .btn-amazon:hover:not(:disabled) {
+    background: #FFB030;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 153, 0, 0.35);
+  }
+</style>

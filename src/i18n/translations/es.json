@@ -5,7 +5,10 @@
     "reviews": "Reviews",
     "lists": "Guias",
     "deals": "Ofertas",
-    "search": "Buscar"
+    "search": "Buscar",
+    "dashboard": "Mi Panel",
+    "login": "Iniciar Sesion",
+    "logout": "Cerrar Sesion"
   },
   "common": {
     "viewOnAmazon": "Ver en Amazon",

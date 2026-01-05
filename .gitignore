@@ -1,5 +1,6 @@
 # build output
 dist/
+
 # generated types
 .astro/
 
@@ -12,13 +13,53 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-
 # environment variables
 .env
+.env.local
 .env.production
+.env.*.local
+
+# local database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+.libsql/
+
+# Claude Code local settings
+.claude/settings.local.json
 
 # macOS-specific files
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# jetbrains setting folder
+# Windows-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# JetBrains IDE
 .idea/
+
+# VS Code (optional - uncomment if you don't want to share settings)
+# .vscode/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Turso local
+.turso/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~

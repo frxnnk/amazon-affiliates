@@ -16,28 +16,52 @@ const footerLinks = [
   { href: `/${lang}/privacy-policy`, label: t('footer.privacy') },
   { href: `/${lang}/terms-of-service`, label: t('footer.terms') },
 ];
+
+const categories = [
+  { href: `/${lang}/category/electronics`, labelEs: 'Electronica', labelEn: 'Electronics' },
+  { href: `/${lang}/category/home-kitchen`, labelEs: 'Hogar y Cocina', labelEn: 'Home & Kitchen' },
+  { href: `/${lang}/category/gaming`, labelEs: 'Gaming', labelEn: 'Gaming' },
+];
 ---
 
-<footer class="bg-gray-900 text-gray-300">
-  <div class="max-w-7xl mx-auto px-4 py-12">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <!-- Brand -->
-      <div>
-        <h3 class="text-xl font-bold text-white mb-4">{siteConfig.site.name}</h3>
-        <p class="text-sm text-gray-400 mb-4">
+<footer class="footer">
+  <div class="footer-inner">
+    <!-- Main Footer Grid -->
+    <div class="footer-grid">
+      <!-- Brand Column -->
+      <div class="footer-brand">
+        <a href={`/${lang}`} class="brand-link">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
+              <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="brand-name">{siteConfig.site.name}</span>
+        </a>
+        <p class="brand-tagline">
           {siteConfig.site.tagline[lang]}
         </p>
+        <div class="brand-cashback">
+          <span class="cashback-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            {lang === 'es' ? 'Gana hasta 10% cashback' : 'Earn up to 10% cashback'}
+          </span>
+        </div>
       </div>
 
-      <!-- Links -->
-      <div>
-        <h4 class="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+      <!-- Quick Links -->
+      <div class="footer-column">
+        <h4 class="column-title">
           {lang === 'es' ? 'Enlaces' : 'Links'}
         </h4>
-        <ul class="space-y-2">
+        <ul class="column-list">
           {footerLinks.map((link) => (
             <li>
-              <a href={link.href} class="text-sm text-gray-400 hover:text-white transition-colors">
+              <a href={link.href} class="column-link">
                 {link.label}
               </a>
             </li>
@@ -46,24 +70,40 @@ const footerLinks = [
       </div>
 
       <!-- Categories -->
-      <div>
-        <h4 class="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+      <div class="footer-column">
+        <h4 class="column-title">
           {lang === 'es' ? 'Categorias' : 'Categories'}
         </h4>
-        <ul class="space-y-2">
+        <ul class="column-list">
+          {categories.map((cat) => (
+            <li>
+              <a href={cat.href} class="column-link">
+                {lang === 'es' ? cat.labelEs : cat.labelEn}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- Resources -->
+      <div class="footer-column">
+        <h4 class="column-title">
+          {lang === 'es' ? 'Recursos' : 'Resources'}
+        </h4>
+        <ul class="column-list">
           <li>
-            <a href={`/${lang}/category/electronics`} class="text-sm text-gray-400 hover:text-white transition-colors">
-              {lang === 'es' ? 'Electronica' : 'Electronics'}
+            <a href={`/${lang}/reviews`} class="column-link">
+              {lang === 'es' ? 'Reviews' : 'Reviews'}
             </a>
           </li>
           <li>
-            <a href={`/${lang}/category/home-kitchen`} class="text-sm text-gray-400 hover:text-white transition-colors">
-              {lang === 'es' ? 'Hogar y Cocina' : 'Home & Kitchen'}
+            <a href={`/${lang}/lists`} class="column-link">
+              {lang === 'es' ? 'Guias' : 'Guides'}
             </a>
           </li>
           <li>
-            <a href={`/${lang}/category/gaming`} class="text-sm text-gray-400 hover:text-white transition-colors">
-              Gaming
+            <a href={`/${lang}/dashboard`} class="column-link">
+              {lang === 'es' ? 'Mi cuenta' : 'My account'}
             </a>
           </li>
         </ul>
@@ -71,15 +111,211 @@ const footerLinks = [
     </div>
 
     <!-- Affiliate Disclosure -->
-    <div class="mt-8 pt-8 border-t border-gray-800">
+    <div class="footer-disclosure">
       <AffiliateDisclosure lang={lang} variant="footer" />
     </div>
 
-    <!-- Copyright -->
-    <div class="mt-8 pt-8 border-t border-gray-800 text-center">
-      <p class="text-sm text-gray-500">
+    <!-- Bottom Bar -->
+    <div class="footer-bottom">
+      <p class="copyright">
         &copy; {currentYear} {siteConfig.site.name}. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
       </p>
+      <div class="footer-meta">
+        <span class="meta-item">Amazon {lang === 'es' ? 'Afiliado' : 'Affiliate'}</span>
+        <span class="meta-divider">·</span>
+        <span class="meta-item">{lang === 'es' ? 'Hecho con cuidado' : 'Made with care'}</span>
+      </div>
     </div>
   </div>
 </footer>
+
+<style>
+  .footer {
+    background: var(--color-ink, #1A1815);
+    color: var(--color-cream, #FDFBF7);
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 2rem;
+  }
+
+  /* Grid */
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(3, 1fr);
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  /* Brand */
+  .footer-brand {
+    padding-right: 2rem;
+  }
+
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 1rem;
+  }
+
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-honey, #C8956C);
+  }
+
+  .brand-mark svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .brand-name {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-tagline {
+    font-size: 0.9375rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.6;
+    margin: 0 0 1.25rem;
+  }
+
+  .brand-cashback {
+    margin-top: 1rem;
+  }
+
+  .cashback-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: rgba(200, 149, 108, 0.15);
+    color: var(--color-honey, #C8956C);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 100px;
+    border: 1px solid rgba(200, 149, 108, 0.25);
+  }
+
+  /* Columns */
+  .footer-column {
+    /* Column styles */
+  }
+
+  .column-title {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-stone, #6B6560);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 0 0 1.25rem;
+  }
+
+  .column-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .column-link {
+    font-size: 0.9375rem;
+    color: var(--color-stone-light, #9C9690);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .column-link:hover {
+    color: var(--color-cream, #FDFBF7);
+  }
+
+  /* Disclosure */
+  .footer-disclosure {
+    padding: 1.5rem 0;
+    border-top: 1px solid rgba(107, 101, 96, 0.2);
+    border-bottom: 1px solid rgba(107, 101, 96, 0.2);
+    margin-bottom: 1.5rem;
+  }
+
+  .footer-disclosure :global(p) {
+    font-size: 0.8125rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Bottom */
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .copyright {
+    font-size: 0.8125rem;
+    color: var(--color-stone, #6B6560);
+    margin: 0;
+  }
+
+  .footer-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .meta-divider {
+    opacity: 0.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+    }
+
+    .footer-brand {
+      grid-column: span 2;
+      padding-right: 0;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .footer-inner {
+      padding: 3rem 1rem 1.5rem;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .footer-brand {
+      grid-column: span 1;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+    }
+  }
+</style>

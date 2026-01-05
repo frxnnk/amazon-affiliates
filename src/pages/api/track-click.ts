@@ -1,4 +1,8 @@
 import type { APIRoute } from 'astro';
+import { recordAffiliateClick } from '@lib/db';
+import crypto from 'crypto';
+
+export const prerender = false;
 
 interface ClickEvent {
   productId: string;
@@ -10,45 +14,55 @@ interface ClickEvent {
   timestamp: number;
 }
 
-export const POST: APIRoute = async ({ request }) => {
+// Hash IP address for privacy
+function hashIp(ip: string): string {
+  return crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16);
+}
+
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const data: ClickEvent = await request.json();
 
     // Basic validation
-    if (!data.productId || !data.asin) {
-      return new Response(JSON.stringify({ error: 'Invalid data' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    if (!data.productId) {
+      return new Response(null, { status: 400 });
     }
 
-    // Enrich data with request info
-    const enrichedData = {
-      ...data,
-      userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') || 'unknown',
-      country: request.headers.get('x-vercel-ip-country') || 'unknown',
-      receivedAt: new Date().toISOString()
-    };
+    // Get user ID if logged in
+    let userId: string | undefined;
+    try {
+      const auth = locals.auth?.();
+      userId = auth?.userId;
+    } catch {
+      // Not authenticated, continue without userId
+    }
 
-    // Log for development (in production, send to analytics service)
-    console.log('[Affiliate Click]', enrichedData);
+    // Get client info
+    const userAgent = request.headers.get('user-agent') || undefined;
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const ip = forwardedFor?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '';
+    const ipHash = ip ? hashIp(ip) : undefined;
 
-    // TODO: Send to analytics service (GA4, Plausible, etc.)
-    // await sendToGA4(enrichedData);
+    // Generate a simple session ID from IP + User Agent if no user
+    const sessionId = !userId && ip && userAgent
+      ? hashIp(`${ip}-${userAgent}`).substring(0, 8)
+      : undefined;
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Record the click to database
+    await recordAffiliateClick(
+      data.productId,
+      userId,
+      sessionId,
+      ipHash,
+      userAgent
+    );
+
+    // Return 204 No Content (best for beacon requests)
+    return new Response(null, { status: 204 });
 
   } catch (error) {
     console.error('[Track Click Error]', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Return 204 anyway to not break user experience
+    return new Response(null, { status: 204 });
   }
 };
-
-export const prerender = false;

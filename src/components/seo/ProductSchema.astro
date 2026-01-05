@@ -1,0 +1,101 @@
+---
+/**
+ * Product Schema Component
+ * Generates JSON-LD structured data for products per Google's guidelines
+ * https://developers.google.com/search/docs/appearance/structured-data/product
+ */
+
+interface Props {
+  name: string;
+  description: string;
+  image: string | string[];
+  brand: string;
+  sku?: string;
+  gtin?: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  availability?: 'InStock' | 'OutOfStock' | 'PreOrder';
+  rating?: number;
+  reviewCount?: number;
+  url: string;
+  seller?: string;
+}
+
+const {
+  name,
+  description,
+  image,
+  brand,
+  sku,
+  gtin,
+  price,
+  originalPrice,
+  currency,
+  availability = 'InStock',
+  rating,
+  reviewCount,
+  url,
+  seller = 'Amazon',
+} = Astro.props;
+
+const images = Array.isArray(image) ? image : [image];
+
+const schema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name,
+  description,
+  image: images,
+  brand: {
+    '@type': 'Brand',
+    name: brand,
+  },
+  offers: {
+    '@type': 'Offer',
+    url,
+    priceCurrency: currency,
+    price: price.toFixed(2),
+    availability: `https://schema.org/${availability}`,
+    seller: {
+      '@type': 'Organization',
+      name: seller,
+    },
+  },
+};
+
+// Add SKU if available
+if (sku) {
+  schema.sku = sku;
+}
+
+// Add GTIN (ASIN can serve as product identifier)
+if (gtin) {
+  schema.gtin = gtin;
+}
+
+// Add price specification with original price if on sale
+if (originalPrice && originalPrice > price) {
+  schema.offers = {
+    ...schema.offers as object,
+    priceSpecification: {
+      '@type': 'PriceSpecification',
+      price: price.toFixed(2),
+      priceCurrency: currency,
+    },
+  };
+}
+
+// Add aggregate rating if available
+if (rating && reviewCount) {
+  schema.aggregateRating = {
+    '@type': 'AggregateRating',
+    ratingValue: rating.toFixed(1),
+    bestRating: '5',
+    worstRating: '1',
+    reviewCount: reviewCount,
+  };
+}
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />

@@ -1,0 +1,573 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getAllPayoutRequests, formatCurrency, getUser } from '@lib/db';
+
+// Get filter from URL
+const url = new URL(Astro.request.url);
+const statusFilter = url.searchParams.get('status') || 'pending';
+
+// Get payouts
+const payouts = await getAllPayoutRequests(statusFilter === 'all' ? undefined : statusFilter);
+
+// Get user info for each payout
+const payoutsWithUsers = await Promise.all(
+  payouts.map(async (payout) => {
+    const user = await getUser(payout.userId);
+    return { ...payout, userEmail: user?.email || 'Unknown' };
+  })
+);
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  processing: 'Procesando',
+  completed: 'Completado',
+  failed: 'Fallido',
+};
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+};
+
+const methodLabels: Record<string, string> = {
+  paypal: 'PayPal',
+  crypto: 'Crypto',
+};
+---
+
+<AdminLayout title="Solicitudes de Retiro">
+  <style>
+    .payouts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .payouts-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .filter-tab {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      transition: all 0.15s;
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .filter-tab:hover {
+      background: #e5e7eb;
+    }
+
+    .filter-tab.active {
+      background: #f97316;
+      color: white;
+    }
+
+    .payouts-table {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .payouts-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .payouts-table th,
+    .payouts-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .payouts-table th {
+      background: #f9fafb;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .payouts-table tr:hover {
+      background: #f9fafb;
+    }
+
+    .payout-user {
+      font-weight: 500;
+      color: #1f2937;
+    }
+
+    .payout-user-id {
+      font-size: 0.75rem;
+      color: #6b7280;
+      font-family: monospace;
+    }
+
+    .payout-amount {
+      font-weight: 600;
+      color: #059669;
+    }
+
+    .payout-method {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+    }
+
+    .payout-details {
+      font-size: 0.75rem;
+      color: #6b7280;
+      font-family: monospace;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .payout-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .payout-date {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .payout-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 0.375rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-process {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-process:hover {
+      background: #2563eb;
+    }
+
+    .btn-complete {
+      background: #059669;
+      color: white;
+    }
+
+    .btn-complete:hover {
+      background: #047857;
+    }
+
+    .btn-fail {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-fail:hover {
+      background: #b91c1c;
+    }
+
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: #9ca3af;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 28rem;
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+
+    .btn-cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-cancel:hover {
+      background: #e5e7eb;
+    }
+
+    .bg-yellow-100 { background: #fef3c7; }
+    .text-yellow-800 { color: #92400e; }
+    .bg-blue-100 { background: #dbeafe; }
+    .text-blue-800 { color: #1e40af; }
+    .bg-green-100 { background: #d1fae5; }
+    .text-green-800 { color: #065f46; }
+    .bg-red-100 { background: #fee2e2; }
+    .text-red-800 { color: #991b1b; }
+  </style>
+
+  <div class="payouts-header">
+    <h1 class="payouts-title">Solicitudes de Retiro</h1>
+
+    <div class="filter-tabs">
+      <a href="/admin/payouts?status=pending" class:list={['filter-tab', { active: statusFilter === 'pending' }]}>
+        Pendientes
+      </a>
+      <a href="/admin/payouts?status=processing" class:list={['filter-tab', { active: statusFilter === 'processing' }]}>
+        Procesando
+      </a>
+      <a href="/admin/payouts?status=completed" class:list={['filter-tab', { active: statusFilter === 'completed' }]}>
+        Completados
+      </a>
+      <a href="/admin/payouts?status=failed" class:list={['filter-tab', { active: statusFilter === 'failed' }]}>
+        Fallidos
+      </a>
+      <a href="/admin/payouts?status=all" class:list={['filter-tab', { active: statusFilter === 'all' }]}>
+        Todos
+      </a>
+    </div>
+  </div>
+
+  <div class="payouts-table">
+    {payoutsWithUsers.length === 0 ? (
+      <div class="empty-state">
+        No hay solicitudes de retiro {statusFilter !== 'all' ? statusLabels[statusFilter]?.toLowerCase() : ''} para mostrar.
+      </div>
+    ) : (
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Monto</th>
+            <th>Metodo</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payoutsWithUsers.map((payout) => (
+            <tr data-payout-id={payout.id}>
+              <td>
+                <div class="payout-user">{payout.userEmail}</div>
+                <div class="payout-user-id">{payout.userId.slice(0, 12)}...</div>
+              </td>
+              <td class="payout-amount">{formatCurrency(payout.amount)}</td>
+              <td>
+                <div class="payout-method">{methodLabels[payout.method]}</div>
+                <div class="payout-details" title={payout.paypalEmail || payout.cryptoAddress || ''}>
+                  {payout.paypalEmail || payout.cryptoAddress || '-'}
+                </div>
+              </td>
+              <td>
+                <span class:list={['payout-status', statusColors[payout.status]]}>
+                  {statusLabels[payout.status]}
+                </span>
+              </td>
+              <td class="payout-date">
+                {formatDate(payout.createdAt)}
+                {payout.processedAt && (
+                  <div>Procesado: {formatDate(payout.processedAt)}</div>
+                )}
+              </td>
+              <td class="payout-actions">
+                {payout.status === 'pending' && (
+                  <button
+                    class="btn-sm btn-process"
+                    data-action="process"
+                    data-payout-id={payout.id}
+                  >
+                    Iniciar
+                  </button>
+                )}
+                {payout.status === 'processing' && (
+                  <>
+                    <button
+                      class="btn-sm btn-complete"
+                      data-action="complete"
+                      data-payout-id={payout.id}
+                    >
+                      Completar
+                    </button>
+                    <button
+                      class="btn-sm btn-fail"
+                      data-action="fail"
+                      data-payout-id={payout.id}
+                    >
+                      Fallar
+                    </button>
+                  </>
+                )}
+                {(payout.status === 'completed' || payout.status === 'failed') && payout.adminNotes && (
+                  <span title={payout.adminNotes} style="cursor: help; font-size: 0.75rem; color: #6b7280;">
+                    Ver notas
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+  <!-- Complete Modal -->
+  <div id="complete-modal" class="modal-overlay">
+    <div class="modal">
+      <h2 class="modal-title">Completar Retiro</h2>
+      <form id="complete-form" class="modal-form">
+        <input type="hidden" name="payoutId" id="complete-payout-id" />
+        <div class="form-group">
+          <label for="transaction-ref">Referencia de Transaccion *</label>
+          <input type="text" id="transaction-ref" name="transactionRef" required placeholder="ID de PayPal o TX hash" />
+        </div>
+        <div class="form-group">
+          <label for="complete-notes">Notas (opcional)</label>
+          <textarea id="complete-notes" name="notes" rows="2"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-cancel" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn-sm btn-complete">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Fail Modal -->
+  <div id="fail-modal" class="modal-overlay">
+    <div class="modal">
+      <h2 class="modal-title">Marcar como Fallido</h2>
+      <p style="margin-bottom: 1rem; color: #6b7280; font-size: 0.875rem;">
+        El saldo sera reembolsado al usuario automaticamente.
+      </p>
+      <form id="fail-form" class="modal-form">
+        <input type="hidden" name="payoutId" id="fail-payout-id" />
+        <div class="form-group">
+          <label for="fail-notes">Razon del fallo *</label>
+          <textarea id="fail-notes" name="notes" rows="3" required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-cancel" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn-sm btn-fail">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const completeModal = document.getElementById('complete-modal');
+  const failModal = document.getElementById('fail-modal');
+  const completeForm = document.getElementById('complete-form');
+  const failForm = document.getElementById('fail-form');
+
+  // Process payout (mark as processing)
+  document.querySelectorAll('[data-action="process"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const payoutId = btn.dataset.payoutId;
+      if (!confirm('Iniciar proceso de este retiro?')) return;
+
+      try {
+        const response = await fetch('/api/admin/payouts/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payoutId: parseInt(payoutId) }),
+        });
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Error al procesar el retiro');
+        }
+      } catch (error) {
+        alert('Error al procesar el retiro');
+      }
+    });
+  });
+
+  // Open complete modal
+  document.querySelectorAll('[data-action="complete"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const payoutId = btn.dataset.payoutId;
+      document.getElementById('complete-payout-id').value = payoutId;
+      completeModal?.classList.add('active');
+    });
+  });
+
+  // Open fail modal
+  document.querySelectorAll('[data-action="fail"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const payoutId = btn.dataset.payoutId;
+      document.getElementById('fail-payout-id').value = payoutId;
+      failModal?.classList.add('active');
+    });
+  });
+
+  // Close modals
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      completeModal?.classList.remove('active');
+      failModal?.classList.remove('active');
+    });
+  });
+
+  // Close on overlay click
+  [completeModal, failModal].forEach(modal => {
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+  });
+
+  // Handle complete
+  completeForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(completeForm);
+
+    try {
+      const response = await fetch('/api/admin/payouts/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payoutId: parseInt(formData.get('payoutId')),
+          transactionRef: formData.get('transactionRef'),
+          notes: formData.get('notes'),
+        }),
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Error al completar el retiro');
+      }
+    } catch (error) {
+      alert('Error al completar el retiro');
+    }
+  });
+
+  // Handle fail
+  failForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(failForm);
+
+    try {
+      const response = await fetch('/api/admin/payouts/fail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payoutId: parseInt(formData.get('payoutId')),
+          notes: formData.get('notes'),
+        }),
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Error al marcar como fallido');
+      }
+    } catch (error) {
+      alert('Error al marcar como fallido');
+    }
+  });
+</script>

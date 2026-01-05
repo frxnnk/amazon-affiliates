@@ -5,7 +5,10 @@
     "reviews": "Reviews",
     "lists": "Guides",
     "deals": "Deals",
-    "search": "Search"
+    "search": "Search",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "logout": "Logout"
   },
   "common": {
     "viewOnAmazon": "View on Amazon",
