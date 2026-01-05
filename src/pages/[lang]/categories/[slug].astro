@@ -5,25 +5,16 @@ import { getCollection } from 'astro:content';
 import { type Lang, getTranslation } from '@i18n/utils';
 import categories from '@data/categories.json';
 
-export function getStaticPaths() {
-  const paths: { params: { lang: string; slug: string }; props: { category: typeof categories.categories[0] } }[] = [];
-
-  for (const category of categories.categories) {
-    paths.push({ params: { lang: 'es', slug: category.id }, props: { category } });
-    paths.push({ params: { lang: 'en', slug: category.id }, props: { category } });
-  }
-
-  return paths;
-}
-
 const { lang, slug } = Astro.params as { lang: Lang; slug: string };
-const { category } = Astro.props;
 
 // Validate lang parameter
 const validLangs = ['es', 'en'];
 if (!validLangs.includes(lang)) {
   return Astro.redirect('/es/categories/', 302);
 }
+
+// Find category by id (slug param matches category.id)
+const category = categories.categories.find(c => c.id === slug);
 
 // Handle missing category
 if (!category) {

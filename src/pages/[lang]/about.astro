@@ -15,11 +15,11 @@ const { lang } = Astro.params as { lang: Lang };
 const content = {
   es: {
     title: 'Sobre Nosotros',
-    description: 'Conoce mas sobre nuestro equipo y mision'
+    description: 'Conoce mas sobre nuestro equipo, mision y como funciona nuestro programa de cashback'
   },
   en: {
     title: 'About Us',
-    description: 'Learn more about our team and mission'
+    description: 'Learn more about our team, mission and how our cashback program works'
   }
 };
 ---
@@ -28,78 +28,266 @@ const content = {
   title={content[lang].title}
   description={content[lang].description}
   lang={lang}
-  updatedAt={new Date()}
+  updatedAt={new Date('2025-01-05')}
 >
   {lang === 'es' ? (
     <>
+      <h2>Nuestra Historia</h2>
+      <p>
+        {siteConfig.site.name} nacio de una idea simple: hacer que las compras online sean mas gratificantes.
+        Somos un equipo apasionado por la tecnologia y el ahorro inteligente, comprometidos a ayudarte
+        a obtener el maximo valor de cada compra que realizas.
+      </p>
+      <p>
+        Fundada en 2024, nuestra plataforma combina la confianza de Amazon con un innovador programa
+        de recompensas que te devuelve parte de tu dinero. No somos solo otro sitio de afiliados:
+        somos tu socio en el ahorro.
+      </p>
+
       <h2>Nuestra Mision</h2>
       <p>
-        En {siteConfig.site.name}, nuestra mision es ayudarte a encontrar los mejores productos
-        al mejor precio. Analizamos, comparamos y revisamos cientos de productos para que puedas
-        tomar decisiones de compra informadas.
+        Nuestra mision es democratizar el acceso a las comisiones de afiliados. Tradicionalmente,
+        estas comisiones beneficiaban solo a los creadores de contenido. Nosotros cambiamos eso:
+        compartimos nuestras ganancias contigo, el comprador.
       </p>
+      <blockquote>
+        <p>"Creemos que cada compra debe ser una oportunidad de ahorro."</p>
+      </blockquote>
 
-      <h2>Que Hacemos</h2>
+      <h2>Como Funciona Nuestro Programa de Cashback</h2>
       <p>
-        Dedicamos horas a investigar, probar y analizar productos en diversas categorias.
-        Nuestros expertos crean reviews detalladas, guias de compra y comparativas para
-        facilitarte la eleccion.
+        Nuestro modelo es transparente y directo:
       </p>
+      <ol>
+        <li>
+          <strong>Explora productos curados:</strong> Seleccionamos cuidadosamente los mejores productos
+          de Amazon, analizando calidad, precio y valoraciones.
+        </li>
+        <li>
+          <strong>Compra a traves de nuestros enlaces:</strong> Cuando haces clic en "Ver en Amazon"
+          y completas tu compra, Amazon nos paga una comision por referirte.
+        </li>
+        <li>
+          <strong>Recibe tu cashback:</strong> En lugar de quedarnos con toda la comision, compartimos
+          un porcentaje contigo. Es nuestro agradecimiento por elegirnos.
+        </li>
+        <li>
+          <strong>Retira cuando quieras:</strong> Acumula tu cashback y retiralo via PayPal o
+          criptomonedas cuando alcances el minimo de $15.
+        </li>
+      </ol>
 
-      <h2>Nuestro Compromiso</h2>
+      <h2>Sistema de Niveles</h2>
+      <p>
+        Recompensamos tu lealtad con mejores tasas de cashback:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Nivel</th>
+            <th>Compras Verificadas</th>
+            <th>Bonus de Cashback</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bronce</td>
+            <td>0 - 9</td>
+            <td>Tasa base (2%)</td>
+          </tr>
+          <tr>
+            <td>Plata</td>
+            <td>10 - 49</td>
+            <td>+5% sobre la base</td>
+          </tr>
+          <tr>
+            <td>Oro</td>
+            <td>50+</td>
+            <td>+10% sobre la base</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Nuestros Valores</h2>
       <ul>
-        <li><strong>Honestidad:</strong> Ofrecemos opiniones sinceras, destacando tanto pros como contras.</li>
-        <li><strong>Calidad:</strong> Solo recomendamos productos que cumplen con nuestros estandares.</li>
-        <li><strong>Transparencia:</strong> Somos claros sobre como ganamos dinero (ver disclosure de afiliados).</li>
+        <li>
+          <strong>Transparencia total:</strong> Somos claros sobre como funcionamos y como ganamos dinero.
+          No hay costos ocultos ni sorpresas.
+        </li>
+        <li>
+          <strong>Honestidad ante todo:</strong> Nuestras recomendaciones son genuinas. Si un producto
+          no cumple estandares, no lo promocionamos.
+        </li>
+        <li>
+          <strong>Usuario primero:</strong> Cada decision que tomamos considera primero tu beneficio.
+          Tu exito es nuestro exito.
+        </li>
+        <li>
+          <strong>Mejora continua:</strong> Escuchamos activamente a nuestra comunidad y mejoramos
+          constantemente nuestra plataforma.
+        </li>
       </ul>
 
-      <h2>Como Funcionamos</h2>
+      <h2>Por Que Elegirnos</h2>
+      <ul>
+        <li><strong>Sin riesgo:</strong> Compras en Amazon con todas sus garantias, nosotros solo te damos dinero extra.</li>
+        <li><strong>Productos verificados:</strong> Cada producto es analizado antes de ser publicado.</li>
+        <li><strong>Retiros flexibles:</strong> PayPal o criptomonedas, tu eliges.</li>
+        <li><strong>Soporte dedicado:</strong> Estamos aqui para ayudarte en cada paso.</li>
+      </ul>
+
+      <h2>Divulgacion de Afiliados</h2>
       <p>
-        Somos participantes del Programa de Afiliados de Amazon EU. Esto significa que cuando
-        compras un producto a traves de nuestros enlaces, recibimos una pequena comision sin
-        coste adicional para ti. Esta comision nos ayuda a mantener el sitio y seguir creando
-        contenido de calidad.
+        {siteConfig.site.name} es participante del Programa de Afiliados de Amazon EU, un programa de
+        publicidad de afiliados disenado para proporcionar un medio para que los sitios web ganen
+        tarifas de publicidad mediante publicidad y enlaces a Amazon.es y Amazon.com.
+      </p>
+      <p>
+        Como asociados de Amazon, ganamos comisiones de compras que califican. Esta comision no tiene
+        costo adicional para ti y nos permite mantener este servicio gratuito mientras compartimos
+        parte de nuestras ganancias contigo.
       </p>
 
       <h2>Contacto</h2>
       <p>
-        Si tienes preguntas, sugerencias o quieres colaborar con nosotros, no dudes en contactarnos.
-        Valoramos la opinion de nuestros lectores y estamos siempre buscando mejorar.
+        Queremos saber de ti. Ya sea que tengas preguntas, sugerencias o simplemente quieras saludar:
+      </p>
+      <ul>
+        <li><strong>Email:</strong> soporte@bestdeals.com</li>
+        <li><strong>Redes sociales:</strong> Siguenos para ofertas exclusivas y novedades</li>
+      </ul>
+      <p>
+        Valoramos cada mensaje y respondemos en un plazo de 24-48 horas habiles.
       </p>
     </>
   ) : (
     <>
+      <h2>Our Story</h2>
+      <p>
+        {siteConfig.site.name} was born from a simple idea: make online shopping more rewarding.
+        We are a team passionate about technology and smart savings, committed to helping you
+        get the most value from every purchase you make.
+      </p>
+      <p>
+        Founded in 2024, our platform combines the trust of Amazon with an innovative rewards
+        program that gives you back part of your money. We're not just another affiliate site:
+        we're your partner in savings.
+      </p>
+
       <h2>Our Mission</h2>
       <p>
-        At {siteConfig.site.name}, our mission is to help you find the best products at the
-        best prices. We analyze, compare, and review hundreds of products so you can make
-        informed purchasing decisions.
+        Our mission is to democratize access to affiliate commissions. Traditionally, these
+        commissions only benefited content creators. We changed that: we share our earnings
+        with you, the buyer.
       </p>
+      <blockquote>
+        <p>"We believe every purchase should be an opportunity to save."</p>
+      </blockquote>
 
-      <h2>What We Do</h2>
+      <h2>How Our Cashback Program Works</h2>
       <p>
-        We dedicate hours to researching, testing, and analyzing products across various categories.
-        Our experts create detailed reviews, buying guides, and comparisons to make your choice easier.
+        Our model is transparent and straightforward:
       </p>
+      <ol>
+        <li>
+          <strong>Explore curated products:</strong> We carefully select the best Amazon products,
+          analyzing quality, price, and ratings.
+        </li>
+        <li>
+          <strong>Purchase through our links:</strong> When you click "View on Amazon" and complete
+          your purchase, Amazon pays us a commission for referring you.
+        </li>
+        <li>
+          <strong>Receive your cashback:</strong> Instead of keeping all the commission, we share
+          a percentage with you. It's our thank you for choosing us.
+        </li>
+        <li>
+          <strong>Withdraw anytime:</strong> Accumulate your cashback and withdraw via PayPal or
+          cryptocurrency when you reach the $15 minimum.
+        </li>
+      </ol>
 
-      <h2>Our Commitment</h2>
+      <h2>Tier System</h2>
+      <p>
+        We reward your loyalty with better cashback rates:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Verified Purchases</th>
+            <th>Cashback Bonus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bronze</td>
+            <td>0 - 9</td>
+            <td>Base rate (2%)</td>
+          </tr>
+          <tr>
+            <td>Silver</td>
+            <td>10 - 49</td>
+            <td>+5% on base</td>
+          </tr>
+          <tr>
+            <td>Gold</td>
+            <td>50+</td>
+            <td>+10% on base</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Our Values</h2>
       <ul>
-        <li><strong>Honesty:</strong> We offer sincere opinions, highlighting both pros and cons.</li>
-        <li><strong>Quality:</strong> We only recommend products that meet our standards.</li>
-        <li><strong>Transparency:</strong> We are clear about how we make money (see affiliate disclosure).</li>
+        <li>
+          <strong>Total transparency:</strong> We're clear about how we work and how we make money.
+          No hidden costs or surprises.
+        </li>
+        <li>
+          <strong>Honesty above all:</strong> Our recommendations are genuine. If a product doesn't
+          meet standards, we don't promote it.
+        </li>
+        <li>
+          <strong>User first:</strong> Every decision we make considers your benefit first.
+          Your success is our success.
+        </li>
+        <li>
+          <strong>Continuous improvement:</strong> We actively listen to our community and
+          constantly improve our platform.
+        </li>
       </ul>
 
-      <h2>How We Work</h2>
+      <h2>Why Choose Us</h2>
+      <ul>
+        <li><strong>No risk:</strong> Shop on Amazon with all its guarantees, we just give you extra money.</li>
+        <li><strong>Verified products:</strong> Every product is analyzed before being published.</li>
+        <li><strong>Flexible withdrawals:</strong> PayPal or cryptocurrency, you choose.</li>
+        <li><strong>Dedicated support:</strong> We're here to help you every step of the way.</li>
+      </ul>
+
+      <h2>Affiliate Disclosure</h2>
       <p>
-        We are participants in the Amazon Associates Program. This means that when you purchase
-        a product through our links, we receive a small commission at no additional cost to you.
-        This commission helps us maintain the site and continue creating quality content.
+        {siteConfig.site.name} is a participant in the Amazon Associates Program, an affiliate
+        advertising program designed to provide a means for sites to earn advertising fees by
+        advertising and linking to Amazon.com and Amazon.es.
+      </p>
+      <p>
+        As Amazon Associates, we earn commissions from qualifying purchases. This commission comes
+        at no additional cost to you and allows us to keep this service free while sharing part
+        of our earnings with you.
       </p>
 
       <h2>Contact</h2>
       <p>
-        If you have questions, suggestions, or want to collaborate with us, feel free to contact us.
-        We value our readers' opinions and are always looking to improve.
+        We want to hear from you. Whether you have questions, suggestions, or just want to say hello:
+      </p>
+      <ul>
+        <li><strong>Email:</strong> support@bestdeals.com</li>
+        <li><strong>Social media:</strong> Follow us for exclusive deals and updates</li>
+      </ul>
+      <p>
+        We value every message and respond within 24-48 business hours.
       </p>
     </>
   )}
