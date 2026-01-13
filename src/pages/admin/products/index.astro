@@ -104,7 +104,10 @@ const products = allProducts.sort((a, b) =>
 
   <div class="toolbar">
     <p style="color: #6b7280;">{products.length} productos</p>
-    <a href="/admin/products/new" class="btn-primary">+ Nuevo Producto</a>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="/admin/products/import" class="btn-primary" style="background: #3b82f6;">Importar</a>
+      <a href="/admin/products/new" class="btn-primary">+ Nuevo Producto</a>
+    </div>
   </div>
 
   <div class="table-container">

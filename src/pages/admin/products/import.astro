@@ -1237,6 +1237,10 @@ import categories from '@data/categories.json';
               <span class="value" id="metaMarketplace">-</span>
             </div>
             <div class="meta-item">
+              <span class="label">Fuente</span>
+              <span class="value" id="metaDataSource">-</span>
+            </div>
+            <div class="meta-item">
               <span class="label">Enlace</span>
               <span class="value"><a id="metaAffiliateUrl" href="#" target="_blank">Ver en Amazon</a></span>
             </div>
@@ -1417,6 +1421,7 @@ import categories from '@data/categories.json';
     const fieldStatusContainer = document.getElementById('fieldStatus')!;
     const metaAsin = document.getElementById('metaAsin')!;
     const metaMarketplace = document.getElementById('metaMarketplace')!;
+    const metaDataSource = document.getElementById('metaDataSource')!;
     const metaAffiliateUrl = document.getElementById('metaAffiliateUrl') as HTMLAnchorElement;
     const modeButtons = document.querySelectorAll('.mode-btn');
     const singleMode = document.getElementById('singleMode')!;
@@ -1611,6 +1616,10 @@ import categories from '@data/categories.json';
       const data = result.data;
       metaAsin.textContent = data.asin;
       metaMarketplace.textContent = `amazon.${data.marketplace}`;
+      // Show data source with styled badge
+      const sourceLabel = result.dataSource === 'paapi' ? 'Amazon API' : 'Web Scraper';
+      const sourceColor = result.dataSource === 'paapi' ? '#10b981' : '#f59e0b';
+      metaDataSource.innerHTML = `<span style="color: ${sourceColor}; font-weight: 500;">${sourceLabel}</span>`;
       metaAffiliateUrl.href = data.affiliateUrl;
       formFields.asin.value = data.asin;
       formFields.affiliateUrl.value = data.affiliateUrl;
