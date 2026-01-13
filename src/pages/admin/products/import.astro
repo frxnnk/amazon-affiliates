@@ -8,7 +8,7 @@ import categories from '@data/categories.json';
 <AdminLayout title="Importar Producto">
   <style>
     .import-container {
-      max-width: 1000px;
+      max-width: 1100px;
     }
 
     .import-card {
@@ -34,6 +34,36 @@ import categories from '@data/categories.json';
     .import-header p {
       color: #8b949e;
       font-size: 0.95rem;
+    }
+
+    /* Mode Toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-btn {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+
+    .mode-btn:hover {
+      background: #21262d;
+      color: #f0f6fc;
+    }
+
+    .mode-btn.active {
+      background: #238636;
+      border-color: #238636;
+      color: white;
     }
 
     /* URL Input Section */
@@ -62,6 +92,33 @@ import categories from '@data/categories.json';
 
     .url-input::placeholder {
       color: #6e7681;
+    }
+
+    /* Bulk Import Textarea */
+    .bulk-textarea {
+      width: 100%;
+      min-height: 150px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      color: #f0f6fc;
+      font-size: 0.9375rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+
+    .bulk-textarea:focus {
+      outline: none;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+
+    .bulk-hint {
+      color: #8b949e;
+      font-size: 0.8125rem;
+      margin-bottom: 1rem;
     }
 
     .import-btn {
@@ -113,6 +170,26 @@ import categories from '@data/categories.json';
       to { transform: rotate(360deg); }
     }
 
+    /* Paste Hint */
+    .paste-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: #8b949e;
+      font-size: 0.8125rem;
+      margin-top: 0.75rem;
+    }
+
+    .paste-hint kbd {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 0.125rem 0.375rem;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.75rem;
+    }
+
     /* Status Messages */
     .status-message {
       padding: 1rem 1.25rem;
@@ -147,6 +224,254 @@ import categories from '@data/categories.json';
       background: rgba(251, 191, 36, 0.1);
       border: 1px solid rgba(251, 191, 36, 0.3);
       color: #fbbf24;
+    }
+
+    .status-message.info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      color: #58a6ff;
+    }
+
+    /* Duplicate Warning */
+    .duplicate-warning {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    .duplicate-warning.visible {
+      display: block;
+    }
+
+    .duplicate-warning h4 {
+      color: #fbbf24;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .duplicate-warning p {
+      color: #c9d1d9;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .duplicate-warning .existing-products {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .duplicate-warning .existing-product {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+      color: #f0f6fc;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .duplicate-warning .existing-product:hover {
+      background: #30363d;
+      border-color: #58a6ff;
+    }
+
+    .duplicate-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .duplicate-actions button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-continue {
+      background: #238636;
+      border: 1px solid #238636;
+      color: white;
+    }
+
+    .btn-continue:hover {
+      background: #2ea043;
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+    }
+
+    .btn-cancel:hover {
+      background: #21262d;
+    }
+
+    /* Product Preview Card */
+    .preview-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    .preview-card.visible {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .preview-card h3 {
+      color: #8b949e;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .preview-content {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 1.5rem;
+    }
+
+    .preview-image {
+      width: 150px;
+      height: 150px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0d1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .preview-image .no-image {
+      color: #6e7681;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .preview-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .preview-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      line-height: 1.3;
+    }
+
+    .preview-brand {
+      color: #8b949e;
+      font-size: 0.875rem;
+    }
+
+    .preview-price {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+
+    .preview-price .current {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #3fb950;
+    }
+
+    .preview-price .original {
+      font-size: 1rem;
+      color: #8b949e;
+      text-decoration: line-through;
+    }
+
+    .preview-price .discount {
+      background: #f85149;
+      color: white;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .preview-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #fbbf24;
+      font-size: 0.875rem;
+    }
+
+    .preview-rating .reviews {
+      color: #8b949e;
+    }
+
+    /* Field Status Indicators */
+    .field-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .field-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      background: #21262d;
+    }
+
+    .field-indicator.success {
+      color: #3fb950;
+    }
+
+    .field-indicator.missing {
+      color: #8b949e;
+    }
+
+    .field-indicator .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .field-indicator.success .dot {
+      background: #3fb950;
+    }
+
+    .field-indicator.missing .dot {
+      background: #6e7681;
     }
 
     /* Product Preview Section */
@@ -283,10 +608,26 @@ import categories from '@data/categories.json';
       font-size: 0.8125rem;
       font-weight: 500;
       color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .form-group label .required {
       color: #f85149;
+    }
+
+    .form-group label .status-icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .form-group label .status-icon.success {
+      color: #3fb950;
+    }
+
+    .form-group label .status-icon.missing {
+      color: #6e7681;
     }
 
     .form-input, .form-select, .form-textarea {
@@ -324,15 +665,24 @@ import categories from '@data/categories.json';
       cursor: pointer;
     }
 
-    /* Features List */
-    .features-list {
+    /* Features Section with Checkboxes */
+    .features-section {
       background: #161b22;
       border: 1px solid #30363d;
       border-radius: 8px;
       padding: 1rem;
+      margin-bottom: 1rem;
     }
 
-    .feature-item {
+    .features-section h4 {
+      color: #8b949e;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-checkbox {
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
@@ -342,13 +692,20 @@ import categories from '@data/categories.json';
       color: #c9d1d9;
     }
 
-    .feature-item:last-child {
+    .feature-checkbox:last-child {
       border-bottom: none;
     }
 
-    .feature-item .bullet {
-      color: #fbbf24;
-      flex-shrink: 0;
+    .feature-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      accent-color: #3fb950;
+    }
+
+    .feature-checkbox label {
+      flex: 1;
+      cursor: pointer;
     }
 
     /* Pros/Cons Editor */
@@ -531,6 +888,72 @@ import categories from '@data/categories.json';
       text-decoration: underline;
     }
 
+    /* Bulk Import Results */
+    .bulk-results {
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .bulk-results.visible {
+      display: block;
+    }
+
+    .bulk-result-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .bulk-result-item.success {
+      border-color: rgba(46, 160, 67, 0.3);
+    }
+
+    .bulk-result-item.error {
+      border-color: rgba(248, 81, 73, 0.3);
+    }
+
+    .bulk-result-item .status-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bulk-result-item.success .status-icon {
+      background: rgba(46, 160, 67, 0.2);
+      color: #3fb950;
+    }
+
+    .bulk-result-item.error .status-icon {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+
+    .bulk-result-item .asin {
+      font-family: 'SF Mono', monospace;
+      font-size: 0.8125rem;
+      color: #f0f6fc;
+    }
+
+    .bulk-result-item .message {
+      flex: 1;
+      font-size: 0.8125rem;
+      color: #8b949e;
+    }
+
+    .bulk-result-item .action-link {
+      color: #58a6ff;
+      text-decoration: none;
+      font-size: 0.8125rem;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .url-section {
@@ -553,6 +976,16 @@ import categories from '@data/categories.json';
         flex-wrap: wrap;
         gap: 1rem;
       }
+
+      .preview-content {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-image {
+        width: 100%;
+        max-width: 200px;
+        margin: 0 auto;
+      }
     }
   </style>
 
@@ -560,25 +993,79 @@ import categories from '@data/categories.json';
     <div class="import-card">
       <div class="import-header">
         <h2>Importar desde Amazon</h2>
-        <p>Pega un enlace de Amazon y extraeremos automáticamente toda la información del producto</p>
+        <p>Pega un enlace de Amazon y extraeremos automaticamente toda la informacion del producto</p>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" data-mode="single">Producto Individual</button>
+        <button type="button" class="mode-btn" data-mode="bulk">Importacion Masiva</button>
       </div>
 
       <div id="statusMessage" class="status-message"></div>
+      <div id="duplicateWarning" class="duplicate-warning"></div>
 
-      <div class="url-section">
-        <input
-          type="text"
-          id="amazonUrl"
-          class="url-input"
-          placeholder="https://www.amazon.es/dp/B0XXXXXXXXX o pega el link completo del producto..."
-          autofocus
-        />
-        <button type="button" id="importBtn" class="import-btn">
+      <!-- Single Import Mode -->
+      <div id="singleMode">
+        <div class="url-section">
+          <input
+            type="text"
+            id="amazonUrl"
+            class="url-input"
+            placeholder="https://www.amazon.es/dp/B0XXXXXXXXX o pega el link completo del producto..."
+            autofocus
+          />
+          <button type="button" id="importBtn" class="import-btn">
+            <span class="spinner"></span>
+            <span class="btn-text">Importar Producto</span>
+          </button>
+        </div>
+        <div class="paste-hint">
+          <span>Tip: Pega directamente con</span>
+          <kbd>Ctrl</kbd>+<kbd>V</kbd>
+          <span>para importar automaticamente</span>
+        </div>
+      </div>
+
+      <!-- Bulk Import Mode -->
+      <div id="bulkMode" style="display: none;">
+        <textarea
+          id="bulkUrls"
+          class="bulk-textarea"
+          placeholder="Pega aqui las URLs o ASINs, uno por linea:&#10;https://www.amazon.es/dp/B0XXXXXXXXX&#10;B01ABCDEFG&#10;https://www.amazon.com/dp/B02HIJKLMN"
+        ></textarea>
+        <p class="bulk-hint">Puedes mezclar URLs completas y ASINs. Cada producto sera importado como borrador para revision posterior.</p>
+        <button type="button" id="bulkImportBtn" class="import-btn">
           <span class="spinner"></span>
-          <span class="btn-text">Importar Producto</span>
+          <span class="btn-text">Importar Todos</span>
         </button>
+        <div id="bulkResults" class="bulk-results"></div>
       </div>
     </div>
+
+    <!-- Preview Card -->
+    <div id="previewCard" class="preview-card">
+      <h3>Vista Previa del Producto</h3>
+      <div class="preview-content">
+        <div class="preview-image">
+          <img id="previewImage" src="" alt="" style="display: none;" />
+          <div id="previewNoImage" class="no-image">Sin imagen</div>
+        </div>
+        <div class="preview-info">
+          <div id="previewBrand" class="preview-brand"></div>
+          <div id="previewTitle" class="preview-title"></div>
+          <div class="preview-price">
+            <span id="previewCurrentPrice" class="current"></span>
+            <span id="previewOriginalPrice" class="original"></span>
+            <span id="previewDiscount" class="discount" style="display: none;"></span>
+          </div>
+          <div id="previewRating" class="preview-rating"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Field Status -->
+    <div id="fieldStatus" class="field-status" style="display: none;"></div>
 
     <div id="productPreview" class="product-preview">
       <form id="productForm">
@@ -607,18 +1094,18 @@ import categories from '@data/categories.json';
 
           <!-- Image Gallery -->
           <div class="image-section">
-            <h3>Imágenes del Producto</h3>
+            <h3>Imagenes del Producto</h3>
             <div id="imageGallery" class="image-gallery">
-              <div class="no-images">No se encontraron imágenes. Puedes agregar una URL manualmente abajo.</div>
+              <div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>
             </div>
           </div>
 
           <!-- Basic Info -->
           <div class="form-section">
-            <h3>Información Básica</h3>
+            <h3>Informacion Basica</h3>
             <div class="form-grid">
               <div class="form-group full-width">
-                <label>Título del Producto <span class="required">*</span></label>
+                <label>Titulo del Producto <span class="required">*</span></label>
                 <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre completo del producto" />
               </div>
 
@@ -633,7 +1120,7 @@ import categories from '@data/categories.json';
               </div>
 
               <div class="form-group">
-                <label>Categoría</label>
+                <label>Categoria</label>
                 <select id="formCategory" name="category" class="form-select">
                   {categories.categories.map(cat => (
                     <option value={cat.id}>{cat.name.es}</option>
@@ -644,7 +1131,7 @@ import categories from '@data/categories.json';
               <div class="form-group">
                 <label>Idioma</label>
                 <select id="formLangSelect" name="langSelect" class="form-select">
-                  <option value="es">Español</option>
+                  <option value="es">Espanol</option>
                   <option value="en">English</option>
                 </select>
               </div>
@@ -666,12 +1153,12 @@ import categories from '@data/categories.json';
               </div>
 
               <div class="form-group">
-                <label>Valoración Amazon (1-5)</label>
+                <label>Valoracion Amazon (1-5)</label>
                 <input type="number" id="formRating" name="rating" class="form-input" step="0.1" min="0" max="5" placeholder="4.5" />
               </div>
 
               <div class="form-group">
-                <label>Total de Reseñas</label>
+                <label>Total de Resenas</label>
                 <input type="number" id="formTotalReviews" name="totalReviews" class="form-input" placeholder="1234" />
               </div>
             </div>
@@ -682,21 +1169,24 @@ import categories from '@data/categories.json';
             <h3>Descripciones</h3>
             <div class="form-grid">
               <div class="form-group full-width">
-                <label>Descripción Corta</label>
+                <label>Descripcion Corta</label>
                 <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Una o dos frases que resuman el producto..."></textarea>
               </div>
 
               <div class="form-group full-width">
-                <label>Descripción Completa</label>
-                <textarea id="formDescription" name="description" class="form-textarea" style="min-height: 150px;" placeholder="Descripción detallada del producto..."></textarea>
+                <label>Descripcion Completa</label>
+                <textarea id="formDescription" name="description" class="form-textarea" style="min-height: 150px;" placeholder="Descripcion detallada del producto..."></textarea>
               </div>
             </div>
           </div>
 
-          <!-- Features -->
+          <!-- Features to Pros -->
           <div class="form-section" id="featuresSection" style="display: none;">
-            <h3>Características Detectadas</h3>
-            <div id="featuresList" class="features-list"></div>
+            <h3>Caracteristicas Detectadas</h3>
+            <p style="color: #8b949e; font-size: 0.875rem; margin-bottom: 1rem;">
+              Selecciona las caracteristicas que deseas usar como ventajas del producto:
+            </p>
+            <div id="featuresList" class="features-section"></div>
           </div>
 
           <!-- Pros and Cons -->
@@ -733,14 +1223,14 @@ import categories from '@data/categories.json';
             <div class="form-grid">
               <div class="form-group full-width">
                 <label>URL de Imagen Principal</label>
-                <input type="url" id="formImageUrl" name="imageUrl" class="form-input" placeholder="https://... (se usará si no seleccionas una imagen arriba)" />
+                <input type="url" id="formImageUrl" name="imageUrl" class="form-input" placeholder="https://... (se usara si no seleccionas una imagen arriba)" />
               </div>
             </div>
           </div>
 
           <!-- Status -->
           <div class="form-section">
-            <h3>Publicación</h3>
+            <h3>Publicacion</h3>
             <div class="form-grid">
               <div class="form-group">
                 <label>Estado</label>
@@ -788,14 +1278,35 @@ import categories from '@data/categories.json';
     const amazonUrlInput = document.getElementById('amazonUrl') as HTMLInputElement;
     const importBtn = document.getElementById('importBtn') as HTMLButtonElement;
     const statusMessage = document.getElementById('statusMessage')!;
+    const duplicateWarning = document.getElementById('duplicateWarning')!;
     const productPreview = document.getElementById('productPreview')!;
     const productForm = document.getElementById('productForm') as HTMLFormElement;
     const resetBtn = document.getElementById('resetBtn')!;
+
+    // Preview elements
+    const previewCard = document.getElementById('previewCard')!;
+    const previewImage = document.getElementById('previewImage') as HTMLImageElement;
+    const previewNoImage = document.getElementById('previewNoImage')!;
+    const previewTitle = document.getElementById('previewTitle')!;
+    const previewBrand = document.getElementById('previewBrand')!;
+    const previewCurrentPrice = document.getElementById('previewCurrentPrice')!;
+    const previewOriginalPrice = document.getElementById('previewOriginalPrice')!;
+    const previewDiscount = document.getElementById('previewDiscount')!;
+    const previewRating = document.getElementById('previewRating')!;
+    const fieldStatusContainer = document.getElementById('fieldStatus')!;
 
     // Meta elements
     const metaAsin = document.getElementById('metaAsin')!;
     const metaMarketplace = document.getElementById('metaMarketplace')!;
     const metaAffiliateUrl = document.getElementById('metaAffiliateUrl') as HTMLAnchorElement;
+
+    // Mode toggle
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    const singleMode = document.getElementById('singleMode')!;
+    const bulkMode = document.getElementById('bulkMode')!;
+    const bulkUrls = document.getElementById('bulkUrls') as HTMLTextAreaElement;
+    const bulkImportBtn = document.getElementById('bulkImportBtn') as HTMLButtonElement;
+    const bulkResults = document.getElementById('bulkResults')!;
 
     // Form elements
     const formFields = {
@@ -827,15 +1338,84 @@ import categories from '@data/categories.json';
     const consList = document.getElementById('consList')!;
 
     let selectedImageUrl: string | null = null;
+    let currentMode: 'single' | 'bulk' = 'single';
+    let pendingDuplicateData: any = null;
 
-    function showStatus(message: string, type: 'error' | 'success' | 'warning') {
-      const icon = type === 'error' ? '!' : type === 'success' ? '✓' : '⚠';
-      statusMessage.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    // Mode toggle handlers
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode') as 'single' | 'bulk';
+        currentMode = mode;
+
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (mode === 'single') {
+          singleMode.style.display = 'block';
+          bulkMode.style.display = 'none';
+        } else {
+          singleMode.style.display = 'none';
+          bulkMode.style.display = 'block';
+        }
+
+        hideStatus();
+        hideDuplicateWarning();
+      });
+    });
+
+    function showStatus(message: string, type: 'error' | 'success' | 'warning' | 'info') {
+      const icons: Record<string, string> = {
+        error: '!',
+        success: '✓',
+        warning: '⚠',
+        info: 'i'
+      };
+      statusMessage.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
       statusMessage.className = `status-message ${type}`;
     }
 
     function hideStatus() {
       statusMessage.className = 'status-message';
+    }
+
+    function showDuplicateWarning(asin: string, products: any[]) {
+      duplicateWarning.innerHTML = `
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          Producto ya existente
+        </h4>
+        <p>El ASIN <strong>${asin}</strong> ya existe en el sistema:</p>
+        <div class="existing-products">
+          ${products.map(p => `
+            <a href="/admin/products/${p.productId}" class="existing-product" target="_blank">
+              ${p.title} (${p.lang.toUpperCase()})
+            </a>
+          `).join('')}
+        </div>
+        <div class="duplicate-actions">
+          <button type="button" class="btn-continue" id="continueImport">Importar de todos modos</button>
+          <button type="button" class="btn-cancel" id="cancelImport">Cancelar</button>
+        </div>
+      `;
+      duplicateWarning.classList.add('visible');
+
+      document.getElementById('continueImport')?.addEventListener('click', () => {
+        hideDuplicateWarning();
+        if (pendingDuplicateData) {
+          processImportedData(pendingDuplicateData);
+        }
+      });
+
+      document.getElementById('cancelImport')?.addEventListener('click', () => {
+        hideDuplicateWarning();
+        pendingDuplicateData = null;
+      });
+    }
+
+    function hideDuplicateWarning() {
+      duplicateWarning.classList.remove('visible');
     }
 
     function setAutoFilled(element: HTMLInputElement | HTMLTextAreaElement, value: string | number | null) {
@@ -845,9 +1425,76 @@ import categories from '@data/categories.json';
       }
     }
 
+    function updatePreviewCard(data: any) {
+      previewCard.classList.add('visible');
+
+      // Image
+      if (data.images && data.images.length > 0) {
+        previewImage.src = data.images[0];
+        previewImage.alt = data.title || 'Product image';
+        previewImage.style.display = 'block';
+        previewNoImage.style.display = 'none';
+      } else {
+        previewImage.style.display = 'none';
+        previewNoImage.style.display = 'block';
+      }
+
+      // Info
+      previewBrand.textContent = data.brand || 'Marca desconocida';
+      previewTitle.textContent = data.title || 'Sin titulo';
+
+      // Price
+      const currency = data.currency === 'USD' ? '$' : '€';
+      previewCurrentPrice.textContent = data.price ? `${currency}${data.price.toFixed(2)}` : '-';
+
+      if (data.originalPrice && data.originalPrice > data.price) {
+        previewOriginalPrice.textContent = `${currency}${data.originalPrice.toFixed(2)}`;
+        previewOriginalPrice.style.display = 'inline';
+        const discount = Math.round((1 - data.price / data.originalPrice) * 100);
+        previewDiscount.textContent = `-${discount}%`;
+        previewDiscount.style.display = 'inline';
+      } else {
+        previewOriginalPrice.style.display = 'none';
+        previewDiscount.style.display = 'none';
+      }
+
+      // Rating
+      if (data.rating) {
+        const stars = '★'.repeat(Math.floor(data.rating)) + '☆'.repeat(5 - Math.floor(data.rating));
+        previewRating.innerHTML = `${stars} ${data.rating.toFixed(1)} <span class="reviews">(${data.totalReviews?.toLocaleString() || 0} resenas)</span>`;
+      } else {
+        previewRating.innerHTML = '<span class="reviews">Sin valoraciones</span>';
+      }
+    }
+
+    function updateFieldStatus(fieldStatus: Record<string, boolean>) {
+      const fieldNames: Record<string, string> = {
+        title: 'Titulo',
+        brand: 'Marca',
+        price: 'Precio',
+        originalPrice: 'Precio Original',
+        rating: 'Valoracion',
+        totalReviews: 'Resenas',
+        images: 'Imagenes',
+        features: 'Caracteristicas',
+        description: 'Descripcion',
+        category: 'Categoria',
+      };
+
+      fieldStatusContainer.innerHTML = Object.entries(fieldStatus)
+        .map(([field, success]) => `
+          <div class="field-indicator ${success ? 'success' : 'missing'}">
+            <span class="dot"></span>
+            ${fieldNames[field] || field}
+          </div>
+        `).join('');
+
+      fieldStatusContainer.style.display = 'flex';
+    }
+
     function renderImages(images: string[]) {
       if (!images || images.length === 0) {
-        imageGallery.innerHTML = '<div class="no-images">No se encontraron imágenes. Puedes agregar una URL manualmente abajo.</div>';
+        imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>';
         return;
       }
 
@@ -886,19 +1533,40 @@ import categories from '@data/categories.json';
       }
 
       featuresSection.style.display = 'block';
-      featuresList.innerHTML = features.map(f => `
-        <div class="feature-item">
-          <span class="bullet">•</span>
-          <span>${f}</span>
+      featuresList.innerHTML = features.map((f, i) => `
+        <div class="feature-checkbox">
+          <input type="checkbox" id="feature-${i}" data-feature="${f}" />
+          <label for="feature-${i}">${f}</label>
         </div>
       `).join('');
+
+      // Add change handlers to populate pros
+      featuresList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const feature = target.getAttribute('data-feature') || '';
+
+          if (target.checked) {
+            // Add to pros list
+            createProsConsItem(prosList, feature);
+          } else {
+            // Remove from pros list
+            const items = prosList.querySelectorAll('.pros-cons-item input');
+            items.forEach(input => {
+              if ((input as HTMLInputElement).value === feature) {
+                input.closest('.pros-cons-item')?.remove();
+              }
+            });
+          }
+        });
+      });
     }
 
     function createProsConsItem(list: HTMLElement, value: string = '') {
       const item = document.createElement('div');
       item.className = 'pros-cons-item';
       item.innerHTML = `
-        <input type="text" value="${value}" placeholder="Escribe aquí..." />
+        <input type="text" value="${value}" placeholder="Escribe aqui..." />
         <button type="button" title="Eliminar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12"/>
@@ -930,6 +1598,77 @@ import categories from '@data/categories.json';
     createProsConsItem(prosList);
     createProsConsItem(consList);
 
+    async function checkDuplicate(asin: string): Promise<{ exists: boolean; products: any[] }> {
+      try {
+        const response = await fetch('/api/admin/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ asin }),
+        });
+        const result = await response.json();
+        return { exists: result.exists, products: result.products || [] };
+      } catch {
+        return { exists: false, products: [] };
+      }
+    }
+
+    function processImportedData(result: any) {
+      const data = result.data;
+
+      // Update meta info
+      metaAsin.textContent = data.asin;
+      metaMarketplace.textContent = `amazon.${data.marketplace}`;
+      metaAffiliateUrl.href = data.affiliateUrl;
+
+      // Update hidden fields
+      formFields.asin.value = data.asin;
+      formFields.affiliateUrl.value = data.affiliateUrl;
+      formFields.lang.value = data.lang;
+      formFields.langSelect.value = data.lang;
+
+      // Populate form with scraped data
+      setAutoFilled(formFields.title, data.title);
+      setAutoFilled(formFields.brand, data.brand);
+      setAutoFilled(formFields.price, data.price);
+      setAutoFilled(formFields.originalPrice, data.originalPrice);
+      setAutoFilled(formFields.rating, data.rating);
+      setAutoFilled(formFields.totalReviews, data.totalReviews);
+      setAutoFilled(formFields.shortDesc, data.shortDescription);
+      setAutoFilled(formFields.description, data.description);
+
+      // Check if on sale
+      if (data.originalPrice && data.price && data.originalPrice > data.price) {
+        formFields.isOnSale.checked = true;
+      }
+
+      // Update preview card
+      updatePreviewCard(data);
+
+      // Update field status
+      if (data.fieldStatus) {
+        updateFieldStatus(data.fieldStatus);
+      }
+
+      // Render images
+      renderImages(data.images || []);
+
+      // Render features
+      renderFeatures(data.features || []);
+
+      // Show preview section
+      productPreview.classList.add('visible');
+
+      // Show appropriate message
+      if (result.scraped) {
+        showStatus(result.message || 'Datos importados correctamente.', 'success');
+      } else {
+        showStatus('No se pudieron obtener datos automaticamente. Completa el formulario manualmente.', 'warning');
+      }
+
+      // Scroll to preview
+      previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     async function importProduct() {
       const input = amazonUrlInput.value.trim();
       if (!input) {
@@ -938,6 +1677,7 @@ import categories from '@data/categories.json';
       }
 
       hideStatus();
+      hideDuplicateWarning();
       importBtn.classList.add('loading');
       importBtn.disabled = true;
 
@@ -957,61 +1697,160 @@ import categories from '@data/categories.json';
           return;
         }
 
-        const data = result.data;
+        // Check for duplicates
+        const { exists, products } = await checkDuplicate(result.data.asin);
 
-        // Update meta info
-        metaAsin.textContent = data.asin;
-        metaMarketplace.textContent = `amazon.${data.marketplace}`;
-        metaAffiliateUrl.href = data.affiliateUrl;
-
-        // Update hidden fields
-        formFields.asin.value = data.asin;
-        formFields.affiliateUrl.value = data.affiliateUrl;
-        formFields.lang.value = data.lang;
-        formFields.langSelect.value = data.lang;
-
-        // Populate form with scraped data
-        setAutoFilled(formFields.title, data.title);
-        setAutoFilled(formFields.brand, data.brand);
-        setAutoFilled(formFields.price, data.price);
-        setAutoFilled(formFields.originalPrice, data.originalPrice);
-        setAutoFilled(formFields.rating, data.rating);
-        setAutoFilled(formFields.totalReviews, data.totalReviews);
-        setAutoFilled(formFields.shortDesc, data.shortDescription);
-        setAutoFilled(formFields.description, data.description);
-
-        // Check if on sale
-        if (data.originalPrice && data.price && data.originalPrice > data.price) {
-          formFields.isOnSale.checked = true;
+        if (exists) {
+          pendingDuplicateData = result;
+          showDuplicateWarning(result.data.asin, products);
+          return;
         }
 
-        // Render images
-        renderImages(data.images || []);
-
-        // Render features
-        renderFeatures(data.features || []);
-
-        // Show preview section
-        productPreview.classList.add('visible');
-
-        // Show appropriate message
-        if (result.scraped) {
-          showStatus('Datos importados correctamente. Revisa y edita antes de guardar.', 'success');
-        } else {
-          showStatus('No se pudieron obtener datos automáticamente. Completa el formulario manualmente.', 'warning');
-        }
-
-        // Scroll to form
-        productPreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        processImportedData(result);
 
       } catch (error) {
-        showStatus('Error de conexión. Intenta de nuevo.', 'error');
+        showStatus('Error de conexion. Intenta de nuevo.', 'error');
         console.error(error);
       } finally {
         importBtn.classList.remove('loading');
         importBtn.disabled = false;
       }
     }
+
+    // Bulk import
+    async function bulkImport() {
+      const lines = bulkUrls.value.trim().split('\n').filter(line => line.trim());
+
+      if (lines.length === 0) {
+        showStatus('Por favor ingresa al menos una URL o ASIN', 'error');
+        return;
+      }
+
+      hideStatus();
+      bulkImportBtn.classList.add('loading');
+      bulkImportBtn.disabled = true;
+      bulkResults.innerHTML = '';
+      bulkResults.classList.add('visible');
+
+      const results: { asin: string; success: boolean; message: string; productId?: string }[] = [];
+
+      for (const line of lines) {
+        const input = line.trim();
+        const isAsin = /^[A-Z0-9]{10}$/i.test(input);
+
+        try {
+          // First scrape the data
+          const scrapeResponse = await fetch('/api/admin/scrape-amazon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+          });
+
+          const scrapeResult = await scrapeResponse.json();
+
+          if (!scrapeResponse.ok) {
+            results.push({ asin: input, success: false, message: scrapeResult.error || 'Error al procesar' });
+            continue;
+          }
+
+          const data = scrapeResult.data;
+
+          // Check for duplicates
+          const { exists } = await checkDuplicate(data.asin);
+          if (exists) {
+            results.push({ asin: data.asin, success: false, message: 'Ya existe en el sistema' });
+            continue;
+          }
+
+          // Create product as draft
+          const createResponse = await fetch('/api/admin/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              asin: data.asin,
+              affiliateUrl: data.affiliateUrl,
+              lang: data.lang,
+              title: data.title || `Producto ${data.asin}`,
+              brand: data.brand || 'Desconocida',
+              price: data.price || 0,
+              originalPrice: data.originalPrice,
+              rating: data.rating,
+              totalReviews: data.totalReviews,
+              shortDescription: data.shortDescription,
+              description: data.description,
+              featuredImage: data.images?.[0] ? { url: data.images[0], alt: data.title || '' } : undefined,
+              status: 'draft',
+              isFeatured: false,
+              isOnSale: !!(data.originalPrice && data.price && data.originalPrice > data.price),
+              pros: [],
+              cons: [],
+            }),
+          });
+
+          const createResult = await createResponse.json();
+
+          if (createResponse.ok) {
+            results.push({ asin: data.asin, success: true, message: data.title || 'Importado', productId: createResult.productId });
+          } else {
+            results.push({ asin: data.asin, success: false, message: createResult.error || 'Error al guardar' });
+          }
+
+        } catch (error) {
+          results.push({ asin: input, success: false, message: 'Error de conexion' });
+        }
+
+        // Update UI after each item
+        renderBulkResults(results);
+      }
+
+      bulkImportBtn.classList.remove('loading');
+      bulkImportBtn.disabled = false;
+
+      const successCount = results.filter(r => r.success).length;
+      showStatus(`Importacion completada: ${successCount}/${results.length} productos importados.`, successCount > 0 ? 'success' : 'warning');
+    }
+
+    function renderBulkResults(results: any[]) {
+      bulkResults.innerHTML = results.map(r => `
+        <div class="bulk-result-item ${r.success ? 'success' : 'error'}">
+          <div class="status-icon">
+            ${r.success ? '✓' : '✗'}
+          </div>
+          <span class="asin">${r.asin}</span>
+          <span class="message">${r.message}</span>
+          ${r.productId ? `<a href="/admin/products/${r.productId}" class="action-link">Editar</a>` : ''}
+        </div>
+      `).join('');
+    }
+
+    bulkImportBtn.addEventListener('click', bulkImport);
+
+    // Paste detection
+    document.addEventListener('paste', async (e) => {
+      if (currentMode !== 'single') return;
+
+      // Only auto-import if input is focused or empty
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement === amazonUrlInput;
+
+      if (!isInputFocused && amazonUrlInput.value.trim()) return;
+
+      const pastedText = e.clipboardData?.getData('text')?.trim() || '';
+
+      // Check if it looks like an Amazon URL or ASIN
+      const isAmazonUrl = pastedText.includes('amazon.') && (pastedText.includes('/dp/') || pastedText.includes('/gp/'));
+      const isAsin = /^[A-Z0-9]{10}$/i.test(pastedText);
+
+      if (isAmazonUrl || isAsin) {
+        e.preventDefault();
+        amazonUrlInput.value = pastedText;
+
+        // Small delay for UX
+        setTimeout(() => {
+          importProduct();
+        }, 100);
+      }
+    });
 
     // Event Listeners
     importBtn.addEventListener('click', importProduct);
@@ -1090,7 +1929,7 @@ import categories from '@data/categories.json';
         }, 1500);
 
       } catch (error) {
-        showStatus('Error de conexión. Intenta de nuevo.', 'error');
+        showStatus('Error de conexion. Intenta de nuevo.', 'error');
         console.error(error);
         saveBtn.disabled = false;
         saveBtn.textContent = 'Guardar Producto';
@@ -1102,7 +1941,10 @@ import categories from '@data/categories.json';
       amazonUrlInput.value = '';
       productForm.reset();
       productPreview.classList.remove('visible');
+      previewCard.classList.remove('visible');
+      fieldStatusContainer.style.display = 'none';
       hideStatus();
+      hideDuplicateWarning();
 
       // Clear auto-filled classes
       document.querySelectorAll('.auto-filled').forEach(el => el.classList.remove('auto-filled'));
@@ -1114,7 +1956,7 @@ import categories from '@data/categories.json';
       createProsConsItem(consList);
 
       // Reset images
-      imageGallery.innerHTML = '<div class="no-images">No se encontraron imágenes. Puedes agregar una URL manualmente abajo.</div>';
+      imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>';
       selectedImageUrl = null;
 
       // Hide features
