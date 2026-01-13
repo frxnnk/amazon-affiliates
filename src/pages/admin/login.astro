@@ -55,8 +55,7 @@ import { SignIn } from '@clerk/astro/components';
   <div class="login-container">
     <div class="logo">BestDeals Admin</div>
     <SignIn
-      path="/admin/login"
-      routing="path"
+      routing="hash"
       signUpUrl="/admin/login"
       afterSignInUrl="/admin"
       appearance={{
