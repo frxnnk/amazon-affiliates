@@ -1,4 +1,4 @@
-import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, eq, desc, and } from 'astro:db';
+import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, eq, desc, and, like, or } from 'astro:db';
 
 // Tier thresholds
 const TIER_THRESHOLDS = {
@@ -512,4 +512,292 @@ export async function getClickStats() {
   return Object.entries(stats)
     .map(([productSlug, count]) => ({ productSlug, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+// ==================== PRODUCT FUNCTIONS ====================
+
+export type ProductStatus = 'draft' | 'published' | 'archived';
+
+export interface ProductInput {
+  productId: string;
+  asin: string;
+  lang?: string;
+  title: string;
+  brand: string;
+  model?: string;
+  description: string;
+  shortDescription?: string;
+  category?: string;
+  subcategory?: string;
+  tags?: string[];
+  price: number;
+  originalPrice?: number;
+  currency?: string;
+  affiliateUrl: string;
+  rating?: number;
+  totalReviews?: number;
+  ourRating?: number;
+  pros?: string[];
+  cons?: string[];
+  specifications?: Record<string, string>;
+  featuredImageUrl: string;
+  featuredImageAlt?: string;
+  gallery?: { url: string; alt: string }[];
+  content?: string;
+  status?: ProductStatus;
+  isFeatured?: boolean;
+  isOnSale?: boolean;
+  relatedProducts?: string[];
+}
+
+// Get all products with optional filters
+export async function getAllProducts(options?: {
+  lang?: string;
+  status?: ProductStatus;
+  category?: string;
+  featured?: boolean;
+  limit?: number;
+}) {
+  let query = db.select().from(Products);
+
+  // Build conditions array
+  const conditions = [];
+
+  if (options?.lang) {
+    conditions.push(eq(Products.lang, options.lang));
+  }
+  if (options?.status) {
+    conditions.push(eq(Products.status, options.status));
+  }
+  if (options?.category) {
+    conditions.push(eq(Products.category, options.category));
+  }
+  if (options?.featured !== undefined) {
+    conditions.push(eq(Products.isFeatured, options.featured));
+  }
+
+  // Apply conditions
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
+  }
+
+  // Order by featured first, then by creation date
+  query = query.orderBy(desc(Products.isFeatured), desc(Products.createdAt)) as typeof query;
+
+  if (options?.limit) {
+    query = query.limit(options.limit) as typeof query;
+  }
+
+  return query.all();
+}
+
+// Get published products for frontend
+export async function getPublishedProducts(lang: string, limit?: number) {
+  return getAllProducts({
+    lang,
+    status: 'published',
+    limit,
+  });
+}
+
+// Get featured products
+export async function getFeaturedProducts(lang: string, limit = 6) {
+  return getAllProducts({
+    lang,
+    status: 'published',
+    featured: true,
+    limit,
+  });
+}
+
+// Get product by slug (productId)
+export async function getProductBySlug(productId: string, lang?: string) {
+  if (lang) {
+    return db.select()
+      .from(Products)
+      .where(and(
+        eq(Products.productId, productId),
+        eq(Products.lang, lang)
+      ))
+      .get();
+  }
+  return db.select()
+    .from(Products)
+    .where(eq(Products.productId, productId))
+    .get();
+}
+
+// Get product by ID (database ID)
+export async function getProductById(id: number) {
+  return db.select()
+    .from(Products)
+    .where(eq(Products.id, id))
+    .get();
+}
+
+// Get products by ASIN
+export async function getProductsByAsin(asin: string) {
+  return db.select()
+    .from(Products)
+    .where(eq(Products.asin, asin))
+    .all();
+}
+
+// Get products by category
+export async function getProductsByCategory(category: string, lang: string) {
+  return db.select()
+    .from(Products)
+    .where(and(
+      eq(Products.category, category),
+      eq(Products.lang, lang),
+      eq(Products.status, 'published')
+    ))
+    .orderBy(desc(Products.isFeatured), desc(Products.createdAt))
+    .all();
+}
+
+// Search products by title or brand
+export async function searchProducts(query: string, lang: string, limit = 20) {
+  const searchTerm = `%${query}%`;
+  return db.select()
+    .from(Products)
+    .where(and(
+      eq(Products.lang, lang),
+      eq(Products.status, 'published'),
+      or(
+        like(Products.title, searchTerm),
+        like(Products.brand, searchTerm)
+      )
+    ))
+    .limit(limit)
+    .all();
+}
+
+// Create a new product
+export async function createProduct(data: ProductInput) {
+  // Check if productId already exists for this language
+  const existing = await getProductBySlug(data.productId, data.lang);
+  if (existing) {
+    throw new Error(`Product with ID "${data.productId}" already exists for language "${data.lang}"`);
+  }
+
+  const now = new Date();
+
+  await db.insert(Products).values({
+    productId: data.productId,
+    asin: data.asin,
+    lang: data.lang || 'en',
+    title: data.title,
+    brand: data.brand,
+    model: data.model,
+    description: data.description,
+    shortDescription: data.shortDescription,
+    category: data.category,
+    subcategory: data.subcategory,
+    tags: data.tags || [],
+    price: data.price,
+    originalPrice: data.originalPrice,
+    currency: data.currency || 'USD',
+    affiliateUrl: data.affiliateUrl,
+    rating: data.rating,
+    totalReviews: data.totalReviews,
+    ourRating: data.ourRating,
+    pros: data.pros || [],
+    cons: data.cons || [],
+    specifications: data.specifications,
+    featuredImageUrl: data.featuredImageUrl,
+    featuredImageAlt: data.featuredImageAlt || data.title,
+    gallery: data.gallery,
+    content: data.content,
+    status: data.status || 'draft',
+    isFeatured: data.isFeatured || false,
+    isOnSale: data.isOnSale || false,
+    relatedProducts: data.relatedProducts,
+    createdAt: now,
+    updatedAt: now,
+    publishedAt: data.status === 'published' ? now : undefined,
+  });
+
+  return getProductBySlug(data.productId, data.lang);
+}
+
+// Update a product
+export async function updateProduct(id: number, data: Partial<ProductInput>) {
+  const product = await getProductById(id);
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  const now = new Date();
+  const updateData: Record<string, any> = {
+    ...data,
+    updatedAt: now,
+  };
+
+  // If status changed to published, set publishedAt
+  if (data.status === 'published' && product.status !== 'published') {
+    updateData.publishedAt = now;
+  }
+
+  await db.update(Products)
+    .set(updateData)
+    .where(eq(Products.id, id));
+
+  return getProductById(id);
+}
+
+// Delete a product
+export async function deleteProduct(id: number) {
+  const product = await getProductById(id);
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  await db.delete(Products).where(eq(Products.id, id));
+  return product;
+}
+
+// Get related products
+export async function getRelatedProducts(productIds: string[], lang: string, limit = 4) {
+  if (!productIds || productIds.length === 0) return [];
+
+  const products = [];
+  for (const productId of productIds.slice(0, limit)) {
+    const product = await getProductBySlug(productId, lang);
+    if (product && product.status === 'published') {
+      products.push(product);
+    }
+  }
+  return products;
+}
+
+// Get product count by status (for admin dashboard)
+export async function getProductStats() {
+  const all = await db.select().from(Products).all();
+
+  const stats = {
+    total: all.length,
+    published: 0,
+    draft: 0,
+    archived: 0,
+    byLang: {} as Record<string, number>,
+    byCategory: {} as Record<string, number>,
+  };
+
+  for (const product of all) {
+    // Count by status
+    if (product.status === 'published') stats.published++;
+    else if (product.status === 'draft') stats.draft++;
+    else if (product.status === 'archived') stats.archived++;
+
+    // Count by language
+    stats.byLang[product.lang] = (stats.byLang[product.lang] || 0) + 1;
+
+    // Count by category
+    if (product.category) {
+      stats.byCategory[product.category] = (stats.byCategory[product.category] || 0) + 1;
+    }
+  }
+
+  return stats;
 }

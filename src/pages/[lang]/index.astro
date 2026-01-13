@@ -42,34 +42,20 @@ const featuredProducts = allProducts
     isFeatured: p.data.isFeatured,
   }));
 
-// Get latest reviews
-const allReviews = await getCollection('reviews');
-const latestReviews = allReviews
-  .filter(r => r.data.lang === lang && r.data.status === 'published')
-  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
-  .slice(0, 3);
-
-// Get latest lists (only public)
-const allLists = await getCollection('lists');
-const latestLists = allLists
-  .filter(l => l.data.lang === lang && l.data.status === 'published' && l.data.visibility === 'public')
-  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
-  .slice(0, 3);
-
 const heroContent = {
   es: {
-    headline: 'Compra inteligente.',
-    subheadline: 'Gana cashback.',
-    description: 'Descubre productos cuidadosamente seleccionados y gana dinero con cada compra en Amazon. Simple, transparente, sin trucos.',
-    cta1: 'Explorar productos',
-    cta2: 'Como funciona',
+    headline: 'Las mejores ofertas.',
+    subheadline: 'En un solo lugar.',
+    description: 'Productos de calidad cuidadosamente seleccionados de Amazon. Encontramos las mejores ofertas para que tú no tengas que hacerlo.',
+    cta1: 'Ver productos',
+    cta2: 'Ver categorias',
   },
   en: {
-    headline: 'Shop smarter.',
-    subheadline: 'Earn cashback.',
-    description: 'Discover curated products and earn money on every Amazon purchase. Simple, transparent, no gimmicks.',
-    cta1: 'Explore products',
-    cta2: 'How it works',
+    headline: 'Best deals.',
+    subheadline: 'All in one place.',
+    description: 'Quality products carefully curated from Amazon. We find the best deals so you don\'t have to.',
+    cta1: 'Browse products',
+    cta2: 'View categories',
   },
 };
 
@@ -77,19 +63,19 @@ const howItWorksContent = {
   es: {
     title: 'Como funciona',
     steps: [
-      { number: '01', title: 'Explora', description: 'Encuentra productos de calidad en nuestras guias y reviews.' },
-      { number: '02', title: 'Compra', description: 'Haz clic y compra en Amazon como siempre.' },
-      { number: '03', title: 'Reclama', description: 'Envia tu numero de pedido para verificacion.' },
-      { number: '04', title: 'Gana', description: 'Recibe tu cashback cuando alcances el minimo.' },
+      { number: '01', title: 'Explora', description: 'Navega por nuestra seleccion de productos verificados.' },
+      { number: '02', title: 'Compara', description: 'Lee nuestras descripciones y comparativas.' },
+      { number: '03', title: 'Decide', description: 'Elige el producto que mejor se adapta a ti.' },
+      { number: '04', title: 'Compra', description: 'Compra seguro en Amazon con un solo clic.' },
     ],
   },
   en: {
     title: 'How it works',
     steps: [
-      { number: '01', title: 'Explore', description: 'Find quality products in our guides and reviews.' },
-      { number: '02', title: 'Purchase', description: 'Click through and buy on Amazon as usual.' },
-      { number: '03', title: 'Claim', description: 'Submit your order number for verification.' },
-      { number: '04', title: 'Earn', description: 'Receive your cashback when you hit the minimum.' },
+      { number: '01', title: 'Explore', description: 'Browse our selection of verified products.' },
+      { number: '02', title: 'Compare', description: 'Read our descriptions and comparisons.' },
+      { number: '03', title: 'Decide', description: 'Choose the product that fits you best.' },
+      { number: '04', title: 'Buy', description: 'Shop safely on Amazon with one click.' },
     ],
   },
 };
@@ -114,7 +100,7 @@ const howItWorks = howItWorksContent[lang];
         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
-        <span>{lang === 'es' ? 'Hasta 10% de cashback' : 'Up to 10% cashback'}</span>
+        <span>{lang === 'es' ? 'Productos verificados' : 'Verified products'}</span>
       </div>
 
       <h1 class="hero-headline animate-in" style="--delay: 100ms;">
@@ -133,26 +119,9 @@ const howItWorks = howItWorksContent[lang];
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </Button>
-        <Button href="#how-it-works" variant="outline" size="lg">
+        <Button href={`/${lang}/categories`} variant="outline" size="lg">
           {hero.cta2}
         </Button>
-      </div>
-
-      <div class="hero-stats animate-in" style="--delay: 400ms;">
-        <div class="stat">
-          <span class="stat-value">2%</span>
-          <span class="stat-label">{lang === 'es' ? 'Cashback base' : 'Base cashback'}</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-value">$15</span>
-          <span class="stat-label">{lang === 'es' ? 'Minimo de retiro' : 'Min. payout'}</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-value">24h</span>
-          <span class="stat-label">{lang === 'es' ? 'Verificacion' : 'Verification'}</span>
-        </div>
       </div>
     </div>
   </section>
@@ -210,155 +179,6 @@ const howItWorks = howItWorksContent[lang];
     </div>
   </section>
 
-  <!-- Latest Reviews -->
-  <section class="reviews-section">
-    <div class="section-container">
-      <div class="section-header-row">
-        <div>
-          <span class="section-eyebrow">{lang === 'es' ? 'Analisis experto' : 'Expert analysis'}</span>
-          <h2 class="section-title">
-            {lang === 'es' ? 'Ultimas reviews' : 'Latest reviews'}
-          </h2>
-        </div>
-        <a href={`/${lang}/reviews`} class="see-all-link">
-          {t('common.seeAll')}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
-      </div>
-
-      {latestReviews.length > 0 ? (
-        <div class="reviews-grid">
-          {latestReviews.map((review, index) => (
-            <article class="review-card" style={`--card-delay: ${index * 100}ms;`}>
-              <a href={`/${lang}/reviews/${review.data.reviewId}`} class="review-image-link">
-                <div class="review-image">
-                  <img
-                    src={review.data.featuredImage.url}
-                    alt={review.data.featuredImage.alt}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div class="review-score">
-                    <span class="score-value">{review.data.overallScore}</span>
-                    <span class="score-max">/10</span>
-                  </div>
-                </div>
-              </a>
-              <div class="review-content">
-                <h3 class="review-title">
-                  <a href={`/${lang}/reviews/${review.data.reviewId}`}>
-                    {review.data.title}
-                  </a>
-                </h3>
-                <p class="review-excerpt">{review.data.excerpt}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div class="empty-state">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-          </div>
-          <p>{lang === 'es' ? 'Proximamente reviews' : 'Reviews coming soon'}</p>
-        </div>
-      )}
-    </div>
-  </section>
-
-  <!-- Latest Lists/Guides -->
-  <section class="lists-section">
-    <div class="section-container">
-      <div class="section-header-row">
-        <div>
-          <span class="section-eyebrow">{lang === 'es' ? 'Comparativas' : 'Comparisons'}</span>
-          <h2 class="section-title">
-            {lang === 'es' ? 'Guias y comparativas' : 'Guides & comparisons'}
-          </h2>
-        </div>
-        <a href={`/${lang}/lists`} class="see-all-link">
-          {t('common.seeAll')}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
-      </div>
-
-      {latestLists.length > 0 ? (
-        <div class="lists-grid">
-          {latestLists.map((list, index) => (
-            <article class="list-card" style={`--card-delay: ${index * 100}ms;`}>
-              <a href={`/${lang}/lists/${list.data.listId}`} class="list-image-link">
-                <div class="list-image">
-                  <img
-                    src={list.data.featuredImage.url}
-                    alt={list.data.featuredImage.alt}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              </a>
-              <div class="list-content">
-                <span class="list-type">
-                  {list.data.listType.replace('-', ' ')}
-                </span>
-                <h3 class="list-title">
-                  <a href={`/${lang}/lists/${list.data.listId}`}>
-                    {list.data.title}
-                  </a>
-                </h3>
-                <p class="list-excerpt">{list.data.excerpt}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div class="empty-state">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <p>{lang === 'es' ? 'Proximamente guias' : 'Guides coming soon'}</p>
-        </div>
-      )}
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <div class="cta-container">
-      <div class="cta-content">
-        <h2 class="cta-title">
-          {lang === 'es' ? 'Empieza a ganar hoy' : 'Start earning today'}
-        </h2>
-        <p class="cta-description">
-          {lang === 'es'
-            ? 'Crea tu cuenta gratis y comienza a recibir cashback en cada compra. Sin costes ocultos, sin complicaciones.'
-            : 'Create your free account and start earning cashback on every purchase. No hidden fees, no hassle.'}
-        </p>
-        <div class="cta-actions">
-          <Button href={`/${lang}/dashboard`} variant="secondary" size="lg">
-            {lang === 'es' ? 'Crear cuenta gratis' : 'Create free account'}
-          </Button>
-          <span class="cta-note">
-            {lang === 'es' ? 'Sin tarjeta de credito' : 'No credit card required'}
-          </span>
-        </div>
-      </div>
-      <div class="cta-visual">
-        <div class="cashback-illustration">
-          <div class="coin coin-1">$</div>
-          <div class="coin coin-2">$</div>
-          <div class="coin coin-3">$</div>
-        </div>
-      </div>
-    </div>
-  </section>
 </BaseLayout>
 
 <style>
@@ -452,45 +272,6 @@ const howItWorks = howItWorksContent[lang];
     flex-wrap: wrap;
     gap: 1rem;
     justify-content: center;
-    margin-bottom: 3rem;
-  }
-
-  .hero-stats {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    padding: 1.5rem 2rem;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--color-sand, #E8E4DD);
-    border-radius: 16px;
-  }
-
-  .stat {
-    text-align: center;
-  }
-
-  .stat-value {
-    display: block;
-    font-family: var(--font-display, 'Fraunces', Georgia, serif);
-    font-size: 1.75rem;
-    font-weight: 500;
-    color: var(--color-ink, #1A1815);
-    letter-spacing: -0.02em;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    color: var(--color-stone, #6B6560);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .stat-divider {
-    width: 1px;
-    height: 2.5rem;
-    background: var(--color-sand, #E8E4DD);
   }
 
   /* Animation */
@@ -628,194 +409,6 @@ const howItWorks = howItWorksContent[lang];
     background: var(--color-cream, #FDFBF7);
   }
 
-  /* Reviews Section */
-  .reviews-section {
-    background: var(--color-white, #FFFFFF);
-  }
-
-  .reviews-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-  }
-
-  .review-card {
-    background: var(--color-cream, #FDFBF7);
-    border: 1px solid var(--color-sand, #E8E4DD);
-    border-radius: 16px;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .review-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
-  }
-
-  .review-image-link {
-    display: block;
-  }
-
-  .review-image {
-    position: relative;
-    aspect-ratio: 16/10;
-    background: var(--color-sand, #E8E4DD);
-    overflow: hidden;
-  }
-
-  .review-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .review-card:hover .review-image img {
-    transform: scale(1.05);
-  }
-
-  .review-score {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    display: flex;
-    align-items: baseline;
-    gap: 0.125rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-ink, #1A1815);
-    color: var(--color-cream, #FDFBF7);
-    border-radius: 8px;
-  }
-
-  .score-value {
-    font-family: var(--font-display, 'Fraunces', Georgia, serif);
-    font-size: 1.5rem;
-    font-weight: 500;
-    line-height: 1;
-  }
-
-  .score-max {
-    font-size: 0.75rem;
-    opacity: 0.7;
-  }
-
-  .review-content {
-    padding: 1.25rem 1.5rem 1.5rem;
-  }
-
-  .review-title {
-    font-size: 1rem;
-    font-weight: 500;
-    line-height: 1.4;
-    margin: 0 0 0.5rem;
-  }
-
-  .review-title a {
-    color: var(--color-ink, #1A1815);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .review-title a:hover {
-    color: var(--color-honey-dark, #A67B5B);
-  }
-
-  .review-excerpt {
-    font-size: 0.875rem;
-    color: var(--color-stone, #6B6560);
-    line-height: 1.5;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* Lists Section */
-  .lists-section {
-    background: var(--color-cream, #FDFBF7);
-  }
-
-  .lists-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-  }
-
-  .list-card {
-    background: var(--color-white, #FFFFFF);
-    border: 1px solid var(--color-sand, #E8E4DD);
-    border-radius: 16px;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .list-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
-  }
-
-  .list-image-link {
-    display: block;
-  }
-
-  .list-image {
-    aspect-ratio: 16/10;
-    background: var(--color-sand, #E8E4DD);
-    overflow: hidden;
-  }
-
-  .list-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .list-card:hover .list-image img {
-    transform: scale(1.05);
-  }
-
-  .list-content {
-    padding: 1.25rem 1.5rem 1.5rem;
-  }
-
-  .list-type {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--color-sage, #7D8B6A);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .list-title {
-    font-size: 1rem;
-    font-weight: 500;
-    line-height: 1.4;
-    margin: 0.5rem 0;
-  }
-
-  .list-title a {
-    color: var(--color-ink, #1A1815);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .list-title a:hover {
-    color: var(--color-honey-dark, #A67B5B);
-  }
-
-  .list-excerpt {
-    font-size: 0.875rem;
-    color: var(--color-stone, #6B6560);
-    line-height: 1.5;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
   /* Empty State */
   .empty-state {
     text-align: center;
@@ -838,152 +431,17 @@ const howItWorks = howItWorksContent[lang];
     height: 100%;
   }
 
-  /* CTA Section */
-  .cta-section {
-    background: var(--color-ink, #1A1815);
-    color: var(--color-cream, #FDFBF7);
-    overflow: hidden;
-  }
-
-  .cta-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 5rem 1.5rem;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 4rem;
-  }
-
-  .cta-title {
-    font-family: var(--font-display, 'Fraunces', Georgia, serif);
-    font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 400;
-    margin: 0 0 1rem;
-    letter-spacing: -0.02em;
-  }
-
-  .cta-description {
-    font-size: 1.125rem;
-    color: var(--color-stone-light, #9C9690);
-    line-height: 1.6;
-    max-width: 480px;
-    margin: 0 0 2rem;
-  }
-
-  .cta-actions {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  .cta-note {
-    font-size: 0.8125rem;
-    color: var(--color-stone, #6B6560);
-  }
-
-  .cta-visual {
-    display: none;
-  }
-
-  .cashback-illustration {
-    position: relative;
-    width: 200px;
-    height: 200px;
-  }
-
-  .coin {
-    position: absolute;
-    width: 60px;
-    height: 60px;
-    background: var(--color-honey, #C8956C);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display, 'Fraunces', Georgia, serif);
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: white;
-    box-shadow: 0 8px 24px rgba(200, 149, 108, 0.4);
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .coin-1 {
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    animation-delay: 0s;
-  }
-
-  .coin-2 {
-    bottom: 20px;
-    left: 20px;
-    width: 50px;
-    height: 50px;
-    font-size: 1.25rem;
-    animation-delay: 0.5s;
-  }
-
-  .coin-3 {
-    bottom: 30px;
-    right: 20px;
-    width: 45px;
-    height: 45px;
-    font-size: 1.125rem;
-    animation-delay: 1s;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
   /* Responsive */
   @media (max-width: 1024px) {
     .steps-grid {
       grid-template-columns: repeat(2, 1fr);
     }
-
-    .reviews-grid,
-    .lists-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (min-width: 768px) {
-    .cta-visual {
-      display: block;
-    }
   }
 
   @media (max-width: 768px) {
-    .hero-stats {
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .stat-divider {
-      width: 3rem;
-      height: 1px;
-    }
-
     .section-header-row {
       flex-direction: column;
       align-items: flex-start;
-    }
-
-    .cta-container {
-      grid-template-columns: 1fr;
-      text-align: center;
-    }
-
-    .cta-actions {
-      flex-direction: column;
     }
   }
 
@@ -992,9 +450,7 @@ const howItWorks = howItWorksContent[lang];
       padding: 4rem 1rem;
     }
 
-    .steps-grid,
-    .reviews-grid,
-    .lists-grid {
+    .steps-grid {
       grid-template-columns: 1fr;
     }
 

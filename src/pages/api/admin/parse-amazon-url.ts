@@ -1,15 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getProductPrefillFromUrl, parseAmazonUrl, isValidAsin } from '@utils/amazon';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const userId = locals.auth?.userId;
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
+// Nota: El middleware ya verifica que sea admin para rutas /api/admin/*
+export const POST: APIRoute = async ({ request }) => {
   try {
     const { url, asin, affiliateTag } = await request.json();
 

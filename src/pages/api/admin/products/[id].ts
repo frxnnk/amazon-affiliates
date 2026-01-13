@@ -1,10 +1,64 @@
 import type { APIRoute } from 'astro';
-import { generateProductMarkdown, generateProductFilename, slugify } from '@utils/markdown';
 import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { getCollection } from 'astro:content';
+import { getProductById, getProductBySlug, updateProduct, deleteProduct } from '@lib/db';
 
+// GET - Get a single product by ID
+export const GET: APIRoute = async (context) => {
+  const { locals, params } = context;
+  const userId = locals.auth?.userId;
+
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const isAdmin = await isUserAdmin(userId, context);
+  if (!isAdmin) {
+    return unauthorizedResponse('Admin access required');
+  }
+
+  try {
+    const id = params.id;
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: 'Product ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Try to get by numeric ID first, then by slug
+    let product = null;
+    const numericId = parseInt(id);
+    if (!isNaN(numericId)) {
+      product = await getProductById(numericId);
+    }
+    if (!product) {
+      product = await getProductBySlug(id);
+    }
+
+    if (!product) {
+      return new Response(
+        JSON.stringify({ error: 'Product not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(JSON.stringify({ success: true, product }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('[Get Product Error]', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch product' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+};
+
+// PUT - Update a product
 export const PUT: APIRoute = async (context) => {
   const { request, locals, params } = context;
   const userId = locals.auth?.userId;
@@ -12,111 +66,95 @@ export const PUT: APIRoute = async (context) => {
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Verify admin role
   const isAdmin = await isUserAdmin(userId, context);
   if (!isAdmin) {
     return unauthorizedResponse('Admin access required');
   }
 
   try {
-    const productId = params.id;
-    if (!productId) {
+    const id = params.id;
+    if (!id) {
       return new Response(
         JSON.stringify({ error: 'Product ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await request.json();
+    // Get existing product
+    const numericId = parseInt(id);
+    let product = null;
+    if (!isNaN(numericId)) {
+      product = await getProductById(numericId);
+    }
+    if (!product) {
+      product = await getProductBySlug(id);
+    }
 
-    // Validate required fields
-    if (!data.title || !data.asin || !data.brand) {
+    if (!product) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: title, asin, brand' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Product not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const lang = data.lang || 'es';
-    const now = new Date().toISOString().split('T')[0];
+    const data = await request.json();
 
-    // Find existing product to get publishedAt
-    let publishedAt = now;
-    try {
-      const products = await getCollection('products');
-      const existing = products.find(p => p.data.productId === productId && p.data.lang === lang);
-      if (existing) {
-        publishedAt = existing.data.publishedAt || now;
-      }
-    } catch {}
+    // Build update data
+    const updateData: Record<string, any> = {};
 
-    const frontmatter = {
-      productId,
-      asin: data.asin,
-      lang,
-      title: data.title,
-      brand: data.brand,
-      model: data.model || undefined,
-      description: data.description || '',
-      shortDescription: data.shortDescription || '',
-      category: data.category || 'electronics',
-      subcategory: data.subcategory || undefined,
-      tags: data.tags || [],
-      price: parseFloat(data.price) || 0,
-      originalPrice: data.originalPrice ? parseFloat(data.originalPrice) : undefined,
-      currency: data.currency || 'EUR',
-      affiliateUrl: data.affiliateUrl || `https://www.amazon.${lang === 'en' ? 'com' : 'es'}/dp/${data.asin}`,
-      rating: parseFloat(data.rating) || 0,
-      totalReviews: data.totalReviews ? parseInt(data.totalReviews) : undefined,
-      ourRating: data.ourRating ? parseFloat(data.ourRating) : undefined,
-      pros: data.pros || [],
-      cons: data.cons || [],
-      specifications: data.specifications || undefined,
-      featuredImage: data.featuredImage || { url: '', alt: data.title },
-      gallery: data.gallery || undefined,
-      status: data.status || 'draft',
-      isFeatured: Boolean(data.isFeatured),
-      isOnSale: Boolean(data.isOnSale),
-      publishedAt,
-      updatedAt: now,
-      relatedProducts: data.relatedProducts || undefined,
-    };
+    // Only include fields that were provided
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.brand !== undefined) updateData.brand = data.brand;
+    if (data.model !== undefined) updateData.model = data.model;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.subcategory !== undefined) updateData.subcategory = data.subcategory;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.price !== undefined) updateData.price = parseFloat(data.price);
+    if (data.originalPrice !== undefined) updateData.originalPrice = data.originalPrice ? parseFloat(data.originalPrice) : null;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.affiliateUrl !== undefined) updateData.affiliateUrl = data.affiliateUrl;
+    if (data.rating !== undefined) updateData.rating = data.rating ? parseFloat(data.rating) : null;
+    if (data.totalReviews !== undefined) updateData.totalReviews = data.totalReviews ? parseInt(data.totalReviews) : null;
+    if (data.ourRating !== undefined) updateData.ourRating = data.ourRating ? parseFloat(data.ourRating) : null;
+    if (data.pros !== undefined) updateData.pros = data.pros;
+    if (data.cons !== undefined) updateData.cons = data.cons;
+    if (data.specifications !== undefined) updateData.specifications = data.specifications;
+    if (data.featuredImageUrl !== undefined) updateData.featuredImageUrl = data.featuredImageUrl;
+    if (data.featuredImageAlt !== undefined) updateData.featuredImageAlt = data.featuredImageAlt;
+    if (data.gallery !== undefined) updateData.gallery = data.gallery;
+    if (data.content !== undefined) updateData.content = data.content;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.isFeatured !== undefined) updateData.isFeatured = Boolean(data.isFeatured);
+    if (data.isOnSale !== undefined) updateData.isOnSale = Boolean(data.isOnSale);
+    if (data.relatedProducts !== undefined) updateData.relatedProducts = data.relatedProducts;
 
-    const markdownContent = generateProductMarkdown(frontmatter as any, data.content || '');
-    const relativePath = generateProductFilename(productId, lang);
-
-    // Write file locally
-    const absolutePath = path.join(process.cwd(), relativePath);
-    const dir = path.dirname(absolutePath);
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    fs.writeFileSync(absolutePath, markdownContent, 'utf-8');
+    const updatedProduct = await updateProduct(product.id, updateData);
 
     return new Response(
       JSON.stringify({
         success: true,
-        productId,
-        filePath: relativePath,
-        message: 'Product updated successfully.',
+        product: updatedProduct,
+        message: 'Product updated successfully',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[Update Product Error]', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Failed to update product: ' + (error as Error).message }),
+      JSON.stringify({ error: `Failed to update product: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
 
+// DELETE - Delete a product
 export const DELETE: APIRoute = async (context) => {
   const { locals, params } = context;
   const userId = locals.auth?.userId;
@@ -124,60 +162,56 @@ export const DELETE: APIRoute = async (context) => {
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Verify admin role
   const isAdmin = await isUserAdmin(userId, context);
   if (!isAdmin) {
     return unauthorizedResponse('Admin access required');
   }
 
   try {
-    const productId = params.id;
-    if (!productId) {
+    const id = params.id;
+    if (!id) {
       return new Response(
         JSON.stringify({ error: 'Product ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Find and delete product files for all languages
-    const products = await getCollection('products');
-    const productFiles = products.filter(p => p.data.productId === productId);
+    // Get existing product
+    const numericId = parseInt(id);
+    let product = null;
+    if (!isNaN(numericId)) {
+      product = await getProductById(numericId);
+    }
+    if (!product) {
+      product = await getProductBySlug(id);
+    }
 
-    if (productFiles.length === 0) {
+    if (!product) {
       return new Response(
         JSON.stringify({ error: 'Product not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const deletedFiles: string[] = [];
-    for (const product of productFiles) {
-      const relativePath = generateProductFilename(productId, product.data.lang);
-      const absolutePath = path.join(process.cwd(), relativePath);
-
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-        deletedFiles.push(relativePath);
-      }
-    }
+    await deleteProduct(product.id);
 
     return new Response(
       JSON.stringify({
         success: true,
-        productId,
-        deletedFiles,
-        message: 'Product deleted successfully.',
+        productId: product.productId,
+        message: 'Product deleted successfully',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[Delete Product Error]', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Failed to delete product: ' + (error as Error).message }),
+      JSON.stringify({ error: `Failed to delete product: ${message}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

@@ -1,20 +1,30 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:4321',
     trace: 'on-first-retry',
+    headless: true,
   },
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:4321',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  projects: [
+    {
+      name: 'edge',
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
+  ],
+  // Only start server in CI
+  ...(process.env.CI && {
+    webServer: {
+      command: 'npm run dev',
+      url: 'http://localhost:4321',
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
+  }),
 });

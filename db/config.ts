@@ -81,6 +81,74 @@ const AffiliateClicks = defineTable({
   },
 });
 
+// Products table - main product catalog
+const Products = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    productId: column.text({ unique: true }), // URL slug
+    asin: column.text(),
+    lang: column.text({ default: 'en' }), // 'es' | 'en'
+
+    // Content
+    title: column.text(),
+    brand: column.text(),
+    model: column.text({ optional: true }),
+    description: column.text(),
+    shortDescription: column.text({ optional: true }),
+
+    // Categorization
+    category: column.text({ optional: true }),
+    subcategory: column.text({ optional: true }),
+    tags: column.json({ default: [] }), // string[]
+
+    // Pricing
+    price: column.number(), // in currency units (not cents)
+    originalPrice: column.number({ optional: true }),
+    currency: column.text({ default: 'USD' }),
+
+    // Affiliate
+    affiliateUrl: column.text(),
+
+    // Ratings
+    rating: column.number({ optional: true }), // 0-5 from Amazon
+    totalReviews: column.number({ optional: true }),
+    ourRating: column.number({ optional: true }), // 0-10 custom rating
+
+    // Pros/Cons
+    pros: column.json({ default: [] }), // string[]
+    cons: column.json({ default: [] }), // string[]
+
+    // Specifications
+    specifications: column.json({ optional: true }), // Record<string, string>
+
+    // Images
+    featuredImageUrl: column.text(),
+    featuredImageAlt: column.text({ optional: true }),
+    gallery: column.json({ optional: true }), // {url: string, alt: string}[]
+
+    // Markdown content (optional body)
+    content: column.text({ optional: true }),
+
+    // Status & Visibility
+    status: column.text({ default: 'draft' }), // draft | published | archived
+    isFeatured: column.boolean({ default: false }),
+    isOnSale: column.boolean({ default: false }),
+
+    // Related products
+    relatedProducts: column.json({ optional: true }), // string[] of productIds
+
+    // Timestamps
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ default: new Date() }),
+    publishedAt: column.date({ optional: true }),
+  },
+  indexes: [
+    { on: ['asin'], unique: false },
+    { on: ['lang', 'status'] },
+    { on: ['category'] },
+  ],
+});
+
 export default defineDb({
   tables: {
     Users,
@@ -88,5 +156,6 @@ export default defineDb({
     CashbackTransactions,
     PayoutRequests,
     AffiliateClicks,
+    Products,
   },
 });

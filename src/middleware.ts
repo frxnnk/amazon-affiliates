@@ -37,8 +37,16 @@ export const onRequest = clerkMiddleware(async (auth, context) => {
 
   // Si es ruta de admin
   if (isAdminRoute(context.request)) {
-    // Si no esta autenticado, redirigir a login
+    const isApiRoute = context.request.url.includes('/api/');
+
+    // Si no esta autenticado
     if (!userId) {
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return redirectToSignIn();
     }
 
@@ -50,11 +58,22 @@ export const onRequest = clerkMiddleware(async (auth, context) => {
       const adminEmails = getAdminEmails();
 
       if (!adminEmails.includes(userEmail)) {
-        // No es admin, redirigir a pagina de no autorizado
+        if (isApiRoute) {
+          return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
         return context.redirect('/admin/unauthorized');
       }
     } catch (error) {
       console.error('Error checking admin status:', error);
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Error checking permissions' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return context.redirect('/admin/unauthorized');
     }
 
