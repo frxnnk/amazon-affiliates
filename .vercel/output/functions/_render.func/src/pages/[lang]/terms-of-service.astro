@@ -1,0 +1,691 @@
+---
+import LegalLayout from '@layouts/LegalLayout.astro';
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+const content = {
+  es: {
+    title: 'Terminos de Servicio',
+    description: 'Terminos y condiciones que rigen el uso de nuestra plataforma y servicios de cashback'
+  },
+  en: {
+    title: 'Terms of Service',
+    description: 'Terms and conditions governing the use of our platform and cashback services'
+  }
+};
+---
+
+<LegalLayout
+  title={content[lang].title}
+  description={content[lang].description}
+  lang={lang}
+  updatedAt={new Date('2025-01-05')}
+>
+  {lang === 'es' ? (
+    <>
+      <p>
+        Bienvenido a {siteConfig.site.name}. Estos Terminos de Servicio ("Terminos") rigen tu acceso
+        y uso de nuestra plataforma, incluyendo nuestro sitio web, servicios de cashback, y todas
+        las funcionalidades relacionadas.
+      </p>
+      <p>
+        <strong>Al crear una cuenta o usar nuestros servicios, aceptas estos Terminos en su totalidad.</strong>
+        Si no estas de acuerdo con alguna parte, no utilices nuestros servicios.
+      </p>
+
+      <h2>1. Definiciones</h2>
+      <ul>
+        <li><strong>"Plataforma":</strong> El sitio web {siteConfig.site.name} y todos sus servicios asociados</li>
+        <li><strong>"Usuario":</strong> Cualquier persona que accede o usa la Plataforma</li>
+        <li><strong>"Cuenta":</strong> Tu registro personal en la Plataforma</li>
+        <li><strong>"Cashback":</strong> El porcentaje de comision que compartimos contigo por compras calificadas</li>
+        <li><strong>"Compra Calificada":</strong> Una compra realizada a traves de nuestros enlaces de afiliado que cumple con los requisitos de Amazon Associates</li>
+      </ul>
+
+      <h2>2. Elegibilidad y Registro</h2>
+
+      <h3>2.1 Requisitos de Elegibilidad</h3>
+      <p>Para usar nuestros servicios debes:</p>
+      <ul>
+        <li>Tener al menos 18 anos de edad</li>
+        <li>Tener capacidad legal para celebrar contratos vinculantes</li>
+        <li>No haber sido previamente suspendido o eliminado de la Plataforma</li>
+        <li>Proporcionar informacion veraz y actualizada</li>
+      </ul>
+
+      <h3>2.2 Creacion de Cuenta</h3>
+      <ul>
+        <li>Solo puedes crear una cuenta por persona</li>
+        <li>Eres responsable de mantener la confidencialidad de tus credenciales</li>
+        <li>Debes notificarnos inmediatamente si detectas uso no autorizado de tu cuenta</li>
+        <li>No puedes transferir tu cuenta a otra persona</li>
+      </ul>
+
+      <h2>3. Programa de Cashback</h2>
+
+      <h3>3.1 Como Funciona</h3>
+      <ol>
+        <li>Navegas productos en nuestra Plataforma</li>
+        <li>Haces clic en un enlace de afiliado para ir a Amazon</li>
+        <li>Completas una compra en Amazon</li>
+        <li>Envias tu numero de pedido para verificacion</li>
+        <li>Verificamos la compra con Amazon</li>
+        <li>Acreditamos el cashback a tu cuenta</li>
+      </ol>
+
+      <h3>3.2 Tasas de Cashback</h3>
+      <p>El cashback se calcula como un porcentaje de la comision que recibimos de Amazon:</p>
+      <ul>
+        <li><strong>Tasa base:</strong> 2% del precio del producto</li>
+        <li><strong>Las tasas pueden variar</strong> segun la categoria del producto y las politicas de Amazon Associates</li>
+        <li><strong>Bonificaciones de nivel</strong> se aplican segun tu historial de compras verificadas</li>
+      </ul>
+
+      <h3>3.3 Sistema de Niveles de Fidelidad</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nivel</th>
+            <th>Compras Verificadas</th>
+            <th>Bonificacion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bronce</td>
+            <td>0 - 9</td>
+            <td>Sin bonificacion</td>
+          </tr>
+          <tr>
+            <td>Plata</td>
+            <td>10 - 49</td>
+            <td>+5% sobre la tasa base</td>
+          </tr>
+          <tr>
+            <td>Oro</td>
+            <td>50+</td>
+            <td>+10% sobre la tasa base</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Nos reservamos el derecho de modificar las tasas y niveles con previo aviso. Los cambios
+        no afectaran el cashback ya acreditado.
+      </p>
+
+      <h3>3.4 Condiciones para Cashback Valido</h3>
+      <p>Para que una compra califique para cashback:</p>
+      <ul>
+        <li>Debe realizarse dentro de las 24 horas siguientes al clic en nuestro enlace</li>
+        <li>No debe ser cancelada ni devuelta</li>
+        <li>Debe cumplir con los terminos del programa Amazon Associates</li>
+        <li>No puede ser una compra de productos excluidos (tarjetas regalo, ciertos productos digitales, etc.)</li>
+        <li>No puede estar asociada a otra cuenta de afiliados</li>
+      </ul>
+
+      <h3>3.5 Exclusiones</h3>
+      <p>No se otorgara cashback por:</p>
+      <ul>
+        <li>Compras propias realizadas con intencion de fraude</li>
+        <li>Pedidos cancelados o devueltos</li>
+        <li>Productos excluidos por Amazon Associates</li>
+        <li>Compras realizadas sin usar nuestros enlaces</li>
+        <li>Actividad sospechosa o fraudulenta</li>
+      </ul>
+
+      <h2>4. Verificacion y Retiros</h2>
+
+      <h3>4.1 Proceso de Verificacion</h3>
+      <ul>
+        <li>Debes enviar el numero de pedido de Amazon exacto</li>
+        <li>Verificamos con Amazon que la compra es valida y atribuida a nosotros</li>
+        <li>El proceso normalmente toma 24-48 horas habiles</li>
+        <li>Podemos solicitar informacion adicional si es necesario</li>
+        <li>La verificacion puede tardar mas durante periodos de alta demanda</li>
+      </ul>
+
+      <h3>4.2 Requisitos para Retiro</h3>
+      <ul>
+        <li><strong>Saldo minimo:</strong> $15 USD (o equivalente)</li>
+        <li><strong>Cuenta verificada:</strong> Tu email debe estar confirmado</li>
+        <li><strong>Informacion de pago:</strong> Debes proporcionar una direccion de PayPal valida o billetera de criptomonedas</li>
+      </ul>
+
+      <h3>4.3 Metodos de Pago</h3>
+      <ul>
+        <li><strong>PayPal:</strong> Transferencia a tu cuenta de PayPal verificada</li>
+        <li><strong>Criptomonedas:</strong> USDT a traves de la red TRC-20</li>
+      </ul>
+      <p>
+        Los tiempos de procesamiento varian segun el metodo. PayPal normalmente se procesa en 1-3
+        dias habiles. Las transferencias cripto pueden tardar hasta 24 horas.
+      </p>
+
+      <h3>4.4 Tarifas</h3>
+      <p>
+        No cobramos tarifas por retiros. Sin embargo, pueden aplicarse tarifas de terceros
+        (como tarifas de red para criptomonedas o tarifas de PayPal).
+      </p>
+
+      <h2>5. Conducta del Usuario</h2>
+
+      <h3>5.1 Usos Permitidos</h3>
+      <p>Puedes usar la Plataforma para:</p>
+      <ul>
+        <li>Explorar y comparar productos</li>
+        <li>Realizar compras legitimas a traves de nuestros enlaces</li>
+        <li>Reclamar cashback por compras validas</li>
+        <li>Acceder a tu panel de usuario y gestionar tu cuenta</li>
+      </ul>
+
+      <h3>5.2 Conducta Prohibida</h3>
+      <p>Esta estrictamente prohibido:</p>
+      <ul>
+        <li>Crear multiples cuentas para obtener mas cashback</li>
+        <li>Enviar pedidos falsos o manipulados</li>
+        <li>Usar bots, scripts o herramientas automatizadas</li>
+        <li>Intentar manipular el sistema de referidos o niveles</li>
+        <li>Compartir publicamente enlaces de afiliado modificados</li>
+        <li>Realizar compras y devoluciones sistematicas para obtener cashback</li>
+        <li>Cualquier actividad que viole los terminos de Amazon Associates</li>
+        <li>Usar la Plataforma para actividades ilegales</li>
+      </ul>
+
+      <h3>5.3 Consecuencias de Violaciones</h3>
+      <p>Si violas estos terminos, podemos:</p>
+      <ul>
+        <li>Suspender o cancelar el cashback pendiente</li>
+        <li>Suspender temporalmente tu cuenta</li>
+        <li>Terminar permanentemente tu cuenta</li>
+        <li>Retener fondos relacionados con actividad fraudulenta</li>
+        <li>Reportar actividades ilegales a las autoridades</li>
+      </ul>
+
+      <h2>6. Propiedad Intelectual</h2>
+
+      <h3>6.1 Nuestra Propiedad</h3>
+      <p>
+        Todo el contenido de la Plataforma, incluyendo pero no limitado a textos, graficos,
+        logos, iconos, imagenes, clips de audio, descargas digitales, y software, es propiedad
+        de {siteConfig.site.name} o sus licenciantes y esta protegido por leyes de propiedad intelectual.
+      </p>
+
+      <h3>6.2 Licencia Limitada</h3>
+      <p>
+        Te otorgamos una licencia limitada, no exclusiva, no transferible y revocable para
+        acceder y usar la Plataforma para uso personal y no comercial.
+      </p>
+
+      <h3>6.3 Restricciones</h3>
+      <p>No puedes:</p>
+      <ul>
+        <li>Copiar, modificar o distribuir nuestro contenido</li>
+        <li>Usar nuestras marcas sin autorizacion escrita</li>
+        <li>Realizar ingenieria inversa de nuestro software</li>
+        <li>Extraer datos de forma automatizada (scraping)</li>
+      </ul>
+
+      <h2>7. Contenido de Terceros</h2>
+
+      <h3>7.1 Productos de Amazon</h3>
+      <p>
+        La informacion de productos mostrada proviene de Amazon. No garantizamos la precision,
+        disponibilidad o precios de los productos. Los precios pueden cambiar sin previo aviso.
+      </p>
+
+      <h3>7.2 Enlaces Externos</h3>
+      <p>
+        La Plataforma contiene enlaces a sitios de terceros (principalmente Amazon). No somos
+        responsables del contenido, politicas de privacidad o practicas de estos sitios.
+      </p>
+
+      <h2>8. Limitacion de Responsabilidad</h2>
+
+      <h3>8.1 Exencion de Garantias</h3>
+      <p>
+        LA PLATAFORMA SE PROPORCIONA "TAL CUAL" Y "SEGUN DISPONIBILIDAD". NO OFRECEMOS GARANTIAS
+        DE NINGUN TIPO, EXPRESAS O IMPLICITAS, INCLUYENDO GARANTIAS DE COMERCIABILIDAD, IDONEIDAD
+        PARA UN PROPOSITO PARTICULAR O NO INFRACCION.
+      </p>
+
+      <h3>8.2 Limitacion de Danos</h3>
+      <p>
+        EN NINGÚN CASO {siteConfig.site.name.toUpperCase()}, SUS DIRECTORES, EMPLEADOS O AGENTES SERAN RESPONSABLES
+        DE DANOS INDIRECTOS, INCIDENTALES, ESPECIALES, CONSECUENTES O PUNITIVOS, INCLUYENDO PERDIDA
+        DE BENEFICIOS, DATOS O USO, DERIVADOS DE TU USO DE LA PLATAFORMA.
+      </p>
+
+      <h3>8.3 Maximo de Responsabilidad</h3>
+      <p>
+        Nuestra responsabilidad total no excedera el monto de cashback que hayas ganado en los
+        ultimos 12 meses, o $100, lo que sea mayor.
+      </p>
+
+      <h2>9. Indemnizacion</h2>
+      <p>
+        Aceptas indemnizar y mantener indemne a {siteConfig.site.name} de cualquier reclamacion,
+        dano, perdida, responsabilidad y gasto (incluyendo honorarios de abogados) que surja de:
+      </p>
+      <ul>
+        <li>Tu uso de la Plataforma</li>
+        <li>Tu violacion de estos Terminos</li>
+        <li>Tu violacion de derechos de terceros</li>
+        <li>Cualquier actividad fraudulenta de tu parte</li>
+      </ul>
+
+      <h2>10. Modificaciones</h2>
+
+      <h3>10.1 Cambios a los Terminos</h3>
+      <p>
+        Podemos modificar estos Terminos en cualquier momento. Los cambios significativos seran
+        notificados con al menos 30 dias de anticipacion a traves de:
+      </p>
+      <ul>
+        <li>Email a tu direccion registrada</li>
+        <li>Aviso destacado en la Plataforma</li>
+      </ul>
+
+      <h3>10.2 Aceptacion de Cambios</h3>
+      <p>
+        Tu uso continuado de la Plataforma despues del periodo de notificacion constituye
+        aceptacion de los nuevos Terminos. Si no estas de acuerdo, debes dejar de usar
+        la Plataforma.
+      </p>
+
+      <h2>11. Terminacion</h2>
+
+      <h3>11.1 Terminacion por el Usuario</h3>
+      <p>
+        Puedes cerrar tu cuenta en cualquier momento. El cashback pendiente verificado sera
+        pagado si alcanzas el minimo de retiro. El cashback no verificado se perdera.
+      </p>
+
+      <h3>11.2 Terminacion por Nosotros</h3>
+      <p>Podemos terminar o suspender tu cuenta:</p>
+      <ul>
+        <li>Por violacion de estos Terminos</li>
+        <li>Por actividad fraudulenta o sospechosa</li>
+        <li>Si Amazon Associates termina nuestra participacion en el programa</li>
+        <li>Por cualquier razon, con 30 dias de previo aviso</li>
+      </ul>
+
+      <h3>11.3 Efectos de la Terminacion</h3>
+      <p>
+        Tras la terminacion, perderas acceso a tu cuenta. El cashback no reclamado puede
+        ser retenido si hay sospecha de fraude.
+      </p>
+
+      <h2>12. Disposiciones Generales</h2>
+
+      <h3>12.1 Ley Aplicable</h3>
+      <p>
+        Estos Terminos se rigen por las leyes de Espana. Cualquier disputa sera sometida
+        a la jurisdiccion exclusiva de los tribunales de Madrid, Espana.
+      </p>
+
+      <h3>12.2 Divisibilidad</h3>
+      <p>
+        Si alguna disposicion de estos Terminos se considera invalida, las demas disposiciones
+        seguiran en pleno vigor y efecto.
+      </p>
+
+      <h3>12.3 Renuncia</h3>
+      <p>
+        El hecho de que no ejerzamos algun derecho bajo estos Terminos no constituye una
+        renuncia a dicho derecho.
+      </p>
+
+      <h3>12.4 Acuerdo Completo</h3>
+      <p>
+        Estos Terminos, junto con nuestra Politica de Privacidad, constituyen el acuerdo
+        completo entre tu y {siteConfig.site.name} respecto al uso de la Plataforma.
+      </p>
+
+      <h2>13. Contacto</h2>
+      <p>
+        Para preguntas sobre estos Terminos de Servicio:
+      </p>
+      <ul>
+        <li><strong>Email:</strong> legal@bestdeals.com</li>
+        <li><strong>Soporte:</strong> soporte@bestdeals.com</li>
+      </ul>
+    </>
+  ) : (
+    <>
+      <p>
+        Welcome to {siteConfig.site.name}. These Terms of Service ("Terms") govern your access
+        to and use of our platform, including our website, cashback services, and all
+        related features.
+      </p>
+      <p>
+        <strong>By creating an account or using our services, you accept these Terms in their entirety.</strong>
+        If you disagree with any part, do not use our services.
+      </p>
+
+      <h2>1. Definitions</h2>
+      <ul>
+        <li><strong>"Platform":</strong> The {siteConfig.site.name} website and all associated services</li>
+        <li><strong>"User":</strong> Any person who accesses or uses the Platform</li>
+        <li><strong>"Account":</strong> Your personal registration on the Platform</li>
+        <li><strong>"Cashback":</strong> The percentage of commission we share with you for qualifying purchases</li>
+        <li><strong>"Qualifying Purchase":</strong> A purchase made through our affiliate links that meets Amazon Associates requirements</li>
+      </ul>
+
+      <h2>2. Eligibility and Registration</h2>
+
+      <h3>2.1 Eligibility Requirements</h3>
+      <p>To use our services you must:</p>
+      <ul>
+        <li>Be at least 18 years of age</li>
+        <li>Have the legal capacity to enter binding contracts</li>
+        <li>Not have been previously suspended or removed from the Platform</li>
+        <li>Provide accurate and current information</li>
+      </ul>
+
+      <h3>2.2 Account Creation</h3>
+      <ul>
+        <li>You may only create one account per person</li>
+        <li>You are responsible for maintaining the confidentiality of your credentials</li>
+        <li>You must notify us immediately if you detect unauthorized use of your account</li>
+        <li>You may not transfer your account to another person</li>
+      </ul>
+
+      <h2>3. Cashback Program</h2>
+
+      <h3>3.1 How It Works</h3>
+      <ol>
+        <li>You browse products on our Platform</li>
+        <li>You click an affiliate link to go to Amazon</li>
+        <li>You complete a purchase on Amazon</li>
+        <li>You submit your order number for verification</li>
+        <li>We verify the purchase with Amazon</li>
+        <li>We credit the cashback to your account</li>
+      </ol>
+
+      <h3>3.2 Cashback Rates</h3>
+      <p>Cashback is calculated as a percentage of the commission we receive from Amazon:</p>
+      <ul>
+        <li><strong>Base rate:</strong> 2% of the product price</li>
+        <li><strong>Rates may vary</strong> depending on product category and Amazon Associates policies</li>
+        <li><strong>Tier bonuses</strong> apply based on your verified purchase history</li>
+      </ul>
+
+      <h3>3.3 Loyalty Tier System</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Verified Purchases</th>
+            <th>Bonus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bronze</td>
+            <td>0 - 9</td>
+            <td>No bonus</td>
+          </tr>
+          <tr>
+            <td>Silver</td>
+            <td>10 - 49</td>
+            <td>+5% on base rate</td>
+          </tr>
+          <tr>
+            <td>Gold</td>
+            <td>50+</td>
+            <td>+10% on base rate</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        We reserve the right to modify rates and tiers with prior notice. Changes will
+        not affect already credited cashback.
+      </p>
+
+      <h3>3.4 Conditions for Valid Cashback</h3>
+      <p>For a purchase to qualify for cashback:</p>
+      <ul>
+        <li>It must be made within 24 hours of clicking our link</li>
+        <li>It must not be canceled or returned</li>
+        <li>It must comply with Amazon Associates program terms</li>
+        <li>It cannot be a purchase of excluded products (gift cards, certain digital products, etc.)</li>
+        <li>It cannot be associated with another affiliate account</li>
+      </ul>
+
+      <h3>3.5 Exclusions</h3>
+      <p>Cashback will not be granted for:</p>
+      <ul>
+        <li>Self-purchases made with intent to defraud</li>
+        <li>Canceled or returned orders</li>
+        <li>Products excluded by Amazon Associates</li>
+        <li>Purchases made without using our links</li>
+        <li>Suspicious or fraudulent activity</li>
+      </ul>
+
+      <h2>4. Verification and Withdrawals</h2>
+
+      <h3>4.1 Verification Process</h3>
+      <ul>
+        <li>You must submit the exact Amazon order number</li>
+        <li>We verify with Amazon that the purchase is valid and attributed to us</li>
+        <li>The process normally takes 24-48 business hours</li>
+        <li>We may request additional information if necessary</li>
+        <li>Verification may take longer during high-demand periods</li>
+      </ul>
+
+      <h3>4.2 Withdrawal Requirements</h3>
+      <ul>
+        <li><strong>Minimum balance:</strong> $15 USD (or equivalent)</li>
+        <li><strong>Verified account:</strong> Your email must be confirmed</li>
+        <li><strong>Payment information:</strong> You must provide a valid PayPal address or cryptocurrency wallet</li>
+      </ul>
+
+      <h3>4.3 Payment Methods</h3>
+      <ul>
+        <li><strong>PayPal:</strong> Transfer to your verified PayPal account</li>
+        <li><strong>Cryptocurrency:</strong> USDT via TRC-20 network</li>
+      </ul>
+      <p>
+        Processing times vary by method. PayPal is normally processed in 1-3 business days.
+        Crypto transfers may take up to 24 hours.
+      </p>
+
+      <h3>4.4 Fees</h3>
+      <p>
+        We do not charge fees for withdrawals. However, third-party fees may apply
+        (such as network fees for cryptocurrency or PayPal fees).
+      </p>
+
+      <h2>5. User Conduct</h2>
+
+      <h3>5.1 Permitted Uses</h3>
+      <p>You may use the Platform to:</p>
+      <ul>
+        <li>Explore and compare products</li>
+        <li>Make legitimate purchases through our links</li>
+        <li>Claim cashback for valid purchases</li>
+        <li>Access your user panel and manage your account</li>
+      </ul>
+
+      <h3>5.2 Prohibited Conduct</h3>
+      <p>It is strictly prohibited to:</p>
+      <ul>
+        <li>Create multiple accounts to obtain more cashback</li>
+        <li>Submit false or manipulated orders</li>
+        <li>Use bots, scripts, or automated tools</li>
+        <li>Attempt to manipulate the referral or tier system</li>
+        <li>Publicly share modified affiliate links</li>
+        <li>Make systematic purchases and returns to obtain cashback</li>
+        <li>Any activity that violates Amazon Associates terms</li>
+        <li>Use the Platform for illegal activities</li>
+      </ul>
+
+      <h3>5.3 Consequences of Violations</h3>
+      <p>If you violate these terms, we may:</p>
+      <ul>
+        <li>Suspend or cancel pending cashback</li>
+        <li>Temporarily suspend your account</li>
+        <li>Permanently terminate your account</li>
+        <li>Withhold funds related to fraudulent activity</li>
+        <li>Report illegal activities to authorities</li>
+      </ul>
+
+      <h2>6. Intellectual Property</h2>
+
+      <h3>6.1 Our Property</h3>
+      <p>
+        All content on the Platform, including but not limited to texts, graphics, logos,
+        icons, images, audio clips, digital downloads, and software, is the property of
+        {siteConfig.site.name} or its licensors and is protected by intellectual property laws.
+      </p>
+
+      <h3>6.2 Limited License</h3>
+      <p>
+        We grant you a limited, non-exclusive, non-transferable, revocable license to
+        access and use the Platform for personal, non-commercial use.
+      </p>
+
+      <h3>6.3 Restrictions</h3>
+      <p>You may not:</p>
+      <ul>
+        <li>Copy, modify, or distribute our content</li>
+        <li>Use our trademarks without written authorization</li>
+        <li>Reverse engineer our software</li>
+        <li>Extract data automatically (scraping)</li>
+      </ul>
+
+      <h2>7. Third-Party Content</h2>
+
+      <h3>7.1 Amazon Products</h3>
+      <p>
+        Product information displayed comes from Amazon. We do not guarantee the accuracy,
+        availability, or prices of products. Prices may change without notice.
+      </p>
+
+      <h3>7.2 External Links</h3>
+      <p>
+        The Platform contains links to third-party sites (primarily Amazon). We are not
+        responsible for the content, privacy policies, or practices of these sites.
+      </p>
+
+      <h2>8. Limitation of Liability</h2>
+
+      <h3>8.1 Disclaimer of Warranties</h3>
+      <p>
+        THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE." WE MAKE NO WARRANTIES OF ANY
+        KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+        PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+      </p>
+
+      <h3>8.2 Limitation of Damages</h3>
+      <p>
+        IN NO EVENT SHALL {siteConfig.site.name.toUpperCase()}, ITS DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE
+        FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING
+        LOSS OF PROFITS, DATA, OR USE, ARISING FROM YOUR USE OF THE PLATFORM.
+      </p>
+
+      <h3>8.3 Maximum Liability</h3>
+      <p>
+        Our total liability will not exceed the amount of cashback you have earned in the
+        last 12 months, or $100, whichever is greater.
+      </p>
+
+      <h2>9. Indemnification</h2>
+      <p>
+        You agree to indemnify and hold harmless {siteConfig.site.name} from any claims, damages,
+        losses, liability, and expenses (including attorney fees) arising from:
+      </p>
+      <ul>
+        <li>Your use of the Platform</li>
+        <li>Your violation of these Terms</li>
+        <li>Your violation of third-party rights</li>
+        <li>Any fraudulent activity on your part</li>
+      </ul>
+
+      <h2>10. Modifications</h2>
+
+      <h3>10.1 Changes to Terms</h3>
+      <p>
+        We may modify these Terms at any time. Significant changes will be notified at
+        least 30 days in advance through:
+      </p>
+      <ul>
+        <li>Email to your registered address</li>
+        <li>Prominent notice on the Platform</li>
+      </ul>
+
+      <h3>10.2 Acceptance of Changes</h3>
+      <p>
+        Your continued use of the Platform after the notification period constitutes
+        acceptance of the new Terms. If you disagree, you must stop using the Platform.
+      </p>
+
+      <h2>11. Termination</h2>
+
+      <h3>11.1 Termination by User</h3>
+      <p>
+        You may close your account at any time. Verified pending cashback will be paid
+        if you reach the withdrawal minimum. Unverified cashback will be forfeited.
+      </p>
+
+      <h3>11.2 Termination by Us</h3>
+      <p>We may terminate or suspend your account:</p>
+      <ul>
+        <li>For violation of these Terms</li>
+        <li>For fraudulent or suspicious activity</li>
+        <li>If Amazon Associates terminates our participation in the program</li>
+        <li>For any reason, with 30 days prior notice</li>
+      </ul>
+
+      <h3>11.3 Effects of Termination</h3>
+      <p>
+        Upon termination, you will lose access to your account. Unclaimed cashback may
+        be withheld if fraud is suspected.
+      </p>
+
+      <h2>12. General Provisions</h2>
+
+      <h3>12.1 Governing Law</h3>
+      <p>
+        These Terms are governed by the laws of Spain. Any dispute will be submitted
+        to the exclusive jurisdiction of the courts of Madrid, Spain.
+      </p>
+
+      <h3>12.2 Severability</h3>
+      <p>
+        If any provision of these Terms is found to be invalid, the remaining provisions
+        will continue in full force and effect.
+      </p>
+
+      <h3>12.3 Waiver</h3>
+      <p>
+        Our failure to exercise any right under these Terms does not constitute a
+        waiver of that right.
+      </p>
+
+      <h3>12.4 Entire Agreement</h3>
+      <p>
+        These Terms, along with our Privacy Policy, constitute the entire agreement
+        between you and {siteConfig.site.name} regarding the use of the Platform.
+      </p>
+
+      <h2>13. Contact</h2>
+      <p>
+        For questions about these Terms of Service:
+      </p>
+      <ul>
+        <li><strong>Email:</strong> legal@bestdeals.com</li>
+        <li><strong>Support:</strong> support@bestdeals.com</li>
+      </ul>
+    </>
+  )}
+</LegalLayout>

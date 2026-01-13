@@ -1,0 +1,175 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/login/sso-callback/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/login/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/products/import/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/products/new/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/products/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/products/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/tools/affiliate-link/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/unauthorized/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/check-duplicate/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/claims/approve/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/claims/reject/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/fetch-product-data/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/lists/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/lists/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/parse-amazon-url/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/payouts/complete/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/payouts/fail/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/payouts/process/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/products/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/products/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/admin/scrape-amazon/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/search/products/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/track-click/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/user/claims/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/user/payout/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/about/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/categories/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/categories/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/login/sso-callback/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/login/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/privacy-policy/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/products/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/products/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/terms-of-service/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		}
+	]
+}
