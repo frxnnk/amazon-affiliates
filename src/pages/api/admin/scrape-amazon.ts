@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
 import { parseAmazonUrl, isValidAsin } from '@utils/amazon';
+import { getProductByAsin, isPaapiConfigured, type PaapiProductData } from '@lib/amazon-paapi';
 import siteConfig from '@data/site-config.json';
 
 export interface ScrapedFieldStatus {
@@ -81,6 +82,44 @@ function parsePrice(priceStr: string | undefined | null): number | null {
 }
 
 /**
+ * Convert PA-API response to our format
+ */
+function paapiToScrapedFormat(paapiData: PaapiProductData): ScrapedProductData {
+  const fieldStatus: ScrapedFieldStatus = {
+    title: !!paapiData.title,
+    brand: !!paapiData.brand,
+    price: paapiData.price !== null,
+    originalPrice: paapiData.originalPrice !== null,
+    rating: paapiData.rating !== null,
+    totalReviews: paapiData.totalReviews !== null,
+    images: paapiData.images.length > 0,
+    features: paapiData.features.length > 0,
+    description: !!paapiData.description,
+    category: !!paapiData.category,
+  };
+
+  return {
+    asin: paapiData.asin,
+    marketplace: paapiData.marketplace,
+    affiliateUrl: paapiData.affiliateUrl,
+    lang: paapiData.lang,
+    title: paapiData.title,
+    brand: paapiData.brand,
+    price: paapiData.price,
+    originalPrice: paapiData.originalPrice,
+    currency: paapiData.currency,
+    description: paapiData.description,
+    shortDescription: paapiData.shortDescription,
+    rating: paapiData.rating,
+    totalReviews: paapiData.totalReviews,
+    images: paapiData.images,
+    features: paapiData.features,
+    category: paapiData.category,
+    fieldStatus,
+  };
+}
+
+/**
  * Attempts to scrape product data from Amazon
  * Falls back gracefully if scraping fails
  */
@@ -130,7 +169,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
     const data: Partial<ScrapedProductData> = {};
 
     // ========== TITLE ==========
-    // Multiple fallback patterns for title extraction
     const titlePatterns = [
       /<span[^>]*id="productTitle"[^>]*>([^<]+)<\/span>/i,
       /<h1[^>]*id="title"[^>]*>.*?<span[^>]*>([^<]+)<\/span>/is,
@@ -163,7 +201,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
       if (match) {
         let brand = cleanText(match[1]);
         if (brand) {
-          // Clean up common prefixes
           brand = brand.replace(/^(Visit the|Visita la tienda de|Brand:|Marca:|Marque\s*:)\s*/i, '').trim();
           brand = brand.replace(/\s+Store$/i, '').trim();
           if (brand) {
@@ -260,7 +297,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
     // ========== IMAGES ==========
     const images: string[] = [];
 
-    // Try hiRes images first (highest quality)
     const hiResMatches = html.matchAll(/"hiRes"\s*:\s*"(https:\/\/[^"]+)"/g);
     for (const match of hiResMatches) {
       const imgUrl = match[1].replace(/\\/g, '');
@@ -270,7 +306,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
       if (images.length >= 6) break;
     }
 
-    // Fallback to large images
     if (images.length === 0) {
       const largeMatches = html.matchAll(/"large"\s*:\s*"(https:\/\/[^"]+)"/g);
       for (const match of largeMatches) {
@@ -282,7 +317,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
       }
     }
 
-    // Fallback to main image
     if (images.length === 0) {
       const mainImgMatch = html.match(/<img[^>]*id="landingImage"[^>]*src="([^"]+)"/i) ||
                            html.match(/<img[^>]*class="[^"]*a-dynamic-image[^"]*"[^>]*src="([^"]+)"/i);
@@ -299,7 +333,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
     // ========== FEATURES ==========
     const features: string[] = [];
 
-    // Feature bullets from about section
     const featureSection = html.match(/<div[^>]*id="feature-bullets"[^>]*>(.*?)<\/div>/is);
     if (featureSection) {
       const featureMatches = featureSection[1].matchAll(/<span[^>]*class="[^"]*a-list-item[^"]*"[^>]*>([^<]+)<\/span>/g);
@@ -312,7 +345,6 @@ async function scrapeAmazonProduct(asin: string, marketplace: string): Promise<{
       }
     }
 
-    // Fallback: general list items
     if (features.length === 0) {
       const listMatches = html.matchAll(/<li[^>]*class="[^"]*a-spacing-mini[^"]*"[^>]*>.*?<span[^>]*class="[^"]*a-list-item[^"]*"[^>]*>([^<]+)<\/span>/gis);
       for (const match of listMatches) {
@@ -394,7 +426,7 @@ export const POST: APIRoute = async (context) => {
 
   try {
     const body = await request.json();
-    const { url, asin: inputAsin } = body;
+    const { url, asin: inputAsin, usePaapi = true } = body;
 
     let asin: string | null = null;
     let marketplace: string = 'es';
@@ -421,33 +453,53 @@ export const POST: APIRoute = async (context) => {
     const lang: 'es' | 'en' = marketplace === 'com' ? 'en' : 'es';
     const currency = marketplace === 'com' ? 'USD' : 'EUR';
 
-    // Try to scrape product data
-    const { data: scrapedData, fieldStatus } = await scrapeAmazonProduct(asin, marketplace);
+    let productData: ScrapedProductData | null = null;
+    let dataSource: 'paapi' | 'scraper' | 'none' = 'none';
 
-    // Build response with scraped data + defaults
-    const productData: ScrapedProductData = {
-      asin,
-      marketplace,
-      affiliateUrl: generateAffiliateUrlFromConfig(asin, lang),
-      lang,
-      title: scrapedData.title || null,
-      brand: scrapedData.brand || null,
-      price: scrapedData.price || null,
-      originalPrice: scrapedData.originalPrice || null,
-      currency,
-      description: scrapedData.description || null,
-      shortDescription: scrapedData.features?.[0] || null,
-      rating: scrapedData.rating || null,
-      totalReviews: scrapedData.totalReviews || null,
-      images: scrapedData.images || [],
-      features: scrapedData.features || [],
-      category: scrapedData.category || null,
-      fieldStatus,
-    };
+    // Try PA-API first if configured and requested
+    if (usePaapi && isPaapiConfigured()) {
+      console.log('[Product Import] Trying PA-API first...');
+      const paapiResult = await getProductByAsin(asin, marketplace);
 
-    // Count how many fields were successfully scraped
-    const successCount = Object.values(fieldStatus).filter(Boolean).length;
-    const totalFields = Object.keys(fieldStatus).length;
+      if (paapiResult.success && paapiResult.data) {
+        productData = paapiToScrapedFormat(paapiResult.data);
+        dataSource = 'paapi';
+        console.log('[Product Import] PA-API success');
+      } else {
+        console.log('[Product Import] PA-API failed:', paapiResult.error);
+      }
+    }
+
+    // Fall back to scraping if PA-API didn't work
+    if (!productData || dataSource === 'none') {
+      console.log('[Product Import] Falling back to scraper...');
+      const { data: scrapedData, fieldStatus } = await scrapeAmazonProduct(asin, marketplace);
+
+      productData = {
+        asin,
+        marketplace,
+        affiliateUrl: generateAffiliateUrlFromConfig(asin, lang),
+        lang,
+        title: scrapedData.title || null,
+        brand: scrapedData.brand || null,
+        price: scrapedData.price || null,
+        originalPrice: scrapedData.originalPrice || null,
+        currency,
+        description: scrapedData.description || null,
+        shortDescription: scrapedData.features?.[0] || null,
+        rating: scrapedData.rating || null,
+        totalReviews: scrapedData.totalReviews || null,
+        images: scrapedData.images || [],
+        features: scrapedData.features || [],
+        category: scrapedData.category || null,
+        fieldStatus,
+      };
+      dataSource = 'scraper';
+    }
+
+    // Count how many fields were successfully obtained
+    const successCount = Object.values(productData.fieldStatus).filter(Boolean).length;
+    const totalFields = Object.keys(productData.fieldStatus).length;
     const hasData = successCount > 0;
 
     return new Response(
@@ -456,8 +508,10 @@ export const POST: APIRoute = async (context) => {
         scraped: hasData,
         scrapedFieldCount: successCount,
         totalFields,
+        dataSource,
+        paapiConfigured: isPaapiConfigured(),
         message: hasData
-          ? `Product data fetched (${successCount}/${totalFields} fields). Review and complete missing data.`
+          ? `Product data fetched via ${dataSource === 'paapi' ? 'Amazon API' : 'web scraping'} (${successCount}/${totalFields} fields). Review and complete missing data.`
           : 'Could not fetch product data automatically. Please fill in manually.',
         data: productData,
       }),
