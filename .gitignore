@@ -63,3 +63,4 @@ playwright/.cache/
 *.temp
 *.swp
 *~
+.vercel
