@@ -6,359 +6,475 @@ import categories from '@data/categories.json';
 ---
 
 <AdminLayout title="Importar Producto">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    .import-container {
-      max-width: 1100px;
+    :root {
+      --bg-deep: #0a0a0b;
+      --bg-surface: #111113;
+      --bg-elevated: #18181b;
+      --bg-hover: #1f1f23;
+      --border: #27272a;
+      --border-subtle: #1f1f23;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ff9900;
+      --accent-dim: rgba(255, 153, 0, 0.15);
+      --accent-glow: rgba(255, 153, 0, 0.4);
+      --success: #10b981;
+      --success-dim: rgba(16, 185, 129, 0.15);
+      --error: #ef4444;
+      --error-dim: rgba(239, 68, 68, 0.15);
+      --warning: #f59e0b;
+      --warning-dim: rgba(245, 158, 11, 0.15);
+      --info: #3b82f6;
+      --info-dim: rgba(59, 130, 246, 0.15);
+      --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .import-card {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 12px;
-      padding: 2rem;
-      margin-bottom: 1.5rem;
+    .import-page {
+      font-family: var(--font-sans);
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 1rem;
     }
 
-    .import-header {
+    /* Page Header */
+    .page-header {
       text-align: center;
-      margin-bottom: 2rem;
+      padding: 2.5rem 0 2rem;
+      position: relative;
     }
 
-    .import-header h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #f0f6fc;
-      margin-bottom: 0.5rem;
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      border-radius: 2px;
     }
 
-    .import-header p {
-      color: #8b949e;
-      font-size: 0.95rem;
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
     }
 
-    /* Mode Toggle */
+    .page-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+      margin: 0;
+      font-weight: 400;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+    }
+
+    /* Mode Toggle - Segmented Control */
     .mode-toggle {
       display: flex;
-      gap: 0.5rem;
-      justify-content: center;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 4px;
       margin-bottom: 1.5rem;
+      max-width: 360px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .mode-btn {
-      padding: 0.5rem 1rem;
+      flex: 1;
+      padding: 0.625rem 1rem;
       background: transparent;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #8b949e;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
       cursor: pointer;
-      font-size: 0.875rem;
-      transition: all 0.2s;
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
 
     .mode-btn:hover {
-      background: #21262d;
-      color: #f0f6fc;
+      color: var(--text-primary);
+      background: var(--bg-hover);
     }
 
     .mode-btn.active {
-      background: #238636;
-      border-color: #238636;
-      color: white;
+      background: var(--accent);
+      color: #000;
+      box-shadow: 0 2px 8px var(--accent-glow);
     }
 
-    /* URL Input Section */
-    .url-section {
+    .mode-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* URL Input */
+    .input-group {
       display: flex;
       gap: 0.75rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
     .url-input {
       flex: 1;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      color: #f0f6fc;
-      font-size: 1rem;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.875rem 1rem;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      transition: var(--transition);
     }
 
     .url-input:focus {
       outline: none;
-      border-color: #58a6ff;
-      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
     }
 
     .url-input::placeholder {
-      color: #6e7681;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
     }
 
-    /* Bulk Import Textarea */
+    /* Bulk Textarea */
     .bulk-textarea {
       width: 100%;
-      min-height: 150px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      color: #f0f6fc;
-      font-size: 0.9375rem;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+      min-height: 140px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      line-height: 1.6;
       resize: vertical;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
+      transition: var(--transition);
     }
 
     .bulk-textarea:focus {
       outline: none;
-      border-color: #58a6ff;
-      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
     }
 
     .bulk-hint {
-      color: #8b949e;
+      color: var(--text-muted);
       font-size: 0.8125rem;
       margin-bottom: 1rem;
     }
 
+    /* Import Button */
     .import-btn {
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1a1815;
+      background: var(--accent);
+      color: #000;
       border: none;
-      border-radius: 8px;
-      padding: 1rem 2rem;
+      border-radius: var(--radius-md);
+      padding: 0.875rem 1.5rem;
+      font-family: var(--font-sans);
       font-weight: 600;
-      font-size: 1rem;
+      font-size: 0.875rem;
       cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      display: flex;
+      transition: var(--transition);
+      display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      box-shadow: 0 2px 8px var(--accent-glow);
     }
 
     .import-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .import-btn:active {
+      transform: translateY(0);
     }
 
     .import-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
       transform: none;
     }
 
     .import-btn .spinner {
-      width: 18px;
-      height: 18px;
-      border: 2px solid transparent;
-      border-top-color: currentColor;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #000;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
       display: none;
     }
 
-    .import-btn.loading .spinner {
-      display: block;
-    }
-
-    .import-btn.loading .btn-text {
-      display: none;
-    }
+    .import-btn.loading .spinner { display: block; }
+    .import-btn.loading .btn-text { display: none; }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    /* Paste Hint */
-    .paste-hint {
+    /* Keyboard Hint */
+    .keyboard-hint {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      color: #8b949e;
-      font-size: 0.8125rem;
-      margin-top: 0.75rem;
+      gap: 0.375rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-subtle);
     }
 
-    .paste-hint kbd {
-      background: #21262d;
-      border: 1px solid #30363d;
+    kbd {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
       border-radius: 4px;
-      padding: 0.125rem 0.375rem;
-      font-family: 'SF Mono', monospace;
-      font-size: 0.75rem;
+      padding: 2px 6px;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
     }
 
     /* Status Messages */
     .status-message {
-      padding: 1rem 1.25rem;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
       display: none;
-      font-size: 0.9375rem;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      border-radius: var(--radius-md);
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .status-message.error {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: rgba(248, 81, 73, 0.1);
-      border: 1px solid rgba(248, 81, 73, 0.3);
-      color: #f85149;
+      background: var(--error-dim);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--error);
     }
 
     .status-message.success {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: rgba(46, 160, 67, 0.1);
-      border: 1px solid rgba(46, 160, 67, 0.3);
-      color: #3fb950;
+      background: var(--success-dim);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
     }
 
     .status-message.warning {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      color: #fbbf24;
+      background: var(--warning-dim);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--warning);
     }
 
     .status-message.info {
       display: flex;
+      background: var(--info-dim);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: var(--info);
+    }
+
+    .status-icon {
+      width: 18px;
+      height: 18px;
+      display: flex;
       align-items: center;
-      gap: 0.75rem;
-      background: rgba(88, 166, 255, 0.1);
-      border: 1px solid rgba(88, 166, 255, 0.3);
-      color: #58a6ff;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
     /* Duplicate Warning */
     .duplicate-warning {
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
       display: none;
+      background: var(--warning-dim);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
 
     .duplicate-warning.visible {
       display: block;
+      animation: slideIn 0.3s ease;
     }
 
     .duplicate-warning h4 {
-      color: #fbbf24;
-      font-size: 0.9375rem;
+      color: var(--warning);
+      font-size: 0.875rem;
       font-weight: 600;
-      margin-bottom: 0.5rem;
+      margin: 0 0 0.5rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
     .duplicate-warning p {
-      color: #c9d1d9;
-      font-size: 0.875rem;
-      margin-bottom: 0.75rem;
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      margin: 0 0 0.75rem;
     }
 
-    .duplicate-warning .existing-products {
+    .existing-products {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
+      margin-bottom: 1rem;
     }
 
-    .duplicate-warning .existing-product {
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 4px;
+    .existing-product {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       padding: 0.375rem 0.75rem;
-      font-size: 0.8125rem;
-      color: #f0f6fc;
+      font-size: 0.75rem;
+      color: var(--text-primary);
       text-decoration: none;
-      transition: all 0.2s;
+      transition: var(--transition);
     }
 
-    .duplicate-warning .existing-product:hover {
-      background: #30363d;
-      border-color: #58a6ff;
+    .existing-product:hover {
+      border-color: var(--accent);
+      background: var(--bg-hover);
     }
 
     .duplicate-actions {
       display: flex;
-      gap: 0.75rem;
-      margin-top: 1rem;
+      gap: 0.5rem;
     }
 
-    .duplicate-actions button {
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      font-size: 0.8125rem;
+    .btn-sm {
+      padding: 0.5rem 0.875rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: var(--transition);
     }
 
     .btn-continue {
-      background: #238636;
-      border: 1px solid #238636;
-      color: white;
+      background: var(--success);
+      border: none;
+      color: #000;
     }
 
     .btn-continue:hover {
-      background: #2ea043;
+      filter: brightness(1.1);
     }
 
     .btn-cancel {
       background: transparent;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
     }
 
     .btn-cancel:hover {
-      background: #21262d;
+      background: var(--bg-hover);
+      color: var(--text-primary);
     }
 
-    /* Product Preview Card */
+    /* Preview Card */
     .preview-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
       display: none;
+      background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
     }
 
     .preview-card.visible {
       display: block;
-      animation: fadeIn 0.4s ease;
+      animation: fadeUp 0.4s ease;
     }
 
-    .preview-card h3 {
-      color: #8b949e;
-      font-size: 0.75rem;
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .preview-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
       margin-bottom: 1rem;
     }
 
     .preview-content {
       display: grid;
-      grid-template-columns: 150px 1fr;
+      grid-template-columns: 140px 1fr;
       gap: 1.5rem;
     }
 
     .preview-image {
-      width: 150px;
-      height: 150px;
-      border-radius: 8px;
+      width: 140px;
+      height: 140px;
+      border-radius: var(--radius-md);
       overflow: hidden;
-      background: #0d1117;
+      background: var(--bg-deep);
       display: flex;
       align-items: center;
       justify-content: center;
+      border: 1px solid var(--border);
     }
 
     .preview-image img {
@@ -368,183 +484,253 @@ import categories from '@data/categories.json';
     }
 
     .preview-image .no-image {
-      color: #6e7681;
-      font-size: 0.75rem;
-      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .preview-info {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.625rem;
+    }
+
+    .preview-brand {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .preview-title {
       font-size: 1.125rem;
       font-weight: 600;
-      color: #f0f6fc;
-      line-height: 1.3;
-    }
-
-    .preview-brand {
-      color: #8b949e;
-      font-size: 0.875rem;
+      color: var(--text-primary);
+      line-height: 1.35;
     }
 
     .preview-price {
       display: flex;
       align-items: baseline;
-      gap: 0.75rem;
+      gap: 0.625rem;
+      margin-top: 0.25rem;
     }
 
     .preview-price .current {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #3fb950;
+      color: var(--success);
+      font-family: var(--font-mono);
     }
 
     .preview-price .original {
-      font-size: 1rem;
-      color: #8b949e;
+      font-size: 0.9375rem;
+      color: var(--text-muted);
       text-decoration: line-through;
+      font-family: var(--font-mono);
     }
 
     .preview-price .discount {
-      background: #f85149;
-      color: white;
+      background: var(--error);
+      color: #fff;
       padding: 0.125rem 0.5rem;
       border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 0.6875rem;
+      font-weight: 700;
     }
 
     .preview-rating {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      color: #fbbf24;
+      color: var(--accent);
       font-size: 0.875rem;
     }
 
-    .preview-rating .reviews {
-      color: #8b949e;
+    .preview-rating .stars {
+      letter-spacing: 1px;
     }
 
-    /* Field Status Indicators */
+    .preview-rating .count {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    /* Field Status */
     .field-status {
-      display: flex;
+      display: none;
       flex-wrap: wrap;
       gap: 0.5rem;
       padding: 1rem;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 1.25rem;
+    }
+
+    .field-status.visible {
+      display: flex;
     }
 
     .field-indicator {
       display: flex;
       align-items: center;
       gap: 0.375rem;
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      background: #21262d;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
     }
 
     .field-indicator.success {
-      color: #3fb950;
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.3);
     }
 
     .field-indicator.missing {
-      color: #8b949e;
+      color: var(--text-muted);
     }
 
     .field-indicator .dot {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
     }
 
-    .field-indicator.success .dot {
-      background: #3fb950;
-    }
+    .field-indicator.success .dot { background: var(--success); }
+    .field-indicator.missing .dot { background: var(--text-muted); }
 
-    .field-indicator.missing .dot {
-      background: #6e7681;
-    }
-
-    /* Product Preview Section */
+    /* Form Preview Section */
     .product-preview {
       display: none;
-      animation: fadeIn 0.4s ease;
     }
 
     .product-preview.visible {
       display: block;
+      animation: fadeUp 0.5s ease 0.1s both;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Meta Bar */
+    .meta-bar {
+      display: flex;
+      gap: 2rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .meta-item .label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .meta-item .value {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+    }
+
+    .meta-item .value a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .meta-item .value a:hover {
+      text-decoration: underline;
     }
 
     /* Image Gallery */
-    .image-section {
-      margin-bottom: 2rem;
+    .section-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
-    .image-section h3 {
-      color: #f0f6fc;
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
 
     .image-gallery {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.625rem;
       overflow-x: auto;
       padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .image-gallery::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .image-gallery::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+      border-radius: 2px;
+    }
+
+    .image-gallery::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
     }
 
     .image-item {
       position: relative;
       flex-shrink: 0;
-      width: 120px;
-      height: 120px;
-      border-radius: 8px;
+      width: 100px;
+      height: 100px;
+      border-radius: var(--radius-md);
       overflow: hidden;
-      border: 2px solid #30363d;
+      border: 2px solid var(--border);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: var(--transition);
+      background: var(--bg-deep);
     }
 
     .image-item:hover {
-      border-color: #58a6ff;
+      border-color: var(--text-muted);
     }
 
     .image-item.selected {
-      border-color: #fbbf24;
-      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
     }
 
     .image-item img {
       width: 100%;
       height: 100%;
       object-fit: contain;
-      background: #161b22;
     }
 
     .image-item .check-badge {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 20px;
-      height: 20px;
-      background: #fbbf24;
+      top: 6px;
+      right: 6px;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
       border-radius: 50%;
       display: none;
       align-items: center;
@@ -556,12 +742,13 @@ import categories from '@data/categories.json';
     }
 
     .no-images {
-      background: #161b22;
-      border: 1px dashed #30363d;
-      border-radius: 8px;
+      background: var(--bg-deep);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
       padding: 2rem;
       text-align: center;
-      color: #8b949e;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
     }
 
     /* Form Sections */
@@ -569,35 +756,16 @@ import categories from '@data/categories.json';
       margin-bottom: 2rem;
     }
 
-    .form-section h3 {
-      color: #f0f6fc;
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .form-section h3::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: #30363d;
-    }
-
     .form-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1.25rem;
+      gap: 1rem;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .form-group.full-width {
@@ -605,91 +773,78 @@ import categories from '@data/categories.json';
     }
 
     .form-group label {
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       font-weight: 500;
-      color: #8b949e;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      color: var(--text-secondary);
     }
 
     .form-group label .required {
-      color: #f85149;
-    }
-
-    .form-group label .status-icon {
-      width: 14px;
-      height: 14px;
-    }
-
-    .form-group label .status-icon.success {
-      color: #3fb950;
-    }
-
-    .form-group label .status-icon.missing {
-      color: #6e7681;
+      color: var(--error);
     }
 
     .form-input, .form-select, .form-textarea {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 0.75rem 1rem;
-      color: #f0f6fc;
-      font-size: 0.9375rem;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6875rem 0.875rem;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      transition: var(--transition);
     }
 
     .form-input:focus, .form-select:focus, .form-textarea:focus {
       outline: none;
-      border-color: #58a6ff;
-      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
     }
 
     .form-input::placeholder, .form-textarea::placeholder {
-      color: #6e7681;
+      color: var(--text-muted);
     }
 
     .form-input.auto-filled {
-      border-color: #3fb950;
-      background: rgba(46, 160, 67, 0.05);
+      border-color: var(--success);
+      background: var(--success-dim);
     }
 
     .form-textarea {
-      min-height: 100px;
+      min-height: 90px;
       resize: vertical;
-      font-family: inherit;
+      font-family: var(--font-sans);
+      line-height: 1.5;
     }
 
     .form-select {
       cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.5rem;
     }
 
-    /* Features Section with Checkboxes */
-    .features-section {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
+    /* Features Section */
+    .features-wrapper {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
       padding: 1rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
-    .features-section h4 {
-      color: #8b949e;
+    .features-hint {
       font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      color: var(--text-muted);
       margin-bottom: 0.75rem;
     }
 
     .feature-checkbox {
       display: flex;
       align-items: flex-start;
-      gap: 0.75rem;
+      gap: 0.625rem;
       padding: 0.5rem 0;
-      border-bottom: 1px solid #21262d;
-      font-size: 0.875rem;
-      color: #c9d1d9;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .feature-checkbox:last-child {
@@ -699,13 +854,17 @@ import categories from '@data/categories.json';
     .feature-checkbox input[type="checkbox"] {
       width: 16px;
       height: 16px;
-      margin-top: 2px;
-      accent-color: #3fb950;
+      margin-top: 1px;
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
     .feature-checkbox label {
       flex: 1;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
       cursor: pointer;
+      line-height: 1.4;
     }
 
     /* Pros/Cons Editor */
@@ -716,28 +875,23 @@ import categories from '@data/categories.json';
     }
 
     .pros-cons-section {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
       padding: 1rem;
     }
 
     .pros-cons-section h4 {
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      margin-bottom: 0.75rem;
+      margin: 0 0 0.75rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
-    .pros-cons-section.pros h4 {
-      color: #3fb950;
-    }
-
-    .pros-cons-section.cons h4 {
-      color: #f85149;
-    }
+    .pros-cons-section.pros h4 { color: var(--success); }
+    .pros-cons-section.cons h4 { color: var(--error); }
 
     .pros-cons-list {
       display: flex;
@@ -747,148 +901,144 @@ import categories from '@data/categories.json';
 
     .pros-cons-item {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .pros-cons-item input {
       flex: 1;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       padding: 0.5rem 0.75rem;
-      color: #f0f6fc;
-      font-size: 0.875rem;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      transition: var(--transition);
     }
 
     .pros-cons-item input:focus {
       outline: none;
-      border-color: #58a6ff;
+      border-color: var(--accent);
     }
 
     .pros-cons-item button {
       background: transparent;
-      border: 1px solid #30363d;
-      border-radius: 4px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       padding: 0.5rem;
-      color: #8b949e;
+      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .pros-cons-item button:hover {
-      background: #21262d;
-      color: #f85149;
+      background: var(--error-dim);
+      border-color: var(--error);
+      color: var(--error);
     }
 
     .add-btn {
       width: 100%;
       background: transparent;
-      border: 1px dashed #30363d;
-      border-radius: 4px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
       padding: 0.5rem;
-      color: #8b949e;
+      color: var(--text-muted);
       cursor: pointer;
-      font-size: 0.8125rem;
-      transition: all 0.2s;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: var(--transition);
       margin-top: 0.5rem;
     }
 
     .add-btn:hover {
-      background: #161b22;
-      border-color: #58a6ff;
-      color: #58a6ff;
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
     }
 
-    /* Actions */
+    /* Checkboxes Row */
+    .checkbox-row {
+      display: flex;
+      gap: 1.5rem;
+      padding: 0.5rem 0;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+    }
+
+    .checkbox-item input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Form Actions */
     .form-actions {
       display: flex;
-      gap: 1rem;
+      gap: 0.75rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #30363d;
+      border-top: 1px solid var(--border);
+      margin-top: 0.5rem;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
-      color: white;
+      background: var(--success);
+      color: #000;
       border: none;
-      border-radius: 8px;
-      padding: 0.875rem 2rem;
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1.5rem;
+      font-family: var(--font-sans);
       font-weight: 600;
+      font-size: 0.875rem;
       cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.9375rem;
+      transition: var(--transition);
     }
 
     .btn-primary:hover {
-      background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+      filter: brightness(1.1);
       transform: translateY(-1px);
     }
 
     .btn-primary:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
       transform: none;
     }
 
     .btn-secondary {
       background: transparent;
-      color: #c9d1d9;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 0.875rem 1.5rem;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1.25rem;
+      font-family: var(--font-sans);
       font-weight: 500;
+      font-size: 0.875rem;
       cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.9375rem;
+      transition: var(--transition);
       text-decoration: none;
       display: inline-flex;
       align-items: center;
     }
 
     .btn-secondary:hover {
-      background: #21262d;
+      background: var(--bg-hover);
+      color: var(--text-primary);
     }
 
-    /* Meta Info Bar */
-    .meta-bar {
-      display: flex;
-      gap: 1.5rem;
-      padding: 1rem 1.25rem;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-    }
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .meta-item .label {
-      font-size: 0.75rem;
-      color: #8b949e;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .meta-item .value {
-      font-size: 0.875rem;
-      color: #f0f6fc;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-
-    .meta-item .value a {
-      color: #58a6ff;
-      text-decoration: none;
-    }
-
-    .meta-item .value a:hover {
-      text-decoration: underline;
-    }
-
-    /* Bulk Import Results */
+    /* Bulk Results */
     .bulk-results {
       margin-top: 1rem;
       display: none;
@@ -903,60 +1053,75 @@ import categories from '@data/categories.json';
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       margin-bottom: 0.5rem;
+      animation: slideIn 0.3s ease;
     }
 
     .bulk-result-item.success {
-      border-color: rgba(46, 160, 67, 0.3);
+      border-color: rgba(16, 185, 129, 0.3);
     }
 
     .bulk-result-item.error {
-      border-color: rgba(248, 81, 73, 0.3);
+      border-color: rgba(239, 68, 68, 0.3);
     }
 
-    .bulk-result-item .status-icon {
+    .bulk-result-item .result-icon {
       width: 20px;
       height: 20px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
     }
 
-    .bulk-result-item.success .status-icon {
-      background: rgba(46, 160, 67, 0.2);
-      color: #3fb950;
+    .bulk-result-item.success .result-icon {
+      background: var(--success-dim);
+      color: var(--success);
     }
 
-    .bulk-result-item.error .status-icon {
-      background: rgba(248, 81, 73, 0.2);
-      color: #f85149;
+    .bulk-result-item.error .result-icon {
+      background: var(--error-dim);
+      color: var(--error);
     }
 
     .bulk-result-item .asin {
-      font-family: 'SF Mono', monospace;
-      font-size: 0.8125rem;
-      color: #f0f6fc;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
     }
 
     .bulk-result-item .message {
       flex: 1;
       font-size: 0.8125rem;
-      color: #8b949e;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .bulk-result-item .action-link {
-      color: #58a6ff;
+      color: var(--accent);
       text-decoration: none;
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .bulk-result-item .action-link:hover {
+      text-decoration: underline;
     }
 
     /* Responsive */
     @media (max-width: 768px) {
-      .url-section {
+      .input-group {
         flex-direction: column;
       }
 
@@ -983,58 +1148,52 @@ import categories from '@data/categories.json';
 
       .preview-image {
         width: 100%;
-        max-width: 200px;
+        max-width: 180px;
+        height: 180px;
         margin: 0 auto;
       }
     }
   </style>
 
-  <div class="import-container">
-    <div class="import-card">
-      <div class="import-header">
-        <h2>Importar desde Amazon</h2>
-        <p>Pega un enlace de Amazon y extraeremos automaticamente toda la informacion del producto</p>
-      </div>
+  <div class="import-page">
+    <header class="page-header">
+      <h1 class="page-title">Importar Producto</h1>
+      <p class="page-subtitle">Extrae automaticamente informacion de productos desde Amazon</p>
+    </header>
 
-      <!-- Mode Toggle -->
+    <div class="card">
       <div class="mode-toggle">
-        <button type="button" class="mode-btn active" data-mode="single">Producto Individual</button>
-        <button type="button" class="mode-btn" data-mode="bulk">Importacion Masiva</button>
+        <button type="button" class="mode-btn active" data-mode="single">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8m-4-4h8"/></svg>
+          Individual
+        </button>
+        <button type="button" class="mode-btn" data-mode="bulk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Masivo
+        </button>
       </div>
 
       <div id="statusMessage" class="status-message"></div>
       <div id="duplicateWarning" class="duplicate-warning"></div>
 
-      <!-- Single Import Mode -->
       <div id="singleMode">
-        <div class="url-section">
-          <input
-            type="text"
-            id="amazonUrl"
-            class="url-input"
-            placeholder="https://www.amazon.es/dp/B0XXXXXXXXX o pega el link completo del producto..."
-            autofocus
-          />
+        <div class="input-group">
+          <input type="text" id="amazonUrl" class="url-input" placeholder="Pega URL de Amazon o ASIN (ej: B09XS7JWHH)" autofocus />
           <button type="button" id="importBtn" class="import-btn">
             <span class="spinner"></span>
-            <span class="btn-text">Importar Producto</span>
+            <span class="btn-text">Importar</span>
           </button>
         </div>
-        <div class="paste-hint">
-          <span>Tip: Pega directamente con</span>
-          <kbd>Ctrl</kbd>+<kbd>V</kbd>
+        <div class="keyboard-hint">
+          <span>Pega con</span>
+          <kbd>Ctrl</kbd><span>+</span><kbd>V</kbd>
           <span>para importar automaticamente</span>
         </div>
       </div>
 
-      <!-- Bulk Import Mode -->
       <div id="bulkMode" style="display: none;">
-        <textarea
-          id="bulkUrls"
-          class="bulk-textarea"
-          placeholder="Pega aqui las URLs o ASINs, uno por linea:&#10;https://www.amazon.es/dp/B0XXXXXXXXX&#10;B01ABCDEFG&#10;https://www.amazon.com/dp/B02HIJKLMN"
-        ></textarea>
-        <p class="bulk-hint">Puedes mezclar URLs completas y ASINs. Cada producto sera importado como borrador para revision posterior.</p>
+        <textarea id="bulkUrls" class="bulk-textarea" placeholder="Una URL o ASIN por linea:&#10;https://www.amazon.es/dp/B09XS7JWHH&#10;B01ABCDEFG&#10;https://www.amazon.com/dp/B02HIJKLMN"></textarea>
+        <p class="bulk-hint">Productos importados como borrador para revision posterior.</p>
         <button type="button" id="bulkImportBtn" class="import-btn">
           <span class="spinner"></span>
           <span class="btn-text">Importar Todos</span>
@@ -1043,9 +1202,8 @@ import categories from '@data/categories.json';
       </div>
     </div>
 
-    <!-- Preview Card -->
     <div id="previewCard" class="preview-card">
-      <h3>Vista Previa del Producto</h3>
+      <div class="preview-label">Vista Previa</div>
       <div class="preview-content">
         <div class="preview-image">
           <img id="previewImage" src="" alt="" style="display: none;" />
@@ -1064,13 +1222,11 @@ import categories from '@data/categories.json';
       </div>
     </div>
 
-    <!-- Field Status -->
-    <div id="fieldStatus" class="field-status" style="display: none;"></div>
+    <div id="fieldStatus" class="field-status"></div>
 
     <div id="productPreview" class="product-preview">
       <form id="productForm">
-        <div class="import-card">
-          <!-- Meta Info Bar -->
+        <div class="card">
           <div class="meta-bar">
             <div class="meta-item">
               <span class="label">ASIN</span>
@@ -1081,44 +1237,38 @@ import categories from '@data/categories.json';
               <span class="value" id="metaMarketplace">-</span>
             </div>
             <div class="meta-item">
-              <span class="label">Enlace Afiliado</span>
+              <span class="label">Enlace</span>
               <span class="value"><a id="metaAffiliateUrl" href="#" target="_blank">Ver en Amazon</a></span>
             </div>
           </div>
 
-          <!-- Hidden Fields -->
           <input type="hidden" id="formAsin" name="asin" />
           <input type="hidden" id="formAffiliateUrl" name="affiliateUrl" />
           <input type="hidden" id="formLang" name="lang" value="es" />
           <input type="hidden" id="formFeaturedImage" name="featuredImage" />
 
-          <!-- Image Gallery -->
-          <div class="image-section">
-            <h3>Imagenes del Producto</h3>
+          <div class="form-section">
+            <h3 class="section-title">Imagenes</h3>
             <div id="imageGallery" class="image-gallery">
-              <div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>
+              <div class="no-images">No se encontraron imagenes</div>
             </div>
           </div>
 
-          <!-- Basic Info -->
           <div class="form-section">
-            <h3>Informacion Basica</h3>
+            <h3 class="section-title">Informacion Basica</h3>
             <div class="form-grid">
               <div class="form-group full-width">
-                <label>Titulo del Producto <span class="required">*</span></label>
-                <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre completo del producto" />
+                <label>Titulo <span class="required">*</span></label>
+                <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
               </div>
-
               <div class="form-group">
                 <label>Marca <span class="required">*</span></label>
-                <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Ej: Samsung, Sony, Apple" />
+                <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Samsung, Sony..." />
               </div>
-
               <div class="form-group">
                 <label>Modelo</label>
-                <input type="text" id="formModel" name="model" class="form-input" placeholder="Ej: Galaxy S24, WH-1000XM5" />
+                <input type="text" id="formModel" name="model" class="form-input" placeholder="WH-1000XM5" />
               </div>
-
               <div class="form-group">
                 <label>Categoria</label>
                 <select id="formCategory" name="category" class="form-select">
@@ -1127,7 +1277,6 @@ import categories from '@data/categories.json';
                   ))}
                 </select>
               </div>
-
               <div class="form-group">
                 <label>Idioma</label>
                 <select id="formLangSelect" name="langSelect" class="form-select">
@@ -1138,99 +1287,82 @@ import categories from '@data/categories.json';
             </div>
           </div>
 
-          <!-- Pricing -->
           <div class="form-section">
-            <h3>Precio y Valoraciones</h3>
+            <h3 class="section-title">Precio y Valoraciones</h3>
             <div class="form-grid">
               <div class="form-group">
-                <label>Precio Actual <span class="required">*</span></label>
+                <label>Precio <span class="required">*</span></label>
                 <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
               </div>
-
               <div class="form-group">
-                <label>Precio Original (tachado)</label>
+                <label>Precio Original</label>
                 <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="0.00" />
               </div>
-
               <div class="form-group">
-                <label>Valoracion Amazon (1-5)</label>
+                <label>Valoracion (1-5)</label>
                 <input type="number" id="formRating" name="rating" class="form-input" step="0.1" min="0" max="5" placeholder="4.5" />
               </div>
-
               <div class="form-group">
-                <label>Total de Resenas</label>
+                <label>Total Resenas</label>
                 <input type="number" id="formTotalReviews" name="totalReviews" class="form-input" placeholder="1234" />
               </div>
             </div>
           </div>
 
-          <!-- Descriptions -->
           <div class="form-section">
-            <h3>Descripciones</h3>
+            <h3 class="section-title">Descripciones</h3>
             <div class="form-grid">
               <div class="form-group full-width">
                 <label>Descripcion Corta</label>
-                <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Una o dos frases que resuman el producto..."></textarea>
+                <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Resumen del producto..."></textarea>
               </div>
-
               <div class="form-group full-width">
                 <label>Descripcion Completa</label>
-                <textarea id="formDescription" name="description" class="form-textarea" style="min-height: 150px;" placeholder="Descripcion detallada del producto..."></textarea>
+                <textarea id="formDescription" name="description" class="form-textarea" style="min-height: 120px;" placeholder="Descripcion detallada..."></textarea>
               </div>
             </div>
           </div>
 
-          <!-- Features to Pros -->
           <div class="form-section" id="featuresSection" style="display: none;">
-            <h3>Caracteristicas Detectadas</h3>
-            <p style="color: #8b949e; font-size: 0.875rem; margin-bottom: 1rem;">
-              Selecciona las caracteristicas que deseas usar como ventajas del producto:
-            </p>
-            <div id="featuresList" class="features-section"></div>
+            <h3 class="section-title">Caracteristicas Detectadas</h3>
+            <p class="features-hint">Selecciona las que quieras usar como ventajas:</p>
+            <div id="featuresList" class="features-wrapper"></div>
           </div>
 
-          <!-- Pros and Cons -->
           <div class="form-section">
-            <h3>Pros y Contras</h3>
+            <h3 class="section-title">Pros y Contras</h3>
             <div class="pros-cons-grid">
               <div class="pros-cons-section pros">
                 <h4>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6L9 17l-5-5"/>
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
                   Ventajas
                 </h4>
                 <div id="prosList" class="pros-cons-list"></div>
-                <button type="button" class="add-btn" data-target="prosList">+ Agregar ventaja</button>
+                <button type="button" class="add-btn" data-target="prosList">+ Agregar</button>
               </div>
-
               <div class="pros-cons-section cons">
                 <h4>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
                   Desventajas
                 </h4>
                 <div id="consList" class="pros-cons-list"></div>
-                <button type="button" class="add-btn" data-target="consList">+ Agregar desventaja</button>
+                <button type="button" class="add-btn" data-target="consList">+ Agregar</button>
               </div>
             </div>
           </div>
 
-          <!-- Manual Image URL -->
           <div class="form-section">
-            <h3>Imagen (URL Manual)</h3>
+            <h3 class="section-title">Imagen Manual</h3>
             <div class="form-grid">
               <div class="form-group full-width">
-                <label>URL de Imagen Principal</label>
-                <input type="url" id="formImageUrl" name="imageUrl" class="form-input" placeholder="https://... (se usara si no seleccionas una imagen arriba)" />
+                <label>URL de Imagen</label>
+                <input type="url" id="formImageUrl" name="imageUrl" class="form-input" placeholder="https://..." />
               </div>
             </div>
           </div>
 
-          <!-- Status -->
           <div class="form-section">
-            <h3>Publicacion</h3>
+            <h3 class="section-title">Publicacion</h3>
             <div class="form-grid">
               <div class="form-group">
                 <label>Estado</label>
@@ -1239,16 +1371,15 @@ import categories from '@data/categories.json';
                   <option value="published">Publicado</option>
                 </select>
               </div>
-
               <div class="form-group">
                 <label>Opciones</label>
-                <div style="display: flex; gap: 1.5rem; padding: 0.75rem 0;">
-                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #c9d1d9;">
-                    <input type="checkbox" id="formIsFeatured" name="isFeatured" style="width: 16px; height: 16px;" />
+                <div class="checkbox-row">
+                  <label class="checkbox-item">
+                    <input type="checkbox" id="formIsFeatured" name="isFeatured" />
                     Destacado
                   </label>
-                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #c9d1d9;">
-                    <input type="checkbox" id="formIsOnSale" name="isOnSale" style="width: 16px; height: 16px;" />
+                  <label class="checkbox-item">
+                    <input type="checkbox" id="formIsOnSale" name="isOnSale" />
                     En Oferta
                   </label>
                 </div>
@@ -1256,17 +1387,10 @@ import categories from '@data/categories.json';
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="form-actions">
-            <button type="submit" class="btn-primary" id="saveBtn">
-              Guardar Producto
-            </button>
-            <button type="button" id="resetBtn" class="btn-secondary">
-              Limpiar Todo
-            </button>
-            <a href="/admin/products" class="btn-secondary">
-              Cancelar
-            </a>
+            <button type="submit" class="btn-primary" id="saveBtn">Guardar Producto</button>
+            <button type="button" id="resetBtn" class="btn-secondary">Limpiar</button>
+            <a href="/admin/products" class="btn-secondary">Cancelar</a>
           </div>
         </div>
       </form>
@@ -1274,7 +1398,6 @@ import categories from '@data/categories.json';
   </div>
 
   <script>
-    // DOM Elements
     const amazonUrlInput = document.getElementById('amazonUrl') as HTMLInputElement;
     const importBtn = document.getElementById('importBtn') as HTMLButtonElement;
     const statusMessage = document.getElementById('statusMessage')!;
@@ -1282,8 +1405,6 @@ import categories from '@data/categories.json';
     const productPreview = document.getElementById('productPreview')!;
     const productForm = document.getElementById('productForm') as HTMLFormElement;
     const resetBtn = document.getElementById('resetBtn')!;
-
-    // Preview elements
     const previewCard = document.getElementById('previewCard')!;
     const previewImage = document.getElementById('previewImage') as HTMLImageElement;
     const previewNoImage = document.getElementById('previewNoImage')!;
@@ -1294,13 +1415,9 @@ import categories from '@data/categories.json';
     const previewDiscount = document.getElementById('previewDiscount')!;
     const previewRating = document.getElementById('previewRating')!;
     const fieldStatusContainer = document.getElementById('fieldStatus')!;
-
-    // Meta elements
     const metaAsin = document.getElementById('metaAsin')!;
     const metaMarketplace = document.getElementById('metaMarketplace')!;
     const metaAffiliateUrl = document.getElementById('metaAffiliateUrl') as HTMLAnchorElement;
-
-    // Mode toggle
     const modeButtons = document.querySelectorAll('.mode-btn');
     const singleMode = document.getElementById('singleMode')!;
     const bulkMode = document.getElementById('bulkMode')!;
@@ -1308,7 +1425,6 @@ import categories from '@data/categories.json';
     const bulkImportBtn = document.getElementById('bulkImportBtn') as HTMLButtonElement;
     const bulkResults = document.getElementById('bulkResults')!;
 
-    // Form elements
     const formFields = {
       asin: document.getElementById('formAsin') as HTMLInputElement,
       affiliateUrl: document.getElementById('formAffiliateUrl') as HTMLInputElement,
@@ -1341,23 +1457,14 @@ import categories from '@data/categories.json';
     let currentMode: 'single' | 'bulk' = 'single';
     let pendingDuplicateData: any = null;
 
-    // Mode toggle handlers
     modeButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.getAttribute('data-mode') as 'single' | 'bulk';
         currentMode = mode;
-
         modeButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        if (mode === 'single') {
-          singleMode.style.display = 'block';
-          bulkMode.style.display = 'none';
-        } else {
-          singleMode.style.display = 'none';
-          bulkMode.style.display = 'block';
-        }
-
+        singleMode.style.display = mode === 'single' ? 'block' : 'none';
+        bulkMode.style.display = mode === 'bulk' ? 'block' : 'none';
         hideStatus();
         hideDuplicateWarning();
       });
@@ -1365,12 +1472,12 @@ import categories from '@data/categories.json';
 
     function showStatus(message: string, type: 'error' | 'success' | 'warning' | 'info') {
       const icons: Record<string, string> = {
-        error: '!',
-        success: '✓',
-        warning: '⚠',
-        info: 'i'
+        error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+        success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>',
+        warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
+        info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>'
       };
-      statusMessage.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
+      statusMessage.innerHTML = `<span class="status-icon">${icons[type]}</span><span>${message}</span>`;
       statusMessage.className = `status-message ${type}`;
     }
 
@@ -1380,38 +1487,17 @@ import categories from '@data/categories.json';
 
     function showDuplicateWarning(asin: string, products: any[]) {
       duplicateWarning.innerHTML = `
-        <h4>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
-          Producto ya existente
-        </h4>
-        <p>El ASIN <strong>${asin}</strong> ya existe en el sistema:</p>
-        <div class="existing-products">
-          ${products.map(p => `
-            <a href="/admin/products/${p.productId}" class="existing-product" target="_blank">
-              ${p.title} (${p.lang.toUpperCase()})
-            </a>
-          `).join('')}
-        </div>
+        <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Producto existente</h4>
+        <p>ASIN <strong>${asin}</strong> ya existe:</p>
+        <div class="existing-products">${products.map(p => `<a href="/admin/products/${p.productId}" class="existing-product" target="_blank">${p.title} (${p.lang.toUpperCase()})</a>`).join('')}</div>
         <div class="duplicate-actions">
-          <button type="button" class="btn-continue" id="continueImport">Importar de todos modos</button>
-          <button type="button" class="btn-cancel" id="cancelImport">Cancelar</button>
+          <button type="button" class="btn-sm btn-continue" id="continueImport">Importar igual</button>
+          <button type="button" class="btn-sm btn-cancel" id="cancelImport">Cancelar</button>
         </div>
       `;
       duplicateWarning.classList.add('visible');
-
-      document.getElementById('continueImport')?.addEventListener('click', () => {
-        hideDuplicateWarning();
-        if (pendingDuplicateData) {
-          processImportedData(pendingDuplicateData);
-        }
-      });
-
-      document.getElementById('cancelImport')?.addEventListener('click', () => {
-        hideDuplicateWarning();
-        pendingDuplicateData = null;
-      });
+      document.getElementById('continueImport')?.addEventListener('click', () => { hideDuplicateWarning(); if (pendingDuplicateData) processImportedData(pendingDuplicateData); });
+      document.getElementById('cancelImport')?.addEventListener('click', () => { hideDuplicateWarning(); pendingDuplicateData = null; });
     }
 
     function hideDuplicateWarning() {
@@ -1427,26 +1513,19 @@ import categories from '@data/categories.json';
 
     function updatePreviewCard(data: any) {
       previewCard.classList.add('visible');
-
-      // Image
-      if (data.images && data.images.length > 0) {
+      if (data.images?.length > 0) {
         previewImage.src = data.images[0];
-        previewImage.alt = data.title || 'Product image';
+        previewImage.alt = data.title || '';
         previewImage.style.display = 'block';
         previewNoImage.style.display = 'none';
       } else {
         previewImage.style.display = 'none';
         previewNoImage.style.display = 'block';
       }
-
-      // Info
-      previewBrand.textContent = data.brand || 'Marca desconocida';
+      previewBrand.textContent = data.brand || 'Marca';
       previewTitle.textContent = data.title || 'Sin titulo';
-
-      // Price
-      const currency = data.currency === 'USD' ? '$' : '€';
+      const currency = data.currency === 'USD' ? '$' : '\u20AC';
       previewCurrentPrice.textContent = data.price ? `${currency}${data.price.toFixed(2)}` : '-';
-
       if (data.originalPrice && data.originalPrice > data.price) {
         previewOriginalPrice.textContent = `${currency}${data.originalPrice.toFixed(2)}`;
         previewOriginalPrice.style.display = 'inline';
@@ -1457,65 +1536,23 @@ import categories from '@data/categories.json';
         previewOriginalPrice.style.display = 'none';
         previewDiscount.style.display = 'none';
       }
-
-      // Rating
       if (data.rating) {
-        const stars = '★'.repeat(Math.floor(data.rating)) + '☆'.repeat(5 - Math.floor(data.rating));
-        previewRating.innerHTML = `${stars} ${data.rating.toFixed(1)} <span class="reviews">(${data.totalReviews?.toLocaleString() || 0} resenas)</span>`;
+        previewRating.innerHTML = `<span class="stars">${'\u2605'.repeat(Math.floor(data.rating))}${'\u2606'.repeat(5 - Math.floor(data.rating))}</span> ${data.rating.toFixed(1)} <span class="count">(${data.totalReviews?.toLocaleString() || 0})</span>`;
       } else {
-        previewRating.innerHTML = '<span class="reviews">Sin valoraciones</span>';
+        previewRating.innerHTML = '<span class="count">Sin valoraciones</span>';
       }
     }
 
     function updateFieldStatus(fieldStatus: Record<string, boolean>) {
-      const fieldNames: Record<string, string> = {
-        title: 'Titulo',
-        brand: 'Marca',
-        price: 'Precio',
-        originalPrice: 'Precio Original',
-        rating: 'Valoracion',
-        totalReviews: 'Resenas',
-        images: 'Imagenes',
-        features: 'Caracteristicas',
-        description: 'Descripcion',
-        category: 'Categoria',
-      };
-
-      fieldStatusContainer.innerHTML = Object.entries(fieldStatus)
-        .map(([field, success]) => `
-          <div class="field-indicator ${success ? 'success' : 'missing'}">
-            <span class="dot"></span>
-            ${fieldNames[field] || field}
-          </div>
-        `).join('');
-
-      fieldStatusContainer.style.display = 'flex';
+      const names: Record<string, string> = { title: 'Titulo', brand: 'Marca', price: 'Precio', originalPrice: 'Precio Orig.', rating: 'Rating', totalReviews: 'Resenas', images: 'Imagenes', features: 'Features', description: 'Desc.', category: 'Categoria' };
+      fieldStatusContainer.innerHTML = Object.entries(fieldStatus).map(([k, v]) => `<div class="field-indicator ${v ? 'success' : 'missing'}"><span class="dot"></span>${names[k] || k}</div>`).join('');
+      fieldStatusContainer.classList.add('visible');
     }
 
     function renderImages(images: string[]) {
-      if (!images || images.length === 0) {
-        imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>';
-        return;
-      }
-
-      imageGallery.innerHTML = images.map((url, index) => `
-        <div class="image-item ${index === 0 ? 'selected' : ''}" data-url="${url}">
-          <img src="${url}" alt="Product image ${index + 1}" loading="lazy" />
-          <div class="check-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1815" stroke-width="3">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-          </div>
-        </div>
-      `).join('');
-
-      // Set first image as selected
-      if (images.length > 0) {
-        selectedImageUrl = images[0];
-        formFields.featuredImage.value = images[0];
-      }
-
-      // Add click handlers
+      if (!images?.length) { imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes</div>'; return; }
+      imageGallery.innerHTML = images.map((url, i) => `<div class="image-item ${i === 0 ? 'selected' : ''}" data-url="${url}"><img src="${url}" alt="Imagen ${i + 1}" loading="lazy" /><div class="check-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('');
+      if (images.length > 0) { selectedImageUrl = images[0]; formFields.featuredImage.value = images[0]; }
       imageGallery.querySelectorAll('.image-item').forEach(item => {
         item.addEventListener('click', () => {
           imageGallery.querySelectorAll('.image-item').forEach(i => i.classList.remove('selected'));
@@ -1527,106 +1564,58 @@ import categories from '@data/categories.json';
     }
 
     function renderFeatures(features: string[]) {
-      if (!features || features.length === 0) {
-        featuresSection.style.display = 'none';
-        return;
-      }
-
+      if (!features?.length) { featuresSection.style.display = 'none'; return; }
       featuresSection.style.display = 'block';
-      featuresList.innerHTML = features.map((f, i) => `
-        <div class="feature-checkbox">
-          <input type="checkbox" id="feature-${i}" data-feature="${f}" />
-          <label for="feature-${i}">${f}</label>
-        </div>
-      `).join('');
-
-      // Add change handlers to populate pros
-      featuresList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-          const target = e.target as HTMLInputElement;
-          const feature = target.getAttribute('data-feature') || '';
-
-          if (target.checked) {
-            // Add to pros list
-            createProsConsItem(prosList, feature);
-          } else {
-            // Remove from pros list
-            const items = prosList.querySelectorAll('.pros-cons-item input');
-            items.forEach(input => {
-              if ((input as HTMLInputElement).value === feature) {
-                input.closest('.pros-cons-item')?.remove();
-              }
-            });
-          }
+      featuresList.innerHTML = features.map((f, i) => `<div class="feature-checkbox"><input type="checkbox" id="feature-${i}" data-feature="${f}" /><label for="feature-${i}">${f}</label></div>`).join('');
+      featuresList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const t = e.target as HTMLInputElement;
+          const f = t.getAttribute('data-feature') || '';
+          if (t.checked) createProsConsItem(prosList, f);
+          else prosList.querySelectorAll('.pros-cons-item input').forEach(inp => { if ((inp as HTMLInputElement).value === f) inp.closest('.pros-cons-item')?.remove(); });
         });
       });
     }
 
-    function createProsConsItem(list: HTMLElement, value: string = '') {
+    function createProsConsItem(list: HTMLElement, value = '') {
       const item = document.createElement('div');
       item.className = 'pros-cons-item';
-      item.innerHTML = `
-        <input type="text" value="${value}" placeholder="Escribe aqui..." />
-        <button type="button" title="Eliminar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        </button>
-      `;
+      item.innerHTML = `<input type="text" value="${value}" placeholder="Escribe aqui..." /><button type="button"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
       item.querySelector('button')?.addEventListener('click', () => item.remove());
       list.appendChild(item);
     }
 
     function getProsCons(list: HTMLElement): string[] {
-      return Array.from(list.querySelectorAll('input'))
-        .map(input => (input as HTMLInputElement).value.trim())
-        .filter(Boolean);
+      return Array.from(list.querySelectorAll('input')).map(i => (i as HTMLInputElement).value.trim()).filter(Boolean);
     }
 
-    // Add button handlers
     document.querySelectorAll('.add-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const targetId = btn.getAttribute('data-target');
-        if (targetId) {
-          const list = document.getElementById(targetId);
-          if (list) createProsConsItem(list);
-        }
+        const id = btn.getAttribute('data-target');
+        if (id) { const l = document.getElementById(id); if (l) createProsConsItem(l); }
       });
     });
 
-    // Initialize with one empty pro/con each
     createProsConsItem(prosList);
     createProsConsItem(consList);
 
     async function checkDuplicate(asin: string): Promise<{ exists: boolean; products: any[] }> {
       try {
-        const response = await fetch('/api/admin/check-duplicate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ asin }),
-        });
-        const result = await response.json();
-        return { exists: result.exists, products: result.products || [] };
-      } catch {
-        return { exists: false, products: [] };
-      }
+        const r = await fetch('/api/admin/check-duplicate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asin }) });
+        const d = await r.json();
+        return { exists: d.exists, products: d.products || [] };
+      } catch { return { exists: false, products: [] }; }
     }
 
     function processImportedData(result: any) {
       const data = result.data;
-
-      // Update meta info
       metaAsin.textContent = data.asin;
       metaMarketplace.textContent = `amazon.${data.marketplace}`;
       metaAffiliateUrl.href = data.affiliateUrl;
-
-      // Update hidden fields
       formFields.asin.value = data.asin;
       formFields.affiliateUrl.value = data.affiliateUrl;
       formFields.lang.value = data.lang;
       formFields.langSelect.value = data.lang;
-
-      // Populate form with scraped data
       setAutoFilled(formFields.title, data.title);
       setAutoFilled(formFields.brand, data.brand);
       setAutoFilled(formFields.price, data.price);
@@ -1635,332 +1624,106 @@ import categories from '@data/categories.json';
       setAutoFilled(formFields.totalReviews, data.totalReviews);
       setAutoFilled(formFields.shortDesc, data.shortDescription);
       setAutoFilled(formFields.description, data.description);
-
-      // Check if on sale
-      if (data.originalPrice && data.price && data.originalPrice > data.price) {
-        formFields.isOnSale.checked = true;
-      }
-
-      // Update preview card
+      if (data.originalPrice && data.price && data.originalPrice > data.price) formFields.isOnSale.checked = true;
       updatePreviewCard(data);
-
-      // Update field status
-      if (data.fieldStatus) {
-        updateFieldStatus(data.fieldStatus);
-      }
-
-      // Render images
+      if (data.fieldStatus) updateFieldStatus(data.fieldStatus);
       renderImages(data.images || []);
-
-      // Render features
       renderFeatures(data.features || []);
-
-      // Show preview section
       productPreview.classList.add('visible');
-
-      // Show appropriate message
-      if (result.scraped) {
-        showStatus(result.message || 'Datos importados correctamente.', 'success');
-      } else {
-        showStatus('No se pudieron obtener datos automaticamente. Completa el formulario manualmente.', 'warning');
-      }
-
-      // Scroll to preview
+      if (result.scraped) showStatus(result.message || 'Datos importados.', 'success');
+      else showStatus('No se obtuvieron datos. Completa manualmente.', 'warning');
       previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     async function importProduct() {
       const input = amazonUrlInput.value.trim();
-      if (!input) {
-        showStatus('Por favor ingresa una URL de Amazon o un ASIN', 'error');
-        return;
-      }
-
-      hideStatus();
-      hideDuplicateWarning();
-      importBtn.classList.add('loading');
-      importBtn.disabled = true;
-
+      if (!input) { showStatus('Ingresa una URL o ASIN', 'error'); return; }
+      hideStatus(); hideDuplicateWarning();
+      importBtn.classList.add('loading'); importBtn.disabled = true;
       try {
         const isAsin = /^[A-Z0-9]{10}$/i.test(input);
-
-        const response = await fetch('/api/admin/scrape-amazon', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          showStatus(result.error || 'Error al procesar la URL', 'error');
-          return;
-        }
-
-        // Check for duplicates
+        const r = await fetch('/api/admin/scrape-amazon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(isAsin ? { asin: input } : { url: input }) });
+        const result = await r.json();
+        if (!r.ok) { showStatus(result.error || 'Error al procesar', 'error'); return; }
         const { exists, products } = await checkDuplicate(result.data.asin);
-
-        if (exists) {
-          pendingDuplicateData = result;
-          showDuplicateWarning(result.data.asin, products);
-          return;
-        }
-
+        if (exists) { pendingDuplicateData = result; showDuplicateWarning(result.data.asin, products); return; }
         processImportedData(result);
-
-      } catch (error) {
-        showStatus('Error de conexion. Intenta de nuevo.', 'error');
-        console.error(error);
-      } finally {
-        importBtn.classList.remove('loading');
-        importBtn.disabled = false;
-      }
+      } catch (e) { showStatus('Error de conexion', 'error'); console.error(e); }
+      finally { importBtn.classList.remove('loading'); importBtn.disabled = false; }
     }
 
-    // Bulk import
     async function bulkImport() {
-      const lines = bulkUrls.value.trim().split('\n').filter(line => line.trim());
-
-      if (lines.length === 0) {
-        showStatus('Por favor ingresa al menos una URL o ASIN', 'error');
-        return;
-      }
-
-      hideStatus();
-      bulkImportBtn.classList.add('loading');
-      bulkImportBtn.disabled = true;
-      bulkResults.innerHTML = '';
-      bulkResults.classList.add('visible');
-
+      const lines = bulkUrls.value.trim().split('\n').filter(l => l.trim());
+      if (!lines.length) { showStatus('Ingresa al menos una URL o ASIN', 'error'); return; }
+      hideStatus(); bulkImportBtn.classList.add('loading'); bulkImportBtn.disabled = true;
+      bulkResults.innerHTML = ''; bulkResults.classList.add('visible');
       const results: { asin: string; success: boolean; message: string; productId?: string }[] = [];
-
       for (const line of lines) {
         const input = line.trim();
         const isAsin = /^[A-Z0-9]{10}$/i.test(input);
-
         try {
-          // First scrape the data
-          const scrapeResponse = await fetch('/api/admin/scrape-amazon', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
-          });
-
-          const scrapeResult = await scrapeResponse.json();
-
-          if (!scrapeResponse.ok) {
-            results.push({ asin: input, success: false, message: scrapeResult.error || 'Error al procesar' });
-            continue;
-          }
-
-          const data = scrapeResult.data;
-
-          // Check for duplicates
+          const sr = await fetch('/api/admin/scrape-amazon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(isAsin ? { asin: input } : { url: input }) });
+          const sd = await sr.json();
+          if (!sr.ok) { results.push({ asin: input, success: false, message: sd.error || 'Error' }); renderBulkResults(results); continue; }
+          const data = sd.data;
           const { exists } = await checkDuplicate(data.asin);
-          if (exists) {
-            results.push({ asin: data.asin, success: false, message: 'Ya existe en el sistema' });
-            continue;
-          }
-
-          // Create product as draft
-          const createResponse = await fetch('/api/admin/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              asin: data.asin,
-              affiliateUrl: data.affiliateUrl,
-              lang: data.lang,
-              title: data.title || `Producto ${data.asin}`,
-              brand: data.brand || 'Desconocida',
-              price: data.price || 0,
-              originalPrice: data.originalPrice,
-              rating: data.rating,
-              totalReviews: data.totalReviews,
-              shortDescription: data.shortDescription,
-              description: data.description,
-              featuredImage: data.images?.[0] ? { url: data.images[0], alt: data.title || '' } : undefined,
-              status: 'draft',
-              isFeatured: false,
-              isOnSale: !!(data.originalPrice && data.price && data.originalPrice > data.price),
-              pros: [],
-              cons: [],
-            }),
-          });
-
-          const createResult = await createResponse.json();
-
-          if (createResponse.ok) {
-            results.push({ asin: data.asin, success: true, message: data.title || 'Importado', productId: createResult.productId });
-          } else {
-            results.push({ asin: data.asin, success: false, message: createResult.error || 'Error al guardar' });
-          }
-
-        } catch (error) {
-          results.push({ asin: input, success: false, message: 'Error de conexion' });
-        }
-
-        // Update UI after each item
+          if (exists) { results.push({ asin: data.asin, success: false, message: 'Ya existe' }); renderBulkResults(results); continue; }
+          const cr = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asin: data.asin, affiliateUrl: data.affiliateUrl, lang: data.lang, title: data.title || `Producto ${data.asin}`, brand: data.brand || 'Desconocida', price: data.price || 0, originalPrice: data.originalPrice, rating: data.rating, totalReviews: data.totalReviews, shortDescription: data.shortDescription, description: data.description, featuredImage: data.images?.[0] ? { url: data.images[0], alt: data.title || '' } : undefined, status: 'draft', isFeatured: false, isOnSale: !!(data.originalPrice && data.price && data.originalPrice > data.price), pros: [], cons: [] }) });
+          const cd = await cr.json();
+          results.push(cr.ok ? { asin: data.asin, success: true, message: data.title || 'OK', productId: cd.productId } : { asin: data.asin, success: false, message: cd.error || 'Error' });
+        } catch { results.push({ asin: input, success: false, message: 'Error conexion' }); }
         renderBulkResults(results);
       }
-
-      bulkImportBtn.classList.remove('loading');
-      bulkImportBtn.disabled = false;
-
-      const successCount = results.filter(r => r.success).length;
-      showStatus(`Importacion completada: ${successCount}/${results.length} productos importados.`, successCount > 0 ? 'success' : 'warning');
+      bulkImportBtn.classList.remove('loading'); bulkImportBtn.disabled = false;
+      const ok = results.filter(r => r.success).length;
+      showStatus(`Completado: ${ok}/${results.length} importados.`, ok > 0 ? 'success' : 'warning');
     }
 
     function renderBulkResults(results: any[]) {
-      bulkResults.innerHTML = results.map(r => `
-        <div class="bulk-result-item ${r.success ? 'success' : 'error'}">
-          <div class="status-icon">
-            ${r.success ? '✓' : '✗'}
-          </div>
-          <span class="asin">${r.asin}</span>
-          <span class="message">${r.message}</span>
-          ${r.productId ? `<a href="/admin/products/${r.productId}" class="action-link">Editar</a>` : ''}
-        </div>
-      `).join('');
+      bulkResults.innerHTML = results.map(r => `<div class="bulk-result-item ${r.success ? 'success' : 'error'}"><div class="result-icon">${r.success ? '\u2713' : '\u2717'}</div><span class="asin">${r.asin}</span><span class="message">${r.message}</span>${r.productId ? `<a href="/admin/products/${r.productId}" class="action-link">Editar</a>` : ''}</div>`).join('');
     }
 
     bulkImportBtn.addEventListener('click', bulkImport);
 
-    // Paste detection
     document.addEventListener('paste', async (e) => {
       if (currentMode !== 'single') return;
-
-      // Only auto-import if input is focused or empty
-      const activeElement = document.activeElement;
-      const isInputFocused = activeElement === amazonUrlInput;
-
-      if (!isInputFocused && amazonUrlInput.value.trim()) return;
-
-      const pastedText = e.clipboardData?.getData('text')?.trim() || '';
-
-      // Check if it looks like an Amazon URL or ASIN
-      const isAmazonUrl = pastedText.includes('amazon.') && (pastedText.includes('/dp/') || pastedText.includes('/gp/'));
-      const isAsin = /^[A-Z0-9]{10}$/i.test(pastedText);
-
-      if (isAmazonUrl || isAsin) {
-        e.preventDefault();
-        amazonUrlInput.value = pastedText;
-
-        // Small delay for UX
-        setTimeout(() => {
-          importProduct();
-        }, 100);
-      }
+      const ae = document.activeElement;
+      if (ae !== amazonUrlInput && amazonUrlInput.value.trim()) return;
+      const txt = e.clipboardData?.getData('text')?.trim() || '';
+      const isUrl = txt.includes('amazon.') && (txt.includes('/dp/') || txt.includes('/gp/'));
+      const isAsin = /^[A-Z0-9]{10}$/i.test(txt);
+      if (isUrl || isAsin) { e.preventDefault(); amazonUrlInput.value = txt; setTimeout(importProduct, 100); }
     });
 
-    // Event Listeners
     importBtn.addEventListener('click', importProduct);
-    amazonUrlInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        importProduct();
-      }
-    });
+    amazonUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); importProduct(); } });
+    formFields.langSelect.addEventListener('change', () => { formFields.lang.value = formFields.langSelect.value; });
 
-    // Sync language select with hidden field
-    formFields.langSelect.addEventListener('change', () => {
-      formFields.lang.value = formFields.langSelect.value;
-    });
-
-    // Form submission
     productForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideStatus();
-
+      e.preventDefault(); hideStatus();
       const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Guardando...';
-
-      // Build form data
-      const formData: Record<string, any> = {
-        asin: formFields.asin.value,
-        affiliateUrl: formFields.affiliateUrl.value,
-        lang: formFields.lang.value,
-        title: formFields.title.value,
-        brand: formFields.brand.value,
-        model: formFields.model.value || undefined,
-        category: formFields.category.value,
-        price: parseFloat(formFields.price.value) || 0,
-        originalPrice: formFields.originalPrice.value ? parseFloat(formFields.originalPrice.value) : undefined,
-        rating: formFields.rating.value ? parseFloat(formFields.rating.value) : undefined,
-        totalReviews: formFields.totalReviews.value ? parseInt(formFields.totalReviews.value) : undefined,
-        shortDescription: formFields.shortDesc.value || undefined,
-        description: formFields.description.value || undefined,
-        status: formFields.status.value,
-        isFeatured: formFields.isFeatured.checked,
-        isOnSale: formFields.isOnSale.checked,
-        pros: getProsCons(prosList),
-        cons: getProsCons(consList),
-      };
-
-      // Featured image
-      const imageUrl = formFields.featuredImage.value || formFields.imageUrl.value;
-      if (imageUrl) {
-        formData.featuredImage = {
-          url: imageUrl,
-          alt: formFields.title.value,
-        };
-      }
-
+      saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+      const formData: Record<string, any> = { asin: formFields.asin.value, affiliateUrl: formFields.affiliateUrl.value, lang: formFields.lang.value, title: formFields.title.value, brand: formFields.brand.value, model: formFields.model.value || undefined, category: formFields.category.value, price: parseFloat(formFields.price.value) || 0, originalPrice: formFields.originalPrice.value ? parseFloat(formFields.originalPrice.value) : undefined, rating: formFields.rating.value ? parseFloat(formFields.rating.value) : undefined, totalReviews: formFields.totalReviews.value ? parseInt(formFields.totalReviews.value) : undefined, shortDescription: formFields.shortDesc.value || undefined, description: formFields.description.value || undefined, status: formFields.status.value, isFeatured: formFields.isFeatured.checked, isOnSale: formFields.isOnSale.checked, pros: getProsCons(prosList), cons: getProsCons(consList) };
+      const imgUrl = formFields.featuredImage.value || formFields.imageUrl.value;
+      if (imgUrl) formData.featuredImage = { url: imgUrl, alt: formFields.title.value };
       try {
-        const response = await fetch('/api/admin/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          showStatus(result.error || 'Error al crear el producto', 'error');
-          saveBtn.disabled = false;
-          saveBtn.textContent = 'Guardar Producto';
-          return;
-        }
-
-        showStatus(`Producto "${formData.title}" creado exitosamente!`, 'success');
-
-        setTimeout(() => {
-          window.location.href = '/admin/products';
-        }, 1500);
-
-      } catch (error) {
-        showStatus('Error de conexion. Intenta de nuevo.', 'error');
-        console.error(error);
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Producto';
-      }
+        const r = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+        const d = await r.json();
+        if (!r.ok) { showStatus(d.error || 'Error al crear', 'error'); saveBtn.disabled = false; saveBtn.textContent = 'Guardar Producto'; return; }
+        showStatus(`"${formData.title}" creado!`, 'success');
+        setTimeout(() => { window.location.href = '/admin/products'; }, 1500);
+      } catch (err) { showStatus('Error de conexion', 'error'); console.error(err); saveBtn.disabled = false; saveBtn.textContent = 'Guardar Producto'; }
     });
 
-    // Reset button
     resetBtn.addEventListener('click', () => {
-      amazonUrlInput.value = '';
-      productForm.reset();
-      productPreview.classList.remove('visible');
-      previewCard.classList.remove('visible');
-      fieldStatusContainer.style.display = 'none';
-      hideStatus();
-      hideDuplicateWarning();
-
-      // Clear auto-filled classes
+      amazonUrlInput.value = ''; productForm.reset();
+      productPreview.classList.remove('visible'); previewCard.classList.remove('visible');
+      fieldStatusContainer.classList.remove('visible'); hideStatus(); hideDuplicateWarning();
       document.querySelectorAll('.auto-filled').forEach(el => el.classList.remove('auto-filled'));
-
-      // Reset pros/cons
-      prosList.innerHTML = '';
-      consList.innerHTML = '';
-      createProsConsItem(prosList);
-      createProsConsItem(consList);
-
-      // Reset images
-      imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes. Puedes agregar una URL manualmente abajo.</div>';
-      selectedImageUrl = null;
-
-      // Hide features
-      featuresSection.style.display = 'none';
+      prosList.innerHTML = ''; consList.innerHTML = '';
+      createProsConsItem(prosList); createProsConsItem(consList);
+      imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes</div>';
+      selectedImageUrl = null; featuresSection.style.display = 'none';
     });
   </script>
 </AdminLayout>
