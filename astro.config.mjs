@@ -28,7 +28,12 @@ export default defineConfig({
 
   integrations: [
     db(),
-    clerk(),
+    clerk({
+      signInUrl: '/admin/login',
+      signUpUrl: '/admin/login',
+      afterSignInUrl: '/admin',
+      afterSignUpUrl: '/admin',
+    }),
     sitemap({
       filter: (page) => !page.includes('/admin'),
       i18n: {
