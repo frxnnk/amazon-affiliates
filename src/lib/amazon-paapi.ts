@@ -80,6 +80,33 @@ export function getPAAPIConfig(): PAAPIConfig | null {
 }
 
 /**
+ * Check if PA-API is configured
+ */
+export function isPaapiConfigured(): boolean {
+  return getPAAPIConfig() !== null;
+}
+
+// Type alias for compatibility with scrape-amazon.ts
+export interface PaapiProductData {
+  asin: string;
+  marketplace: string;
+  affiliateUrl: string;
+  lang: 'es' | 'en';
+  title: string;
+  brand: string | null;
+  price: number | null;
+  originalPrice: number | null;
+  currency: string;
+  description: string | null;
+  shortDescription: string | null;
+  rating: number | null;
+  totalReviews: number | null;
+  images: string[];
+  features: string[];
+  category: string | null;
+}
+
+/**
  * SHA256 hash helper
  */
 function sha256(data: string): string {
@@ -265,10 +292,20 @@ function parseProductResponse(item: any, marketplace: string): PAAPIProductData 
  */
 export async function getProductByAsin(
   asin: string,
-  config?: PAAPIConfig
+  marketplaceOrConfig?: string | PAAPIConfig
 ): Promise<PAAPIResult> {
   // Get config from env if not provided
-  const apiConfig = config || getPAAPIConfig();
+  let apiConfig: PAAPIConfig | null;
+
+  if (typeof marketplaceOrConfig === 'string') {
+    // Called with marketplace string - get config from env and override marketplace
+    apiConfig = getPAAPIConfig();
+    if (apiConfig) {
+      apiConfig = { ...apiConfig, marketplace: marketplaceOrConfig };
+    }
+  } else {
+    apiConfig = marketplaceOrConfig || getPAAPIConfig();
+  }
 
   if (!apiConfig) {
     return {

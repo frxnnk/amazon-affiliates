@@ -1,0 +1,461 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ProductGrid from '@components/products/ProductGrid.astro';
+import Button from '@components/ui/Button.astro';
+import { getCollection } from 'astro:content';
+import { type Lang, getTranslation } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+// Validate lang parameter - redirect to default locale if invalid
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/', 302);
+}
+const t = getTranslation(lang);
+
+// Get featured products
+const allProducts = await getCollection('products');
+const featuredProducts = allProducts
+  .filter(p => p.data.lang === lang && p.data.status === 'published')
+  .slice(0, 6)
+  .map(p => ({
+    productId: p.data.productId,
+    asin: p.data.asin,
+    title: p.data.title,
+    brand: p.data.brand,
+    price: p.data.price,
+    originalPrice: p.data.originalPrice,
+    currency: p.data.currency,
+    rating: p.data.rating,
+    featuredImage: p.data.featuredImage,
+    affiliateUrl: p.data.affiliateUrl,
+    isOnSale: p.data.isOnSale,
+    isFeatured: p.data.isFeatured,
+  }));
+
+const heroContent = {
+  es: {
+    headline: 'Las mejores ofertas.',
+    subheadline: 'En un solo lugar.',
+    description: 'Productos de calidad cuidadosamente seleccionados de Amazon. Encontramos las mejores ofertas para que tú no tengas que hacerlo.',
+    cta1: 'Ver productos',
+    cta2: 'Ver categorias',
+  },
+  en: {
+    headline: 'Best deals.',
+    subheadline: 'All in one place.',
+    description: 'Quality products carefully curated from Amazon. We find the best deals so you don\'t have to.',
+    cta1: 'Browse products',
+    cta2: 'View categories',
+  },
+};
+
+const howItWorksContent = {
+  es: {
+    title: 'Como funciona',
+    steps: [
+      { number: '01', title: 'Explora', description: 'Navega por nuestra seleccion de productos verificados.' },
+      { number: '02', title: 'Compara', description: 'Lee nuestras descripciones y comparativas.' },
+      { number: '03', title: 'Decide', description: 'Elige el producto que mejor se adapta a ti.' },
+      { number: '04', title: 'Compra', description: 'Compra seguro en Amazon con un solo clic.' },
+    ],
+  },
+  en: {
+    title: 'How it works',
+    steps: [
+      { number: '01', title: 'Explore', description: 'Browse our selection of verified products.' },
+      { number: '02', title: 'Compare', description: 'Read our descriptions and comparisons.' },
+      { number: '03', title: 'Decide', description: 'Choose the product that fits you best.' },
+      { number: '04', title: 'Buy', description: 'Shop safely on Amazon with one click.' },
+    ],
+  },
+};
+
+const hero = heroContent[lang];
+const howItWorks = howItWorksContent[lang];
+---
+
+<BaseLayout
+  title={siteConfig.site.tagline[lang]}
+  lang={lang}
+>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-gradient"></div>
+      <div class="hero-pattern"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge animate-in" style="--delay: 0ms;">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span>{lang === 'es' ? 'Productos verificados' : 'Verified products'}</span>
+      </div>
+
+      <h1 class="hero-headline animate-in" style="--delay: 100ms;">
+        <span class="headline-main">{hero.headline}</span>
+        <span class="headline-accent">{hero.subheadline}</span>
+      </h1>
+
+      <p class="hero-description animate-in" style="--delay: 200ms;">
+        {hero.description}
+      </p>
+
+      <div class="hero-actions animate-in" style="--delay: 300ms;">
+        <Button href={`/${lang}/products`} variant="primary" size="lg">
+          {hero.cta1}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </Button>
+        <Button href={`/${lang}/categories`} variant="outline" size="lg">
+          {hero.cta2}
+        </Button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="how-it-works">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-eyebrow">{lang === 'es' ? 'Proceso simple' : 'Simple process'}</span>
+        <h2 class="section-title">{howItWorks.title}</h2>
+      </div>
+
+      <div class="steps-grid">
+        {howItWorks.steps.map((step, index) => (
+          <div class="step-card" style={`--step-delay: ${index * 100}ms;`}>
+            <span class="step-number">{step.number}</span>
+            <h3 class="step-title">{step.title}</h3>
+            <p class="step-description">{step.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products -->
+  <section class="products-section">
+    <div class="section-container">
+      <div class="section-header-row">
+        <div>
+          <span class="section-eyebrow">{lang === 'es' ? 'Seleccion curada' : 'Curated selection'}</span>
+          <h2 class="section-title">
+            {lang === 'es' ? 'Productos destacados' : 'Featured products'}
+          </h2>
+        </div>
+        <a href={`/${lang}/products`} class="see-all-link">
+          {t('common.seeAll')}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      {featuredProducts.length > 0 ? (
+        <ProductGrid products={featuredProducts} lang={lang} columns={3} />
+      ) : (
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <p>{lang === 'es' ? 'Proximamente productos destacados' : 'Featured products coming soon'}</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  /* Hero Section */
+  .hero {
+    position: relative;
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .hero-gradient {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, var(--color-honey-muted, #E8D5C4) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 80%, var(--color-sage-muted, #D8DFD0) 0%, transparent 50%),
+      var(--color-cream, #FDFBF7);
+  }
+
+  .hero-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--color-sand, #E8E4DD) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.4;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 6rem 1.5rem;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-honey, #C8956C);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 100px;
+    margin-bottom: 2rem;
+  }
+
+  .hero-headline {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin: 0 0 1.5rem;
+    color: var(--color-ink, #1A1815);
+  }
+
+  .headline-main {
+    display: block;
+  }
+
+  .headline-accent {
+    display: block;
+    color: var(--color-honey, #C8956C);
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .hero-description {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: var(--color-stone, #6B6560);
+    max-width: 540px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  /* Animation */
+  .animate-in {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Section Styles */
+  .section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-header-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .section-eyebrow {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-honey, #C8956C);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 400;
+    color: var(--color-ink, #1A1815);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .see-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-stone, #6B6560);
+    text-decoration: none;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+
+  .see-all-link:hover {
+    color: var(--color-ink, #1A1815);
+  }
+
+  .see-all-link svg {
+    transition: transform 0.2s;
+  }
+
+  .see-all-link:hover svg {
+    transform: translateX(3px);
+  }
+
+  /* How It Works */
+  .how-it-works {
+    background: var(--color-white, #FFFFFF);
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .step-card {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: var(--color-cream, #FDFBF7);
+    border: 1px solid var(--color-sand, #E8E4DD);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .step-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(26, 24, 21, 0.08);
+  }
+
+  .step-number {
+    display: block;
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--color-honey, #C8956C);
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+
+  .step-title {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-ink, #1A1815);
+    margin: 0 0 0.5rem;
+  }
+
+  .step-description {
+    font-size: 0.875rem;
+    color: var(--color-stone, #6B6560);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Products Section */
+  .products-section {
+    background: var(--color-cream, #FDFBF7);
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--color-stone, #6B6560);
+  }
+
+  .empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    color: var(--color-mist, #C4BFB8);
+  }
+
+  .empty-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .steps-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .section-header-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .hero-content {
+      padding: 4rem 1rem;
+    }
+
+    .steps-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-container {
+      padding: 3rem 1rem;
+    }
+  }
+</style>

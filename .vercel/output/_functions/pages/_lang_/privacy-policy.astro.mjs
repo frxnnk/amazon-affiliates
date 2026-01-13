@@ -1,0 +1,147 @@
+import { f as createAstro, c as createComponent, a as renderComponent, b as renderTemplate, F as Fragment, m as maybeRenderHead } from "../../chunks/astro/server_NRwpav8g.mjs";
+import "piccolore";
+import { $ as $$LegalLayout } from "../../chunks/LegalLayout_DrQixUWj.mjs";
+import { s as siteConfig } from "../../chunks/site-config_BzdwJVhh.mjs";
+import { renderers } from "../../renderers.mjs";
+const $$Astro = createAstro("https://amazon-affiliates.vercel.app");
+function getStaticPaths() {
+  return [
+    { params: { lang: "es" } },
+    { params: { lang: "en" } }
+  ];
+}
+const $$PrivacyPolicy = createComponent(($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$PrivacyPolicy;
+  const { lang } = Astro2.params;
+  const content = {
+    es: {
+      title: "Politica de Privacidad",
+      description: "Informacion completa sobre como recopilamos, usamos y protegemos tus datos personales"
+    },
+    en: {
+      title: "Privacy Policy",
+      description: "Complete information about how we collect, use and protect your personal data"
+    }
+  };
+  return renderTemplate`${renderComponent($$result, "LegalLayout", $$LegalLayout, { "title": content[lang].title, "description": content[lang].description, "lang": lang, "updatedAt": /* @__PURE__ */ new Date("2025-01-05") }, { "default": ($$result2) => renderTemplate`${lang === "es" ? renderTemplate`${renderComponent($$result2, "Fragment", Fragment, {}, { "default": ($$result3) => renderTemplate` ${maybeRenderHead()}<p>
+En ${siteConfig.site.name} ("nosotros", "nuestro" o "la Plataforma"), nos comprometemos a proteger
+        tu privacidad. Esta Politica de Privacidad explica como recopilamos, usamos, compartimos y
+        protegemos tu informacion personal cuando utilizas nuestros servicios.
+</p> <p>
+Al utilizar ${siteConfig.site.name}, aceptas las practicas descritas en esta politica. Si no estas
+        de acuerdo, por favor no utilices nuestros servicios.
+</p> <h2>1. Informacion que Recopilamos</h2> <h3>1.1 Informacion que Nos Proporcionas</h3> <p>Cuando te registras y usas nuestra plataforma, podemos recopilar:</p> <ul> <li><strong>Datos de cuenta:</strong> Nombre, direccion de correo electronico, foto de perfil (a traves de Clerk)</li> <li><strong>Datos de pago:</strong> Direccion de PayPal o direccion de billetera de criptomonedas para retiros</li> <li><strong>Datos de compras:</strong> Numeros de pedido de Amazon que envias para verificacion de cashback</li> <li><strong>Comunicaciones:</strong> Mensajes que nos envias a traves de soporte o formularios de contacto</li> </ul> <h3>1.2 Informacion Recopilada Automaticamente</h3> <p>Cuando navegas por nuestro sitio, recopilamos automaticamente:</p> <ul> <li><strong>Datos del dispositivo:</strong> Tipo de navegador, sistema operativo, identificadores del dispositivo</li> <li><strong>Datos de uso:</strong> Paginas visitadas, tiempo de permanencia, clics en productos, patrones de navegacion</li> <li><strong>Datos de ubicacion:</strong> Pais e idioma preferido basado en tu configuracion</li> <li><strong>Direccion IP:</strong> Para seguridad y analisis geografico agregado</li> </ul> <h3>1.3 Informacion de Terceros</h3> <ul> <li><strong>Clerk (Autenticacion):</strong> Recibimos datos basicos del perfil cuando inicias sesion con Google, Apple u otros proveedores</li> <li><strong>Amazon:</strong> Verificamos compras a traves del programa de afiliados, pero no accedemos a tu cuenta de Amazon</li> </ul> <h2>2. Como Usamos Tu Informacion</h2> <p>Utilizamos tu informacion para:</p> <h3>2.1 Proporcionar Nuestros Servicios</h3> <ul> <li>Crear y gestionar tu cuenta de usuario</li> <li>Procesar y verificar solicitudes de cashback</li> <li>Gestionar retiros de fondos (PayPal, criptomonedas)</li> <li>Calcular y aplicar bonificaciones de nivel de fidelidad</li> <li>Enviarte notificaciones sobre el estado de tus transacciones</li> </ul> <h3>2.2 Mejorar la Experiencia</h3> <ul> <li>Personalizar recomendaciones de productos</li> <li>Analizar patrones de uso para mejorar la plataforma</li> <li>Detectar y prevenir fraudes o abusos</li> <li>Realizar investigacion y analisis estadistico</li> </ul> <h3>2.3 Comunicaciones</h3> <ul> <li>Responder a tus consultas de soporte</li> <li>Enviarte actualizaciones importantes sobre el servicio</li> <li>Informarte sobre cambios en terminos o politicas</li> <li>Con tu consentimiento, enviarte ofertas y promociones</li> </ul> <h2>3. Cookies y Tecnologias de Seguimiento</h2> <p>Utilizamos cookies y tecnologias similares para:</p> <h3>3.1 Cookies Esenciales</h3> <p>
+Necesarias para el funcionamiento del sitio: autenticacion de sesion, preferencias de idioma,
+        seguridad. No puedes rechazar estas cookies si deseas usar el servicio.
+</p> <h3>3.2 Cookies de Rendimiento</h3> <p>
+Nos ayudan a entender como interactuas con el sitio mediante la recopilacion de informacion
+        anonima y agregada.
+</p> <h3>3.3 Cookies de Afiliados</h3> <p>
+Amazon y otros socios utilizan cookies para rastrear compras realizadas a traves de nuestros
+        enlaces. Estas cookies son necesarias para atribuir correctamente las comisiones y tu cashback.
+</p> <h3>3.4 Gestion de Cookies</h3> <p>
+Puedes configurar tu navegador para rechazar cookies no esenciales. Ten en cuenta que esto
+        puede afectar la funcionalidad del sitio y tu capacidad para recibir cashback.
+</p> <h2>4. Como Compartimos Tu Informacion</h2> <p> <strong>No vendemos tu informacion personal.</strong> Solo compartimos datos en estas circunstancias:
+</p> <h3>4.1 Proveedores de Servicios</h3> <ul> <li><strong>Clerk:</strong> Gestion de autenticacion y cuentas de usuario</li> <li><strong>Turso:</strong> Almacenamiento seguro de base de datos</li> <li><strong>Vercel:</strong> Hosting y distribucion de contenido</li> <li><strong>PayPal:</strong> Procesamiento de pagos de retiros</li> </ul> <h3>4.2 Socios Comerciales</h3> <ul> <li><strong>Amazon Associates:</strong> Verificacion de compras y calculo de comisiones</li> </ul> <h3>4.3 Requisitos Legales</h3> <p>Podemos divulgar informacion cuando sea requerido por ley o para:</p> <ul> <li>Cumplir con procesos legales</li> <li>Proteger nuestros derechos y propiedad</li> <li>Prevenir fraudes o actividades ilegales</li> <li>Proteger la seguridad de nuestros usuarios</li> </ul> <h2>5. Seguridad de los Datos</h2> <p>Implementamos medidas de seguridad para proteger tu informacion:</p> <ul> <li>Encriptacion SSL/TLS en todas las comunicaciones</li> <li>Almacenamiento seguro con Turso (base de datos distribuida)</li> <li>Autenticacion segura mediante Clerk</li> <li>Acceso restringido a datos personales (solo personal autorizado)</li> <li>Monitoreo continuo de seguridad</li> </ul> <p>
+Sin embargo, ningun sistema es 100% seguro. No podemos garantizar la seguridad absoluta de
+        tus datos, pero nos comprometemos a notificarte en caso de cualquier brecha de seguridad.
+</p> <h2>6. Retencion de Datos</h2> <p>Conservamos tu informacion durante:</p> <ul> <li><strong>Datos de cuenta:</strong> Mientras mantengas tu cuenta activa</li> <li><strong>Datos de transacciones:</strong> 7 anos (requerimientos fiscales y legales)</li> <li><strong>Datos de uso:</strong> 2 anos para analisis, luego se anonimizan</li> <li><strong>Comunicaciones:</strong> 3 anos desde la ultima interaccion</li> </ul> <p>
+Puedes solicitar la eliminacion de tu cuenta en cualquier momento. Algunos datos pueden
+        conservarse por obligaciones legales.
+</p> <h2>7. Tus Derechos</h2> <p>Dependiendo de tu ubicacion, puedes tener derecho a:</p> <h3>7.1 Derechos Generales</h3> <ul> <li><strong>Acceso:</strong> Solicitar una copia de tus datos personales</li> <li><strong>Rectificacion:</strong> Corregir datos inexactos o incompletos</li> <li><strong>Eliminacion:</strong> Solicitar la eliminacion de tus datos</li> <li><strong>Portabilidad:</strong> Recibir tus datos en formato estructurado</li> <li><strong>Oposicion:</strong> Oponerte al procesamiento de tus datos</li> <li><strong>Restriccion:</strong> Limitar el uso de tus datos</li> </ul> <h3>7.2 Para Residentes de la UE (GDPR)</h3> <p>
+Si resides en la Union Europea, tienes derechos adicionales bajo el Reglamento General de
+        Proteccion de Datos, incluyendo el derecho a presentar quejas ante tu autoridad de proteccion
+        de datos local.
+</p> <h3>7.3 Para Residentes de California (CCPA)</h3> <p>
+Los residentes de California tienen derechos adicionales, incluyendo el derecho a saber que
+        datos recopilamos y el derecho a no ser discriminados por ejercer sus derechos de privacidad.
+</p> <h3>7.4 Como Ejercer Tus Derechos</h3> <p>
+Para ejercer cualquiera de estos derechos, contactanos en <strong>privacy@bestdeals.com</strong>.
+        Responderemos dentro de los plazos legalmente establecidos (generalmente 30 dias).
+</p> <h2>8. Privacidad de Menores</h2> <p> ${siteConfig.site.name} no esta disenado para menores de 18 anos. No recopilamos conscientemente
+        informacion de menores. Si descubrimos que hemos recopilado datos de un menor, los eliminaremos
+        inmediatamente.
+</p> <h2>9. Transferencias Internacionales</h2> <p>
+Tus datos pueden ser procesados en servidores ubicados fuera de tu pais de residencia.
+        Utilizamos proveedores que cumplen con estandares de proteccion de datos adecuados
+        (incluyendo clausulas contractuales tipo para transferencias desde la UE).
+</p> <h2>10. Cambios a Esta Politica</h2> <p>
+Podemos actualizar esta politica periodicamente. Los cambios significativos seran notificados:
+</p> <ul> <li>Mediante un aviso destacado en el sitio web</li> <li>Por correo electronico (si tienes cuenta registrada)</li> <li>Actualizando la fecha de "Ultima actualizacion" al inicio de esta pagina</li> </ul> <p>
+Te recomendamos revisar esta politica periodicamente. El uso continuado del servicio despues
+        de cambios constituye aceptacion de la politica modificada.
+</p> <h2>11. Contacto</h2> <p>
+Para preguntas, inquietudes o solicitudes relacionadas con tu privacidad:
+</p> <ul> <li><strong>Email de privacidad:</strong> privacy@bestdeals.com</li> <li><strong>Soporte general:</strong> soporte@bestdeals.com</li> </ul> <p>
+Nos comprometemos a responder todas las consultas de privacidad en un plazo maximo de
+        30 dias habiles.
+</p> ` })}` : renderTemplate`${renderComponent($$result2, "Fragment", Fragment, {}, { "default": ($$result3) => renderTemplate` <p>
+At ${siteConfig.site.name} ("we", "our", or "the Platform"), we are committed to protecting
+        your privacy. This Privacy Policy explains how we collect, use, share, and protect your
+        personal information when you use our services.
+</p> <p>
+By using ${siteConfig.site.name}, you agree to the practices described in this policy. If you
+        do not agree, please do not use our services.
+</p> <h2>1. Information We Collect</h2> <h3>1.1 Information You Provide</h3> <p>When you register and use our platform, we may collect:</p> <ul> <li><strong>Account data:</strong> Name, email address, profile photo (through Clerk)</li> <li><strong>Payment data:</strong> PayPal address or cryptocurrency wallet address for withdrawals</li> <li><strong>Purchase data:</strong> Amazon order numbers you submit for cashback verification</li> <li><strong>Communications:</strong> Messages you send us through support or contact forms</li> </ul> <h3>1.2 Information Collected Automatically</h3> <p>When you browse our site, we automatically collect:</p> <ul> <li><strong>Device data:</strong> Browser type, operating system, device identifiers</li> <li><strong>Usage data:</strong> Pages visited, time spent, product clicks, browsing patterns</li> <li><strong>Location data:</strong> Country and preferred language based on your settings</li> <li><strong>IP address:</strong> For security and aggregated geographic analysis</li> </ul> <h3>1.3 Information from Third Parties</h3> <ul> <li><strong>Clerk (Authentication):</strong> We receive basic profile data when you sign in with Google, Apple, or other providers</li> <li><strong>Amazon:</strong> We verify purchases through the affiliate program, but do not access your Amazon account</li> </ul> <h2>2. How We Use Your Information</h2> <p>We use your information to:</p> <h3>2.1 Provide Our Services</h3> <ul> <li>Create and manage your user account</li> <li>Process and verify cashback requests</li> <li>Manage fund withdrawals (PayPal, cryptocurrency)</li> <li>Calculate and apply loyalty tier bonuses</li> <li>Send you notifications about your transaction status</li> </ul> <h3>2.2 Improve the Experience</h3> <ul> <li>Personalize product recommendations</li> <li>Analyze usage patterns to improve the platform</li> <li>Detect and prevent fraud or abuse</li> <li>Conduct research and statistical analysis</li> </ul> <h3>2.3 Communications</h3> <ul> <li>Respond to your support inquiries</li> <li>Send you important service updates</li> <li>Inform you about changes to terms or policies</li> <li>With your consent, send you offers and promotions</li> </ul> <h2>3. Cookies and Tracking Technologies</h2> <p>We use cookies and similar technologies to:</p> <h3>3.1 Essential Cookies</h3> <p>
+Necessary for site operation: session authentication, language preferences, security.
+        You cannot reject these cookies if you want to use the service.
+</p> <h3>3.2 Performance Cookies</h3> <p>
+Help us understand how you interact with the site by collecting anonymous and
+        aggregated information.
+</p> <h3>3.3 Affiliate Cookies</h3> <p>
+Amazon and other partners use cookies to track purchases made through our links.
+        These cookies are necessary to correctly attribute commissions and your cashback.
+</p> <h3>3.4 Cookie Management</h3> <p>
+You can configure your browser to reject non-essential cookies. Note that this may
+        affect site functionality and your ability to receive cashback.
+</p> <h2>4. How We Share Your Information</h2> <p> <strong>We do not sell your personal information.</strong> We only share data in these circumstances:
+</p> <h3>4.1 Service Providers</h3> <ul> <li><strong>Clerk:</strong> Authentication and user account management</li> <li><strong>Turso:</strong> Secure database storage</li> <li><strong>Vercel:</strong> Hosting and content distribution</li> <li><strong>PayPal:</strong> Withdrawal payment processing</li> </ul> <h3>4.2 Business Partners</h3> <ul> <li><strong>Amazon Associates:</strong> Purchase verification and commission calculation</li> </ul> <h3>4.3 Legal Requirements</h3> <p>We may disclose information when required by law or to:</p> <ul> <li>Comply with legal processes</li> <li>Protect our rights and property</li> <li>Prevent fraud or illegal activities</li> <li>Protect the safety of our users</li> </ul> <h2>5. Data Security</h2> <p>We implement security measures to protect your information:</p> <ul> <li>SSL/TLS encryption on all communications</li> <li>Secure storage with Turso (distributed database)</li> <li>Secure authentication through Clerk</li> <li>Restricted access to personal data (authorized personnel only)</li> <li>Continuous security monitoring</li> </ul> <p>
+However, no system is 100% secure. We cannot guarantee absolute security of your data,
+        but we commit to notifying you in case of any security breach.
+</p> <h2>6. Data Retention</h2> <p>We retain your information for:</p> <ul> <li><strong>Account data:</strong> As long as you maintain an active account</li> <li><strong>Transaction data:</strong> 7 years (tax and legal requirements)</li> <li><strong>Usage data:</strong> 2 years for analysis, then anonymized</li> <li><strong>Communications:</strong> 3 years from last interaction</li> </ul> <p>
+You can request account deletion at any time. Some data may be retained due to
+        legal obligations.
+</p> <h2>7. Your Rights</h2> <p>Depending on your location, you may have the right to:</p> <h3>7.1 General Rights</h3> <ul> <li><strong>Access:</strong> Request a copy of your personal data</li> <li><strong>Rectification:</strong> Correct inaccurate or incomplete data</li> <li><strong>Deletion:</strong> Request deletion of your data</li> <li><strong>Portability:</strong> Receive your data in a structured format</li> <li><strong>Objection:</strong> Object to the processing of your data</li> <li><strong>Restriction:</strong> Limit the use of your data</li> </ul> <h3>7.2 For EU Residents (GDPR)</h3> <p>
+If you reside in the European Union, you have additional rights under the General Data
+        Protection Regulation, including the right to file complaints with your local data
+        protection authority.
+</p> <h3>7.3 For California Residents (CCPA)</h3> <p>
+California residents have additional rights, including the right to know what data we
+        collect and the right not to be discriminated against for exercising their privacy rights.
+</p> <h3>7.4 How to Exercise Your Rights</h3> <p>
+To exercise any of these rights, contact us at <strong>privacy@bestdeals.com</strong>.
+        We will respond within legally established timeframes (generally 30 days).
+</p> <h2>8. Children's Privacy</h2> <p> ${siteConfig.site.name} is not designed for individuals under 18 years old. We do not knowingly
+        collect information from minors. If we discover we have collected data from a minor, we will
+        delete it immediately.
+</p> <h2>9. International Transfers</h2> <p>
+Your data may be processed on servers located outside your country of residence.
+        We use providers that comply with adequate data protection standards (including
+        standard contractual clauses for transfers from the EU).
+</p> <h2>10. Changes to This Policy</h2> <p>
+We may update this policy periodically. Significant changes will be notified:
+</p> <ul> <li>Through a prominent notice on the website</li> <li>By email (if you have a registered account)</li> <li>By updating the "Last updated" date at the top of this page</li> </ul> <p>
+We recommend reviewing this policy periodically. Continued use of the service after
+        changes constitutes acceptance of the modified policy.
+</p> <h2>11. Contact</h2> <p>
+For questions, concerns, or requests related to your privacy:
+</p> <ul> <li><strong>Privacy email:</strong> privacy@bestdeals.com</li> <li><strong>General support:</strong> support@bestdeals.com</li> </ul> <p>
+We commit to responding to all privacy inquiries within a maximum of 30 business days.
+</p> ` })}`}` })}`;
+}, "C:/Users/franc/OneDrive/Documentos/dev/amazon-affiliates/src/pages/[lang]/privacy-policy.astro", void 0);
+const $$file = "C:/Users/franc/OneDrive/Documentos/dev/amazon-affiliates/src/pages/[lang]/privacy-policy.astro";
+const $$url = "/[lang]/privacy-policy";
+const _page = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: $$PrivacyPolicy,
+  file: $$file,
+  getStaticPaths,
+  url: $$url
+}, Symbol.toStringTag, { value: "Module" }));
+const page = () => _page;
+export {
+  page,
+  renderers
+};
