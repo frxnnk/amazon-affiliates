@@ -1,17 +1,16 @@
 /**
- * Amazon Product Advertising API (PA-API) 5.0 Integration
- *
- * This module provides functions to fetch product data from Amazon using the official PA-API.
- * Requires the following environment variables:
- * - AMAZON_PAAPI_ACCESS_KEY
- * - AMAZON_PAAPI_SECRET_KEY
- * - AMAZON_PAAPI_PARTNER_TAG (optional, uses site config if not set)
+ * Amazon Product Advertising API 5.0 Client
+ * Implements AWS Signature Version 4 signing
  */
 
-import amazonPaapi from 'amazon-paapi';
-import siteConfig from '@data/site-config.json';
+import { createHmac, createHash } from 'crypto';
 
-// PA-API host by marketplace
+// PA-API Configuration
+const PA_API_SERVICE = 'ProductAdvertisingAPI';
+const PA_API_REGION = 'us-east-1';
+const PA_API_TARGET = 'com.amazon.paapi5.v1.ProductAdvertisingAPIv1';
+
+// Host mapping by marketplace
 const PAAPI_HOSTS: Record<string, string> = {
   'com': 'webservices.amazon.com',
   'es': 'webservices.amazon.es',
@@ -21,7 +20,7 @@ const PAAPI_HOSTS: Record<string, string> = {
   'it': 'webservices.amazon.it',
 };
 
-// Region by marketplace
+// Region mapping by marketplace
 const PAAPI_REGIONS: Record<string, string> = {
   'com': 'us-east-1',
   'es': 'eu-west-1',
@@ -31,329 +30,354 @@ const PAAPI_REGIONS: Record<string, string> = {
   'it': 'eu-west-1',
 };
 
-export interface PaapiProductData {
-  asin: string;
-  marketplace: string;
-  affiliateUrl: string;
-  lang: 'es' | 'en';
-  title: string | null;
-  brand: string | null;
-  manufacturer: string | null;
-  model: string | null;
-  price: number | null;
-  originalPrice: number | null;
-  currency: string;
-  availability: string | null;
-  description: string | null;
-  shortDescription: string | null;
-  rating: number | null;
-  totalReviews: number | null;
-  images: string[];
-  features: string[];
-  category: string | null;
-  productGroup: string | null;
-}
-
-export interface PaapiConfig {
+export interface PAAPIConfig {
   accessKey: string;
   secretKey: string;
   partnerTag: string;
-  marketplace: string;
+  marketplace?: string; // 'com' | 'es' | etc. Default: 'com'
 }
 
-/**
- * Get PA-API configuration from environment variables and site config
- */
-export function getPaapiConfig(lang: 'es' | 'en' = 'es'): PaapiConfig | null {
-  const accessKey = import.meta.env.AMAZON_PAAPI_ACCESS_KEY;
-  const secretKey = import.meta.env.AMAZON_PAAPI_SECRET_KEY;
+export interface PAAPIProductData {
+  asin: string;
+  title: string;
+  brand: string | null;
+  price: number | null;
+  originalPrice: number | null;
+  currency: string;
+  rating: number | null;
+  totalReviews: number | null;
+  imageUrl: string | null;
+  images: string[];
+  features: string[];
+  description: string | null;
+  url: string;
+  availability: string | null;
+}
 
-  if (!accessKey || !secretKey) {
+export interface PAAPIError {
+  code: string;
+  message: string;
+}
+
+export type PAAPIResult =
+  | { success: true; data: PAAPIProductData }
+  | { success: false; error: PAAPIError };
+
+/**
+ * Get PA-API configuration from environment variables
+ */
+export function getPAAPIConfig(): PAAPIConfig | null {
+  const accessKey = import.meta.env.AMAZON_PA_API_ACCESS_KEY;
+  const secretKey = import.meta.env.AMAZON_PA_API_SECRET_KEY;
+  const partnerTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG;
+  const marketplace = import.meta.env.AMAZON_PA_API_MARKETPLACE || 'com';
+
+  if (!accessKey || !secretKey || !partnerTag) {
     return null;
   }
 
-  const associateConfig = siteConfig.amazon.associates[lang];
-  const marketplace = associateConfig.marketplace.replace('amazon.', '');
-  const partnerTag = import.meta.env.AMAZON_PAAPI_PARTNER_TAG || associateConfig.tag;
+  return { accessKey, secretKey, partnerTag, marketplace };
+}
+
+/**
+ * SHA256 hash helper
+ */
+function sha256(data: string): string {
+  return createHash('sha256').update(data, 'utf8').digest('hex');
+}
+
+/**
+ * HMAC-SHA256 helper
+ */
+function hmacSha256(key: Buffer | string, data: string): Buffer {
+  return createHmac('sha256', key).update(data, 'utf8').digest();
+}
+
+/**
+ * Get AWS Signature Key
+ */
+function getSignatureKey(
+  secretKey: string,
+  dateStamp: string,
+  region: string,
+  service: string
+): Buffer {
+  const kDate = hmacSha256(`AWS4${secretKey}`, dateStamp);
+  const kRegion = hmacSha256(kDate, region);
+  const kService = hmacSha256(kRegion, service);
+  const kSigning = hmacSha256(kService, 'aws4_request');
+  return kSigning;
+}
+
+/**
+ * Create AWS Signature Version 4 headers
+ */
+function createSignedHeaders(
+  config: PAAPIConfig,
+  host: string,
+  region: string,
+  target: string,
+  payload: string
+): Record<string, string> {
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+
+  const method = 'POST';
+  const path = '/paapi5/getitems';
+  const service = PA_API_SERVICE;
+
+  // Headers to sign
+  const headers: Record<string, string> = {
+    'content-encoding': 'amz-1.0',
+    'content-type': 'application/json; charset=utf-8',
+    'host': host,
+    'x-amz-date': amzDate,
+    'x-amz-target': target,
+  };
+
+  // Canonical headers (sorted, lowercase)
+  const sortedHeaderKeys = Object.keys(headers).sort();
+  const canonicalHeaders = sortedHeaderKeys
+    .map(key => `${key}:${headers[key]}`)
+    .join('\n') + '\n';
+  const signedHeaders = sortedHeaderKeys.join(';');
+
+  // Payload hash
+  const payloadHash = sha256(payload);
+
+  // Canonical request
+  const canonicalRequest = [
+    method,
+    path,
+    '', // query string (empty)
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+
+  // String to sign
+  const algorithm = 'AWS4-HMAC-SHA256';
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    sha256(canonicalRequest),
+  ].join('\n');
+
+  // Signature
+  const signingKey = getSignatureKey(config.secretKey, dateStamp, region, service);
+  const signature = hmacSha256(signingKey, stringToSign).toString('hex');
+
+  // Authorization header
+  const authorization = `${algorithm} Credential=${config.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   return {
-    accessKey,
-    secretKey,
-    partnerTag,
-    marketplace,
+    ...headers,
+    'Authorization': authorization,
   };
 }
 
 /**
- * Check if PA-API is configured and available
+ * Build GetItems request payload
  */
-export function isPaapiConfigured(): boolean {
-  return getPaapiConfig() !== null;
+function buildGetItemsPayload(asin: string, partnerTag: string, marketplace: string): string {
+  const payload = {
+    ItemIds: [asin],
+    PartnerTag: partnerTag,
+    PartnerType: 'Associates',
+    Marketplace: `www.amazon.${marketplace}`,
+    Resources: [
+      'Images.Primary.Large',
+      'Images.Variants.Large',
+      'ItemInfo.Title',
+      'ItemInfo.ByLineInfo',
+      'ItemInfo.Features',
+      'ItemInfo.ProductInfo',
+      'ItemInfo.TechnicalInfo',
+      'Offers.Listings.Price',
+      'Offers.Listings.SavingBasis',
+      'Offers.Listings.Availability.Message',
+      'CustomerReviews.StarRating',
+      'CustomerReviews.Count',
+    ],
+  };
+  return JSON.stringify(payload);
 }
 
 /**
- * Get product information by ASIN using PA-API
+ * Parse PA-API response into normalized product data
+ */
+function parseProductResponse(item: any, marketplace: string): PAAPIProductData {
+  const itemInfo = item.ItemInfo || {};
+  const offers = item.Offers?.Listings?.[0] || {};
+  const images = item.Images || {};
+  const reviews = item.CustomerReviews || {};
+
+  // Extract price
+  let price: number | null = null;
+  let originalPrice: number | null = null;
+  let currency = 'USD';
+
+  if (offers.Price?.Amount) {
+    price = offers.Price.Amount;
+    currency = offers.Price.Currency || 'USD';
+  }
+  if (offers.SavingBasis?.Amount) {
+    originalPrice = offers.SavingBasis.Amount;
+  }
+
+  // Extract images
+  const imageUrl = images.Primary?.Large?.URL || null;
+  const variantImages: string[] = [];
+  if (images.Variants) {
+    for (const variant of images.Variants) {
+      if (variant.Large?.URL) {
+        variantImages.push(variant.Large.URL);
+      }
+    }
+  }
+
+  // Extract features as description
+  const features: string[] = itemInfo.Features?.DisplayValues || [];
+
+  return {
+    asin: item.ASIN,
+    title: itemInfo.Title?.DisplayValue || '',
+    brand: itemInfo.ByLineInfo?.Brand?.DisplayValue || null,
+    price,
+    originalPrice,
+    currency,
+    rating: reviews.StarRating?.Value || null,
+    totalReviews: reviews.Count || null,
+    imageUrl,
+    images: [imageUrl, ...variantImages].filter(Boolean) as string[],
+    features,
+    description: features.length > 0 ? features.join(' ') : null,
+    url: `https://www.amazon.${marketplace}/dp/${item.ASIN}`,
+    availability: offers.Availability?.Message || null,
+  };
+}
+
+/**
+ * Fetch product data from Amazon PA-API 5.0
  */
 export async function getProductByAsin(
   asin: string,
-  marketplace: string = 'es'
-): Promise<{ success: boolean; data?: PaapiProductData; error?: string }> {
-  const lang: 'es' | 'en' = marketplace === 'com' ? 'en' : 'es';
-  const config = getPaapiConfig(lang);
+  config?: PAAPIConfig
+): Promise<PAAPIResult> {
+  // Get config from env if not provided
+  const apiConfig = config || getPAAPIConfig();
 
-  if (!config) {
+  if (!apiConfig) {
     return {
       success: false,
-      error: 'PA-API not configured. Set AMAZON_PAAPI_ACCESS_KEY and AMAZON_PAAPI_SECRET_KEY environment variables.',
+      error: {
+        code: 'MISSING_CONFIG',
+        message: 'PA-API credentials not configured. Set AMAZON_PA_API_ACCESS_KEY, AMAZON_PA_API_SECRET_KEY, and AMAZON_PA_API_PARTNER_TAG environment variables.',
+      },
     };
   }
 
-  const host = PAAPI_HOSTS[marketplace] || PAAPI_HOSTS['es'];
-  const region = PAAPI_REGIONS[marketplace] || PAAPI_REGIONS['es'];
+  // Validate ASIN format
+  if (!/^[A-Z0-9]{10}$/i.test(asin)) {
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_ASIN',
+        message: `Invalid ASIN format: ${asin}. ASIN must be 10 alphanumeric characters.`,
+      },
+    };
+  }
 
-  const commonParameters = {
-    AccessKey: config.accessKey,
-    SecretKey: config.secretKey,
-    PartnerTag: config.partnerTag,
-    PartnerType: 'Associates',
-    Marketplace: `www.amazon.${marketplace}`,
-    Host: host,
-    Region: region,
-  };
+  const marketplace = apiConfig.marketplace || 'com';
+  const host = PAAPI_HOSTS[marketplace] || PAAPI_HOSTS['com'];
+  const region = PAAPI_REGIONS[marketplace] || PA_API_REGION;
+  const target = `${PA_API_TARGET}.GetItems`;
 
-  const requestParameters = {
-    ItemIds: [asin],
-    ItemIdType: 'ASIN',
-    Resources: [
-      // Basic info
-      'ItemInfo.Title',
-      'ItemInfo.ByLineInfo',
-      'ItemInfo.Classifications',
-      'ItemInfo.Features',
-      'ItemInfo.ManufactureInfo',
-      'ItemInfo.ProductInfo',
-      'ItemInfo.TechnicalInfo',
-      // Images
-      'Images.Primary.Large',
-      'Images.Variants.Large',
-      // Offers/Pricing
-      'Offers.Listings.Price',
-      'Offers.Listings.SavingBasis',
-      'Offers.Listings.Availability.Type',
-      'Offers.Listings.MerchantInfo',
-      'Offers.Summaries.LowestPrice',
-      // Browse info
-      'BrowseNodeInfo.BrowseNodes',
-      'BrowseNodeInfo.BrowseNodes.Ancestor',
-      // Parent ASIN for variations
-      'ParentASIN',
-    ],
-  };
+  const payload = buildGetItemsPayload(asin.toUpperCase(), apiConfig.partnerTag, marketplace);
+  const headers = createSignedHeaders(apiConfig, host, region, target, payload);
 
   try {
-    const response = await amazonPaapi.GetItems(commonParameters, requestParameters);
+    const response = await fetch(`https://${host}/paapi5/getitems`, {
+      method: 'POST',
+      headers,
+      body: payload,
+    });
 
-    if (!response.ItemsResult?.Items?.[0]) {
+    const data = await response.json();
+
+    // Handle API errors
+    if (!response.ok) {
+      const errorCode = data.Errors?.[0]?.Code || 'API_ERROR';
+      const errorMessage = data.Errors?.[0]?.Message || `PA-API returned status ${response.status}`;
+
       return {
         success: false,
-        error: 'Product not found or no data available.',
+        error: {
+          code: errorCode,
+          message: errorMessage,
+        },
       };
     }
 
-    const item = response.ItemsResult.Items[0];
-    const productData = parseItemResponse(item, marketplace, config.partnerTag, lang);
+    // Check if item was found
+    if (!data.ItemsResult?.Items?.length) {
+      // Check for errors in response
+      if (data.Errors?.length) {
+        return {
+          success: false,
+          error: {
+            code: data.Errors[0].Code,
+            message: data.Errors[0].Message,
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: {
+          code: 'ITEM_NOT_FOUND',
+          message: `Product with ASIN ${asin} not found on Amazon ${marketplace}.`,
+        },
+      };
+    }
+
+    const item = data.ItemsResult.Items[0];
+    const productData = parseProductResponse(item, marketplace);
 
     return {
       success: true,
       data: productData,
     };
-  } catch (error: any) {
-    console.error('[PA-API Error]', error);
-
-    // Handle specific error codes
-    if (error.message?.includes('TooManyRequests')) {
-      return {
-        success: false,
-        error: 'Rate limit exceeded. Please wait and try again.',
-      };
-    }
-
-    if (error.message?.includes('InvalidSignature')) {
-      return {
-        success: false,
-        error: 'Invalid PA-API credentials. Please check your access key and secret key.',
-      };
-    }
-
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
     return {
       success: false,
-      error: error.message || 'Failed to fetch product data from Amazon API.',
+      error: {
+        code: 'NETWORK_ERROR',
+        message: `Failed to connect to Amazon PA-API: ${message}`,
+      },
     };
   }
 }
 
 /**
- * Search for products using PA-API
+ * Fetch multiple products by ASIN (batch)
  */
-export async function searchProducts(
-  keywords: string,
-  marketplace: string = 'es',
-  category?: string
-): Promise<{ success: boolean; data?: PaapiProductData[]; error?: string }> {
-  const lang: 'es' | 'en' = marketplace === 'com' ? 'en' : 'es';
-  const config = getPaapiConfig(lang);
+export async function getProductsByAsins(
+  asins: string[],
+  config?: PAAPIConfig
+): Promise<Map<string, PAAPIResult>> {
+  const results = new Map<string, PAAPIResult>();
 
-  if (!config) {
-    return {
-      success: false,
-      error: 'PA-API not configured.',
-    };
+  // PA-API allows max 10 items per request
+  // For simplicity, we fetch one by one (can be optimized later)
+  for (const asin of asins) {
+    const result = await getProductByAsin(asin, config);
+    results.set(asin, result);
   }
 
-  const host = PAAPI_HOSTS[marketplace] || PAAPI_HOSTS['es'];
-  const region = PAAPI_REGIONS[marketplace] || PAAPI_REGIONS['es'];
-
-  const commonParameters = {
-    AccessKey: config.accessKey,
-    SecretKey: config.secretKey,
-    PartnerTag: config.partnerTag,
-    PartnerType: 'Associates',
-    Marketplace: `www.amazon.${marketplace}`,
-    Host: host,
-    Region: region,
-  };
-
-  const requestParameters: Record<string, any> = {
-    Keywords: keywords,
-    SearchIndex: category || 'All',
-    ItemCount: 10,
-    Resources: [
-      'ItemInfo.Title',
-      'ItemInfo.ByLineInfo',
-      'ItemInfo.Features',
-      'Images.Primary.Large',
-      'Offers.Listings.Price',
-      'Offers.Listings.Availability.Type',
-    ],
-  };
-
-  try {
-    const response = await amazonPaapi.SearchItems(commonParameters, requestParameters);
-
-    if (!response.SearchResult?.Items?.length) {
-      return {
-        success: true,
-        data: [],
-      };
-    }
-
-    const products = response.SearchResult.Items.map((item: any) =>
-      parseItemResponse(item, marketplace, config.partnerTag, lang)
-    );
-
-    return {
-      success: true,
-      data: products,
-    };
-  } catch (error: any) {
-    console.error('[PA-API Search Error]', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to search products.',
-    };
-  }
-}
-
-/**
- * Parse the PA-API item response into our product data format
- */
-function parseItemResponse(
-  item: any,
-  marketplace: string,
-  partnerTag: string,
-  lang: 'es' | 'en'
-): PaapiProductData {
-  const asin = item.ASIN;
-
-  // Extract images
-  const images: string[] = [];
-  if (item.Images?.Primary?.Large?.URL) {
-    images.push(item.Images.Primary.Large.URL);
-  }
-  if (item.Images?.Variants) {
-    item.Images.Variants.forEach((variant: any) => {
-      if (variant.Large?.URL && images.length < 6) {
-        images.push(variant.Large.URL);
-      }
-    });
-  }
-
-  // Extract features
-  const features: string[] = [];
-  if (item.ItemInfo?.Features?.DisplayValues) {
-    features.push(...item.ItemInfo.Features.DisplayValues.slice(0, 8));
-  }
-
-  // Extract price info
-  let price: number | null = null;
-  let originalPrice: number | null = null;
-  let currency = marketplace === 'com' ? 'USD' : 'EUR';
-  let availability: string | null = null;
-
-  if (item.Offers?.Listings?.[0]) {
-    const listing = item.Offers.Listings[0];
-    if (listing.Price?.Amount) {
-      price = listing.Price.Amount;
-      currency = listing.Price.Currency || currency;
-    }
-    if (listing.SavingBasis?.Amount && listing.SavingBasis.Amount > (price || 0)) {
-      originalPrice = listing.SavingBasis.Amount;
-    }
-    if (listing.Availability?.Type) {
-      availability = listing.Availability.Type;
-    }
-  }
-
-  // Extract category from browse nodes
-  let category: string | null = null;
-  let productGroup: string | null = null;
-  if (item.BrowseNodeInfo?.BrowseNodes?.[0]) {
-    const browseNode = item.BrowseNodeInfo.BrowseNodes[0];
-    category = browseNode.ContextFreeName || browseNode.DisplayName || null;
-    // Get ancestor for broader category if available
-    if (browseNode.Ancestor?.ContextFreeName) {
-      productGroup = browseNode.Ancestor.ContextFreeName;
-    }
-  }
-
-  // Extract classification
-  if (item.ItemInfo?.Classifications?.ProductGroup?.DisplayValue) {
-    productGroup = item.ItemInfo.Classifications.ProductGroup.DisplayValue;
-  }
-
-  // Build affiliate URL
-  const affiliateUrl = `https://www.amazon.${marketplace}/dp/${asin}?tag=${partnerTag}&linkCode=ogi&th=1&psc=1`;
-
-  return {
-    asin,
-    marketplace,
-    affiliateUrl,
-    lang,
-    title: item.ItemInfo?.Title?.DisplayValue || null,
-    brand: item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue || null,
-    manufacturer: item.ItemInfo?.ByLineInfo?.Manufacturer?.DisplayValue || null,
-    model: item.ItemInfo?.ManufactureInfo?.Model?.DisplayValue || null,
-    price,
-    originalPrice,
-    currency,
-    availability,
-    description: features.length > 0 ? features.join(' ') : null,
-    shortDescription: features[0] || null,
-    rating: null, // PA-API doesn't return ratings directly
-    totalReviews: null, // PA-API doesn't return review counts directly
-    images,
-    features,
-    category,
-    productGroup,
-  };
+  return results;
 }

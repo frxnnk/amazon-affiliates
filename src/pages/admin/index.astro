@@ -2,170 +2,458 @@
 export const prerender = false;
 
 import AdminLayout from '@components/admin/AdminLayout.astro';
-import { getCollection } from 'astro:content';
+import { getAllProducts } from '@lib/db';
 
-let allProducts: any[] = [];
-let allLists: any[] = [];
-
-try {
-  allProducts = await getCollection('products');
-} catch { /* colección vacía */ }
-
-try {
-  allLists = await getCollection('lists');
-} catch { /* colección vacía */ }
+const allProducts = await getAllProducts();
 
 const stats = {
-  products: {
-    total: allProducts.length,
-    published: allProducts.filter(p => p.data.status === 'published').length,
-    drafts: allProducts.filter(p => p.data.status === 'draft').length,
-  },
-  lists: {
-    total: allLists.length,
-    published: allLists.filter(l => l.data.status === 'published').length,
-    drafts: allLists.filter(l => l.data.status === 'draft').length,
-  }
+  total: allProducts.length,
+  published: allProducts.filter(p => p.status === 'published').length,
+  drafts: allProducts.filter(p => p.status === 'draft').length,
 };
+
+const recentProducts = allProducts
+  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  .slice(0, 5);
 ---
 
 <AdminLayout title="Dashboard">
   <style>
-    .stats-grid {
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* Stats */
+    .stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
     }
-    .stat-card {
-      background: white;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+    @media (min-width: 480px) {
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
-    .stat-card h3 {
-      font-size: 0.875rem;
-      color: #6b7280;
+
+    .stat {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+      opacity: 0.4;
+    }
+
+    .stat-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
+      margin-bottom: var(--space-xs);
     }
+
     .stat-value {
       font-size: 2rem;
       font-weight: 700;
-      color: #1f2937;
+      color: var(--text-primary);
+      line-height: 1;
+      letter-spacing: -0.02em;
     }
+
+    @media (min-width: 480px) {
+      .stat-value {
+        font-size: 2.5rem;
+      }
+    }
+
     .stat-meta {
-      font-size: 0.875rem;
-      color: #9ca3af;
-      margin-top: 0.5rem;
+      margin-top: var(--space-sm);
+      font-size: 0.75rem;
     }
-    .quick-actions {
+
+    /* Actions */
+    .actions-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .actions-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
     }
+
+    @media (min-width: 480px) {
+      .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     .action-card {
-      background: white;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      text-decoration: none;
-      color: inherit;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      transition: all 0.2s;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: all var(--duration) var(--ease);
     }
+
     .action-card:hover {
+      border-color: var(--border-default);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
+
+    .action-card.primary {
+      background: linear-gradient(135deg, #ff9900 0%, #ffb84d 100%);
+      border-color: transparent;
+    }
+
+    .action-card.primary:hover {
+      box-shadow: 0 8px 24px rgba(255, 153, 0, 0.3);
+    }
+
     .action-icon {
-      width: 48px;
-      height: 48px;
-      background: #fef3c7;
-      border-radius: 0.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-hover);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      flex-shrink: 0;
     }
-    .action-text h4 {
+
+    .action-card.primary .action-icon {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .action-icon svg {
+      width: 22px;
+      height: 22px;
+      color: var(--text-secondary);
+    }
+
+    .action-card.primary .action-icon svg {
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    .action-content {
+      min-width: 0;
+    }
+
+    .action-title {
+      font-size: 0.9375rem;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--text-primary);
+      margin-bottom: 2px;
     }
-    .action-text p {
+
+    .action-card.primary .action-title {
+      color: #000;
+    }
+
+    .action-desc {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .action-card.primary .action-desc {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    /* Recent Products */
+    .recent-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .recent-header {
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .recent-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .view-all {
+      font-size: 0.8125rem;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .view-all:hover {
+      opacity: 0.8;
+    }
+
+    .view-all svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .recent-list {
+      padding: var(--space-sm) 0;
+    }
+
+    .recent-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      transition: background var(--duration) var(--ease);
+    }
+
+    .recent-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .recent-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .recent-name {
       font-size: 0.875rem;
-      color: #6b7280;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .section-title {
-      font-size: 1.125rem;
+
+    .recent-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-top: 2px;
+    }
+
+    .recent-meta code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6875rem;
+      background: var(--bg-base);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.published {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success-muted);
+    }
+
+    .status-dot.draft {
+      background: var(--warning);
+      box-shadow: 0 0 8px var(--warning-muted);
+    }
+
+    /* Empty State */
+    .empty {
+      padding: var(--space-2xl) var(--space-md);
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto var(--space-md);
+      background: var(--bg-hover);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--text-muted);
+    }
+
+    .empty h4 {
+      font-size: 1rem;
       font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 1rem;
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .empty p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: var(--space-md);
+    }
+
+    .empty-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 10px 20px;
+      background: var(--accent);
+      color: var(--bg-base);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .empty-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    }
+
+    .empty-btn svg {
+      width: 16px;
+      height: 16px;
     }
   </style>
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <h3>Productos</h3>
-      <div class="stat-value">{stats.products.total}</div>
-      <div class="stat-meta">
-        {stats.products.published} publicados, {stats.products.drafts} borradores
+  <div class="dashboard">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Total Productos</div>
+        <div class="stat-value">{stats.total}</div>
+        <div class="stat-meta" style="color: var(--text-secondary);">En tu catalogo</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Publicados</div>
+        <div class="stat-value">{stats.published}</div>
+        <div class="stat-meta">
+          <span class="admin-badge admin-badge-success">Activos</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Borradores</div>
+        <div class="stat-value">{stats.drafts}</div>
+        <div class="stat-meta">
+          <span class="admin-badge admin-badge-warning">Pendientes</span>
+        </div>
       </div>
     </div>
 
-    <div class="stat-card">
-      <h3>Listas</h3>
-      <div class="stat-value">{stats.lists.total}</div>
-      <div class="stat-meta">
-        {stats.lists.published} publicadas, {stats.lists.drafts} borradores
+    <!-- Quick Actions -->
+    <div class="actions-section">
+      <h2 class="admin-section-title">Acciones rapidas</h2>
+      <div class="actions-grid">
+        <a href="/admin/products/import" class="action-card primary">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">Importar de Amazon</div>
+            <div class="action-desc">Pegar link y auto-generar</div>
+          </div>
+        </a>
+
+        <a href="/admin/products/new" class="action-card">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">Nuevo Producto</div>
+            <div class="action-desc">Crear manualmente</div>
+          </div>
+        </a>
       </div>
     </div>
-  </div>
 
-  <h2 class="section-title">Acciones rapidas</h2>
-
-  <div class="quick-actions">
-    <a href="/admin/products/import" class="action-card" style="background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);">
-      <div class="action-icon" style="background: rgba(0,0,0,0.2);">&#128279;</div>
-      <div class="action-text">
-        <h4 style="color: #000;">Importar de Amazon</h4>
-        <p style="color: rgba(0,0,0,0.7);">Pegar link y auto-generar</p>
+    <!-- Recent Products -->
+    <div class="recent-card">
+      <div class="recent-header">
+        <h3 class="recent-title">Productos recientes</h3>
+        {recentProducts.length > 0 && (
+          <a href="/admin/products" class="view-all">
+            Ver todos
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </a>
+        )}
       </div>
-    </a>
 
-    <a href="/admin/products/new" class="action-card">
-      <div class="action-icon">+</div>
-      <div class="action-text">
-        <h4>Nuevo Producto</h4>
-        <p>Agregar un producto</p>
-      </div>
-    </a>
-
-    <a href="/admin/lists/new" class="action-card">
-      <div class="action-icon">+</div>
-      <div class="action-text">
-        <h4>Nueva Lista</h4>
-        <p>Crear una wishlist</p>
-      </div>
-    </a>
-
-    <a href="/admin/products" class="action-card">
-      <div class="action-icon">&#128230;</div>
-      <div class="action-text">
-        <h4>Ver Productos</h4>
-        <p>Gestionar productos</p>
-      </div>
-    </a>
-
-    <a href="/admin/lists" class="action-card">
-      <div class="action-icon">&#128203;</div>
-      <div class="action-text">
-        <h4>Ver Listas</h4>
-        <p>Gestionar wishlists</p>
-      </div>
-    </a>
+      {recentProducts.length > 0 ? (
+        <div class="recent-list">
+          {recentProducts.map((product) => (
+            <div class="recent-item">
+              <div class="recent-info">
+                <div class="recent-name">{product.title}</div>
+                <div class="recent-meta">
+                  <code>{product.asin}</code>
+                  <span>{product.brand}</span>
+                </div>
+              </div>
+              <span class={`status-dot ${product.status}`} title={product.status === 'published' ? 'Publicado' : 'Borrador'}></span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="empty">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
+          <h4>No hay productos todavia</h4>
+          <p>Importa tu primer producto desde Amazon</p>
+          <a href="/admin/products/import" class="empty-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Importar producto
+          </a>
+        </div>
+      )}
+    </div>
   </div>
 </AdminLayout>

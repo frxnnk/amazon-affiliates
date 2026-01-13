@@ -2,774 +2,327 @@
 export const prerender = false;
 
 import AdminLayout from '@components/admin/AdminLayout.astro';
-import categories from '@data/categories.json';
 ---
 
 <AdminLayout title="Importar Producto">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
   <style>
-    :root {
-      --bg-deep: #0a0a0b;
-      --bg-surface: #111113;
-      --bg-elevated: #18181b;
-      --bg-hover: #1f1f23;
-      --border: #27272a;
-      --border-subtle: #1f1f23;
-      --text-primary: #fafafa;
-      --text-secondary: #a1a1aa;
-      --text-muted: #71717a;
-      --accent: #ff9900;
-      --accent-dim: rgba(255, 153, 0, 0.15);
-      --accent-glow: rgba(255, 153, 0, 0.4);
-      --success: #10b981;
-      --success-dim: rgba(16, 185, 129, 0.15);
-      --error: #ef4444;
-      --error-dim: rgba(239, 68, 68, 0.15);
-      --warning: #f59e0b;
-      --warning-dim: rgba(245, 158, 11, 0.15);
-      --info: #3b82f6;
-      --info-dim: rgba(59, 130, 246, 0.15);
-      --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
-      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
     .import-page {
-      font-family: var(--font-sans);
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 0 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
     }
 
-    /* Page Header */
-    .page-header {
-      text-align: center;
-      padding: 2.5rem 0 2rem;
-      position: relative;
-    }
-
-    .page-header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      border-radius: 2px;
-    }
-
-    .page-title {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin: 0 0 0.5rem;
-      letter-spacing: -0.02em;
-    }
-
-    .page-subtitle {
-      color: var(--text-secondary);
-      font-size: 0.9375rem;
-      margin: 0;
-      font-weight: 400;
-    }
-
-    /* Cards */
-    .card {
+    /* Import Card */
+    .import-card {
       background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      margin-bottom: 1.25rem;
-      position: relative;
-      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-md);
     }
 
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+    @media (min-width: 769px) {
+      .import-card {
+        padding: var(--space-lg);
+      }
     }
 
-    /* Mode Toggle - Segmented Control */
-    .mode-toggle {
-      display: flex;
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 1.5rem;
-      max-width: 360px;
-      margin-left: auto;
-      margin-right: auto;
+    .card-header {
+      margin-bottom: var(--space-lg);
     }
 
-    .mode-btn {
-      flex: 1;
-      padding: 0.625rem 1rem;
-      background: transparent;
-      border: none;
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
-      cursor: pointer;
-      font-family: var(--font-sans);
-      font-size: 0.8125rem;
-      font-weight: 500;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-    }
-
-    .mode-btn:hover {
+    .card-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
       color: var(--text-primary);
-      background: var(--bg-hover);
+      margin-bottom: 4px;
     }
 
-    .mode-btn.active {
-      background: var(--accent);
-      color: #000;
-      box-shadow: 0 2px 8px var(--accent-glow);
+    @media (min-width: 480px) {
+      .card-header h2 {
+        font-size: 1.125rem;
+      }
     }
 
-    .mode-btn svg {
-      width: 16px;
-      height: 16px;
+    .card-header p {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
     }
 
     /* URL Input */
-    .input-group {
+    .url-input-group {
       display: flex;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    @media (min-width: 480px) {
+      .url-input-group {
+        flex-direction: row;
+        gap: var(--space-md);
+      }
+    }
+
+    .url-input-wrapper {
+      flex: 1;
+      position: relative;
     }
 
     .url-input {
-      flex: 1;
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 0.875rem 1rem;
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      padding-left: 44px;
       color: var(--text-primary);
-      font-family: var(--font-mono);
       font-size: 0.875rem;
-      transition: var(--transition);
+      font-family: 'JetBrains Mono', monospace;
+      transition: all var(--duration) var(--ease);
     }
 
     .url-input:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-dim);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
     }
 
     .url-input::placeholder {
       color: var(--text-muted);
-      font-family: var(--font-sans);
-    }
-
-    /* Bulk Textarea */
-    .bulk-textarea {
-      width: 100%;
-      min-height: 140px;
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-      color: var(--text-primary);
-      font-family: var(--font-mono);
+      font-family: 'Manrope', sans-serif;
       font-size: 0.8125rem;
-      line-height: 1.6;
-      resize: vertical;
-      margin-bottom: 0.75rem;
-      transition: var(--transition);
     }
 
-    .bulk-textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-dim);
-    }
-
-    .bulk-hint {
+    .url-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
       color: var(--text-muted);
-      font-size: 0.8125rem;
-      margin-bottom: 1rem;
     }
 
-    /* Import Button */
-    .import-btn {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 0.875rem 1.5rem;
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: var(--transition);
+    .btn-extract {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      box-shadow: 0 2px 8px var(--accent-glow);
+      justify-content: center;
+      gap: var(--space-sm);
+      background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px 24px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      white-space: nowrap;
+      min-height: 48px;
     }
 
-    .import-btn:hover {
+    .btn-extract:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 16px var(--accent-glow);
+      box-shadow: 0 4px 16px rgba(255, 153, 0, 0.4);
     }
 
-    .import-btn:active {
-      transform: translateY(0);
-    }
-
-    .import-btn:disabled {
-      opacity: 0.5;
+    .btn-extract:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
-      transform: none;
     }
 
-    .import-btn .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(0,0,0,0.2);
-      border-top-color: #000;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: none;
+    .btn-extract svg {
+      width: 18px;
+      height: 18px;
     }
 
-    .import-btn.loading .spinner { display: block; }
-    .import-btn.loading .btn-text { display: none; }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    /* Tips */
+    .tips-box {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
     }
 
-    /* Keyboard Hint */
-    .keyboard-hint {
+    .tips-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.375rem;
-      color: var(--text-muted);
+      gap: var(--space-sm);
+      color: #818cf8;
       font-size: 0.75rem;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border-subtle);
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
     }
 
-    kbd {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 2px 6px;
-      font-family: var(--font-mono);
-      font-size: 0.6875rem;
+    .tips-header svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .tips-list {
+      margin: 0;
+      padding-left: 1.125rem;
       color: var(--text-secondary);
+      font-size: 0.75rem;
+      line-height: 1.7;
     }
 
-    /* Status Messages */
+    .tips-list li {
+      margin-bottom: 2px;
+    }
+
+    .tips-list code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6875rem;
+      background: var(--bg-base);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #818cf8;
+      word-break: break-all;
+    }
+
+    /* Status Message */
     .status-message {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-md);
       display: none;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.875rem 1rem;
-      border-radius: var(--radius-md);
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
     .status-message.error {
       display: flex;
-      background: var(--error-dim);
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--error-muted);
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: var(--error);
     }
 
     .status-message.success {
       display: flex;
-      background: var(--success-dim);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--success-muted);
+      border: 1px solid rgba(34, 197, 94, 0.3);
       color: var(--success);
     }
 
-    .status-message.warning {
-      display: flex;
-      background: var(--warning-dim);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: var(--warning);
+    /* Extracted Data Section */
+    .extracted-section {
+      display: none;
+      animation: slideUp 300ms var(--ease);
     }
 
-    .status-message.info {
-      display: flex;
-      background: var(--info-dim);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: var(--info);
+    .extracted-section.visible {
+      display: block;
     }
 
-    .status-icon {
-      width: 18px;
-      height: 18px;
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-label {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    /* Duplicate Warning */
-    .duplicate-warning {
-      display: none;
-      background: var(--warning-dim);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .duplicate-warning.visible {
-      display: block;
-      animation: slideIn 0.3s ease;
-    }
-
-    .duplicate-warning h4 {
-      color: var(--warning);
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin: 0 0 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .duplicate-warning p {
-      color: var(--text-secondary);
-      font-size: 0.8125rem;
-      margin: 0 0 0.75rem;
-    }
-
-    .existing-products {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .existing-product {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.375rem 0.75rem;
-      font-size: 0.75rem;
-      color: var(--text-primary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .existing-product:hover {
-      border-color: var(--accent);
-      background: var(--bg-hover);
-    }
-
-    .duplicate-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .btn-sm {
-      padding: 0.5rem 0.875rem;
-      border-radius: var(--radius-sm);
-      font-family: var(--font-sans);
-      font-size: 0.75rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .btn-continue {
-      background: var(--success);
-      border: none;
-      color: #000;
-    }
-
-    .btn-continue:hover {
-      filter: brightness(1.1);
-    }
-
-    .btn-cancel {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
-
-    .btn-cancel:hover {
-      background: var(--bg-hover);
-      color: var(--text-primary);
-    }
-
-    /* Preview Card */
-    .preview-card {
-      display: none;
-      background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .preview-card.visible {
-      display: block;
-      animation: fadeUp 0.4s ease;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .preview-label {
+      gap: var(--space-sm);
       font-size: 0.6875rem;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
       color: var(--text-muted);
-      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-md);
     }
 
-    .preview-content {
+    .section-label svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Data Preview */
+    .data-preview {
       display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 1.5rem;
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
     }
 
-    .preview-image {
-      width: 140px;
-      height: 140px;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      background: var(--bg-deep);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--border);
+    @media (min-width: 480px) {
+      .data-preview {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
+      }
     }
 
-    .preview-image img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
+    .data-item {
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
     }
 
-    .preview-image .no-image {
-      color: var(--text-muted);
-      font-size: 0.6875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .data-item.full-width {
+      grid-column: 1 / -1;
     }
 
-    .preview-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.625rem;
-    }
-
-    .preview-brand {
-      font-size: 0.75rem;
-      color: var(--accent);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .preview-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      line-height: 1.35;
-    }
-
-    .preview-price {
-      display: flex;
-      align-items: baseline;
-      gap: 0.625rem;
-      margin-top: 0.25rem;
-    }
-
-    .preview-price .current {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--success);
-      font-family: var(--font-mono);
-    }
-
-    .preview-price .original {
-      font-size: 0.9375rem;
-      color: var(--text-muted);
-      text-decoration: line-through;
-      font-family: var(--font-mono);
-    }
-
-    .preview-price .discount {
-      background: var(--error);
-      color: #fff;
-      padding: 0.125rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.6875rem;
-      font-weight: 700;
-    }
-
-    .preview-rating {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--accent);
-      font-size: 0.875rem;
-    }
-
-    .preview-rating .stars {
-      letter-spacing: 1px;
-    }
-
-    .preview-rating .count {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-    }
-
-    /* Field Status */
-    .field-status {
-      display: none;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 1rem;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      margin-bottom: 1.25rem;
-    }
-
-    .field-status.visible {
-      display: flex;
-    }
-
-    .field-indicator {
-      display: flex;
-      align-items: center;
-      gap: 0.375rem;
-      font-size: 0.6875rem;
-      font-weight: 500;
-      padding: 0.25rem 0.625rem;
-      border-radius: 999px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-    }
-
-    .field-indicator.success {
-      color: var(--success);
-      border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .field-indicator.missing {
-      color: var(--text-muted);
-    }
-
-    .field-indicator .dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-    }
-
-    .field-indicator.success .dot { background: var(--success); }
-    .field-indicator.missing .dot { background: var(--text-muted); }
-
-    /* Form Preview Section */
-    .product-preview {
-      display: none;
-    }
-
-    .product-preview.visible {
-      display: block;
-      animation: fadeUp 0.5s ease 0.1s both;
-    }
-
-    /* Meta Bar */
-    .meta-bar {
-      display: flex;
-      gap: 2rem;
-      padding: 1rem 1.25rem;
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      margin-bottom: 1.5rem;
-    }
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .meta-item .label {
+    .data-label {
       font-size: 0.625rem;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
       color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
     }
 
-    .meta-item .value {
-      font-family: var(--font-mono);
-      font-size: 0.8125rem;
+    .data-value {
+      font-size: 0.875rem;
+      font-weight: 500;
       color: var(--text-primary);
+      word-break: break-all;
     }
 
-    .meta-item .value a {
-      color: var(--accent);
-      text-decoration: none;
+    .data-value.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
     }
 
-    .meta-item .value a:hover {
-      text-decoration: underline;
-    }
-
-    /* Image Gallery */
-    .section-title {
+    .data-value.small {
       font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    /* Form */
+    .product-form {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      flex-direction: column;
+      gap: var(--space-md);
     }
 
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .image-gallery {
-      display: flex;
-      gap: 0.625rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-      margin-bottom: 2rem;
-    }
-
-    .image-gallery::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    .image-gallery::-webkit-scrollbar-track {
-      background: var(--bg-deep);
-      border-radius: 2px;
-    }
-
-    .image-gallery::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 2px;
-    }
-
-    .image-item {
-      position: relative;
-      flex-shrink: 0;
-      width: 100px;
-      height: 100px;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      border: 2px solid var(--border);
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--bg-deep);
-    }
-
-    .image-item:hover {
-      border-color: var(--text-muted);
-    }
-
-    .image-item.selected {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-dim);
-    }
-
-    .image-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    .image-item .check-badge {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 18px;
-      height: 18px;
-      background: var(--accent);
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .image-item.selected .check-badge {
-      display: flex;
-    }
-
-    .no-images {
-      background: var(--bg-deep);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius-md);
-      padding: 2rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.8125rem;
-    }
-
-    /* Form Sections */
-    .form-section {
-      margin-bottom: 2rem;
-    }
-
-    .form-grid {
+    .form-row {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+
+    @media (min-width: 480px) {
+      .form-row.two-col {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 0.375rem;
-    }
-
-    .form-group.full-width {
-      grid-column: span 2;
+      gap: 6px;
     }
 
     .form-group label {
@@ -782,707 +335,321 @@ import categories from '@data/categories.json';
       color: var(--error);
     }
 
-    .form-input, .form-select, .form-textarea {
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
+    .form-input,
+    .form-select,
+    .form-textarea {
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
       border-radius: var(--radius-sm);
-      padding: 0.6875rem 0.875rem;
+      padding: 12px 14px;
       color: var(--text-primary);
-      font-family: var(--font-sans);
       font-size: 0.875rem;
-      transition: var(--transition);
+      font-family: inherit;
+      transition: all var(--duration) var(--ease);
+      min-height: 46px;
     }
 
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-dim);
-    }
-
-    .form-input::placeholder, .form-textarea::placeholder {
-      color: var(--text-muted);
-    }
-
-    .form-input.auto-filled {
-      border-color: var(--success);
-      background: var(--success-dim);
-    }
-
-    .form-textarea {
-      min-height: 90px;
-      resize: vertical;
-      font-family: var(--font-sans);
-      line-height: 1.5;
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
     }
 
     .form-select {
       cursor: pointer;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      padding-right: 2.5rem;
+      background-position: right 12px center;
+      padding-right: 40px;
     }
 
-    /* Features Section */
-    .features-wrapper {
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .features-hint {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 0.75rem;
-    }
-
-    .feature-checkbox {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.625rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .feature-checkbox:last-child {
-      border-bottom: none;
-    }
-
-    .feature-checkbox input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      margin-top: 1px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .feature-checkbox label {
-      flex: 1;
-      font-size: 0.8125rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-      line-height: 1.4;
-    }
-
-    /* Pros/Cons Editor */
-    .pros-cons-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-
-    .pros-cons-section {
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-    }
-
-    .pros-cons-section h4 {
-      font-size: 0.75rem;
-      font-weight: 600;
-      margin: 0 0 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .pros-cons-section.pros h4 { color: var(--success); }
-    .pros-cons-section.cons h4 { color: var(--error); }
-
-    .pros-cons-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .pros-cons-item {
-      display: flex;
-      gap: 0.375rem;
-    }
-
-    .pros-cons-item input {
-      flex: 1;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem 0.75rem;
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      font-size: 0.8125rem;
-      transition: var(--transition);
-    }
-
-    .pros-cons-item input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .pros-cons-item button {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .pros-cons-item button:hover {
-      background: var(--error-dim);
-      border-color: var(--error);
-      color: var(--error);
-    }
-
-    .add-btn {
-      width: 100%;
-      background: transparent;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius-sm);
-      padding: 0.5rem;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-family: var(--font-sans);
-      font-size: 0.75rem;
-      font-weight: 500;
-      transition: var(--transition);
-      margin-top: 0.5rem;
-    }
-
-    .add-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-dim);
-    }
-
-    /* Checkboxes Row */
-    .checkbox-row {
-      display: flex;
-      gap: 1.5rem;
-      padding: 0.5rem 0;
-    }
-
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 0.8125rem;
-    }
-
-    .checkbox-item input {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-      cursor: pointer;
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
+      line-height: 1.5;
     }
 
     /* Form Actions */
     .form-actions {
       display: flex;
-      gap: 0.75rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      margin-top: 0.5rem;
+      flex-direction: column;
+      gap: var(--space-sm);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    @media (min-width: 480px) {
+      .form-actions {
+        flex-direction: row;
+        gap: var(--space-md);
+      }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      border: none;
+      text-decoration: none;
+      min-height: 46px;
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
     }
 
     .btn-primary {
-      background: var(--success);
+      background: var(--accent);
       color: #000;
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1.5rem;
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: var(--transition);
     }
 
-    .btn-primary:hover {
-      filter: brightness(1.1);
+    .btn-primary:hover:not(:disabled) {
       transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
     }
 
     .btn-primary:disabled {
-      opacity: 0.5;
+      opacity: 0.6;
       cursor: not-allowed;
-      transform: none;
     }
 
     .btn-secondary {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1.25rem;
-      font-family: var(--font-sans);
-      font-weight: 500;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: var(--transition);
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
     }
 
     .btn-secondary:hover {
-      background: var(--bg-hover);
-      color: var(--text-primary);
-    }
-
-    /* Bulk Results */
-    .bulk-results {
-      margin-top: 1rem;
-      display: none;
-    }
-
-    .bulk-results.visible {
-      display: block;
-    }
-
-    .bulk-result-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      margin-bottom: 0.5rem;
-      animation: slideIn 0.3s ease;
-    }
-
-    .bulk-result-item.success {
-      border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .bulk-result-item.error {
-      border-color: rgba(239, 68, 68, 0.3);
-    }
-
-    .bulk-result-item .result-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-
-    .bulk-result-item.success .result-icon {
-      background: var(--success-dim);
-      color: var(--success);
-    }
-
-    .bulk-result-item.error .result-icon {
-      background: var(--error-dim);
-      color: var(--error);
-    }
-
-    .bulk-result-item .asin {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-primary);
       background: var(--bg-elevated);
-      padding: 0.125rem 0.5rem;
-      border-radius: 4px;
+      border-color: var(--border-default);
     }
 
-    .bulk-result-item .message {
-      flex: 1;
-      font-size: 0.8125rem;
+    .btn-ghost {
+      background: transparent;
       color: var(--text-secondary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .bulk-result-item .action-link {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .bulk-result-item .action-link:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .input-group {
-        flex-direction: column;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .form-group.full-width {
-        grid-column: span 1;
-      }
-
-      .pros-cons-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .meta-bar {
-        flex-wrap: wrap;
-        gap: 1rem;
-      }
-
-      .preview-content {
-        grid-template-columns: 1fr;
-      }
-
-      .preview-image {
-        width: 100%;
-        max-width: 180px;
-        height: 180px;
-        margin: 0 auto;
-      }
+    .btn-ghost:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
     }
   </style>
 
   <div class="import-page">
-    <header class="page-header">
-      <h1 class="page-title">Importar Producto</h1>
-      <p class="page-subtitle">Extrae automaticamente informacion de productos desde Amazon</p>
-    </header>
-
-    <div class="card">
-      <div class="mode-toggle">
-        <button type="button" class="mode-btn active" data-mode="single">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8m-4-4h8"/></svg>
-          Individual
-        </button>
-        <button type="button" class="mode-btn" data-mode="bulk">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          Masivo
-        </button>
+    <!-- URL Input Card -->
+    <div class="import-card">
+      <div class="card-header">
+        <h2>Importar desde Amazon</h2>
+        <p>Pega un link de Amazon o SiteStripe para extraer automaticamente la informacion del producto</p>
       </div>
 
       <div id="statusMessage" class="status-message"></div>
-      <div id="duplicateWarning" class="duplicate-warning"></div>
 
-      <div id="singleMode">
-        <div class="input-group">
-          <input type="text" id="amazonUrl" class="url-input" placeholder="Pega URL de Amazon o ASIN (ej: B09XS7JWHH)" autofocus />
-          <button type="button" id="importBtn" class="import-btn">
-            <span class="spinner"></span>
-            <span class="btn-text">Importar</span>
-          </button>
+      <div class="url-input-group">
+        <div class="url-input-wrapper">
+          <svg class="url-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          <input
+            type="text"
+            id="amazonUrl"
+            class="url-input"
+            placeholder="amazon.com/dp/B0XXX o ASIN..."
+            autocomplete="off"
+            spellcheck="false"
+          />
         </div>
-        <div class="keyboard-hint">
-          <span>Pega con</span>
-          <kbd>Ctrl</kbd><span>+</span><kbd>V</kbd>
-          <span>para importar automaticamente</span>
-        </div>
-      </div>
-
-      <div id="bulkMode" style="display: none;">
-        <textarea id="bulkUrls" class="bulk-textarea" placeholder="Una URL o ASIN por linea:&#10;https://www.amazon.es/dp/B09XS7JWHH&#10;B01ABCDEFG&#10;https://www.amazon.com/dp/B02HIJKLMN"></textarea>
-        <p class="bulk-hint">Productos importados como borrador para revision posterior.</p>
-        <button type="button" id="bulkImportBtn" class="import-btn">
-          <span class="spinner"></span>
-          <span class="btn-text">Importar Todos</span>
+        <button type="button" id="parseBtn" class="btn-extract">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Extraer
         </button>
-        <div id="bulkResults" class="bulk-results"></div>
+      </div>
+
+      <div class="tips-box">
+        <div class="tips-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Formatos soportados
+        </div>
+        <ul class="tips-list">
+          <li>Link de SiteStripe (con tu tag incluido)</li>
+          <li>URL completa: <code>amazon.com/Producto/dp/B0XXX</code></li>
+          <li>URL corta: <code>amazon.com/dp/B0XXX</code></li>
+          <li>ASIN directo: <code>B0XXXXXXXXX</code></li>
+        </ul>
       </div>
     </div>
 
-    <div id="previewCard" class="preview-card">
-      <div class="preview-label">Vista Previa</div>
-      <div class="preview-content">
-        <div class="preview-image">
-          <img id="previewImage" src="" alt="" style="display: none;" />
-          <div id="previewNoImage" class="no-image">Sin imagen</div>
+    <!-- Extracted Data Section -->
+    <div id="extractedSection" class="extracted-section">
+      <div class="import-card">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Datos extraidos
         </div>
-        <div class="preview-info">
-          <div id="previewBrand" class="preview-brand"></div>
-          <div id="previewTitle" class="preview-title"></div>
-          <div class="preview-price">
-            <span id="previewCurrentPrice" class="current"></span>
-            <span id="previewOriginalPrice" class="original"></span>
-            <span id="previewDiscount" class="discount" style="display: none;"></span>
+
+        <div class="data-preview">
+          <div class="data-item">
+            <div class="data-label">ASIN</div>
+            <div class="data-value mono" id="previewAsin">-</div>
           </div>
-          <div id="previewRating" class="preview-rating"></div>
+          <div class="data-item">
+            <div class="data-label">Marketplace</div>
+            <div class="data-value" id="previewMarketplace">-</div>
+          </div>
+          <div class="data-item full-width">
+            <div class="data-label">URL Afiliado</div>
+            <div class="data-value small mono" id="previewUrl">-</div>
+          </div>
+          <div class="data-item full-width" id="suggestedTitleItem" style="display: none;">
+            <div class="data-label">Titulo sugerido</div>
+            <div class="data-value" id="previewTitle">-</div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div id="fieldStatus" class="field-status"></div>
-
-    <div id="productPreview" class="product-preview">
-      <form id="productForm">
-        <div class="card">
-          <div class="meta-bar">
-            <div class="meta-item">
-              <span class="label">ASIN</span>
-              <span class="value" id="metaAsin">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="label">Marketplace</span>
-              <span class="value" id="metaMarketplace">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="label">Fuente</span>
-              <span class="value" id="metaDataSource">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="label">Enlace</span>
-              <span class="value"><a id="metaAffiliateUrl" href="#" target="_blank">Ver en Amazon</a></span>
-            </div>
-          </div>
-
+        <form id="productForm" class="product-form">
           <input type="hidden" id="formAsin" name="asin" />
           <input type="hidden" id="formAffiliateUrl" name="affiliateUrl" />
           <input type="hidden" id="formLang" name="lang" value="es" />
-          <input type="hidden" id="formFeaturedImage" name="featuredImage" />
 
-          <div class="form-section">
-            <h3 class="section-title">Imagenes</h3>
-            <div id="imageGallery" class="image-gallery">
-              <div class="no-images">No se encontraron imagenes</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Titulo <span class="required">*</span></label>
+              <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
             </div>
           </div>
 
-          <div class="form-section">
-            <h3 class="section-title">Informacion Basica</h3>
-            <div class="form-grid">
-              <div class="form-group full-width">
-                <label>Titulo <span class="required">*</span></label>
-                <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
-              </div>
-              <div class="form-group">
-                <label>Marca <span class="required">*</span></label>
-                <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Samsung, Sony..." />
-              </div>
-              <div class="form-group">
-                <label>Modelo</label>
-                <input type="text" id="formModel" name="model" class="form-input" placeholder="WH-1000XM5" />
-              </div>
-              <div class="form-group">
-                <label>Categoria</label>
-                <select id="formCategory" name="category" class="form-select">
-                  {categories.categories.map(cat => (
-                    <option value={cat.id}>{cat.name.es}</option>
-                  ))}
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Idioma</label>
-                <select id="formLangSelect" name="langSelect" class="form-select">
-                  <option value="es">Espanol</option>
-                  <option value="en">English</option>
-                </select>
-              </div>
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label>Marca <span class="required">*</span></label>
+              <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Ej: Samsung, Sony" />
+            </div>
+            <div class="form-group">
+              <label>Modelo</label>
+              <input type="text" id="formModel" name="model" class="form-input" placeholder="Ej: Galaxy S24" />
             </div>
           </div>
 
-          <div class="form-section">
-            <h3 class="section-title">Precio y Valoraciones</h3>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Precio <span class="required">*</span></label>
-                <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
-              </div>
-              <div class="form-group">
-                <label>Precio Original</label>
-                <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="0.00" />
-              </div>
-              <div class="form-group">
-                <label>Valoracion (1-5)</label>
-                <input type="number" id="formRating" name="rating" class="form-input" step="0.1" min="0" max="5" placeholder="4.5" />
-              </div>
-              <div class="form-group">
-                <label>Total Resenas</label>
-                <input type="number" id="formTotalReviews" name="totalReviews" class="form-input" placeholder="1234" />
-              </div>
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label>Precio <span class="required">*</span></label>
+              <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label>Precio Original</label>
+              <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="Si descuento" />
             </div>
           </div>
 
-          <div class="form-section">
-            <h3 class="section-title">Descripciones</h3>
-            <div class="form-grid">
-              <div class="form-group full-width">
-                <label>Descripcion Corta</label>
-                <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Resumen del producto..."></textarea>
-              </div>
-              <div class="form-group full-width">
-                <label>Descripcion Completa</label>
-                <textarea id="formDescription" name="description" class="form-textarea" style="min-height: 120px;" placeholder="Descripcion detallada..."></textarea>
-              </div>
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label>Categoria</label>
+              <select id="formCategory" name="category" class="form-select">
+                <option value="electronics">Electronica</option>
+                <option value="computers">Computadoras</option>
+                <option value="smartphones">Smartphones</option>
+                <option value="audio">Audio</option>
+                <option value="tv">TV & Video</option>
+                <option value="gaming">Gaming</option>
+                <option value="home">Hogar</option>
+                <option value="kitchen">Cocina</option>
+                <option value="sports">Deportes</option>
+                <option value="fashion">Moda</option>
+                <option value="beauty">Belleza</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="formStatus" name="status" class="form-select">
+                <option value="draft">Borrador</option>
+                <option value="published">Publicado</option>
+              </select>
             </div>
           </div>
 
-          <div class="form-section" id="featuresSection" style="display: none;">
-            <h3 class="section-title">Caracteristicas Detectadas</h3>
-            <p class="features-hint">Selecciona las que quieras usar como ventajas:</p>
-            <div id="featuresList" class="features-wrapper"></div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="section-title">Pros y Contras</h3>
-            <div class="pros-cons-grid">
-              <div class="pros-cons-section pros">
-                <h4>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-                  Ventajas
-                </h4>
-                <div id="prosList" class="pros-cons-list"></div>
-                <button type="button" class="add-btn" data-target="prosList">+ Agregar</button>
-              </div>
-              <div class="pros-cons-section cons">
-                <h4>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  Desventajas
-                </h4>
-                <div id="consList" class="pros-cons-list"></div>
-                <button type="button" class="add-btn" data-target="consList">+ Agregar</button>
-              </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Descripcion Corta</label>
+              <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Breve descripcion (1-2 oraciones)"></textarea>
             </div>
           </div>
 
-          <div class="form-section">
-            <h3 class="section-title">Imagen Manual</h3>
-            <div class="form-grid">
-              <div class="form-group full-width">
-                <label>URL de Imagen</label>
-                <input type="url" id="formImageUrl" name="imageUrl" class="form-input" placeholder="https://..." />
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="section-title">Publicacion</h3>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Estado</label>
-                <select id="formStatus" name="status" class="form-select">
-                  <option value="draft">Borrador</option>
-                  <option value="published">Publicado</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Opciones</label>
-                <div class="checkbox-row">
-                  <label class="checkbox-item">
-                    <input type="checkbox" id="formIsFeatured" name="isFeatured" />
-                    Destacado
-                  </label>
-                  <label class="checkbox-item">
-                    <input type="checkbox" id="formIsOnSale" name="isOnSale" />
-                    En Oferta
-                  </label>
-                </div>
-              </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>URL de Imagen</label>
+              <input type="url" id="formImage" name="featuredImage" class="form-input" placeholder="https://..." />
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn-primary" id="saveBtn">Guardar Producto</button>
-            <button type="button" id="resetBtn" class="btn-secondary">Limpiar</button>
-            <a href="/admin/products" class="btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Crear
+            </button>
+            <button type="button" id="resetBtn" class="btn btn-secondary">
+              Limpiar
+            </button>
+            <a href="/admin/products/new" class="btn btn-ghost">
+              Formulario completo
+            </a>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <script>
     const amazonUrlInput = document.getElementById('amazonUrl') as HTMLInputElement;
-    const importBtn = document.getElementById('importBtn') as HTMLButtonElement;
+    const parseBtn = document.getElementById('parseBtn') as HTMLButtonElement;
+    const extractedSection = document.getElementById('extractedSection')!;
     const statusMessage = document.getElementById('statusMessage')!;
-    const duplicateWarning = document.getElementById('duplicateWarning')!;
-    const productPreview = document.getElementById('productPreview')!;
     const productForm = document.getElementById('productForm') as HTMLFormElement;
     const resetBtn = document.getElementById('resetBtn')!;
-    const previewCard = document.getElementById('previewCard')!;
-    const previewImage = document.getElementById('previewImage') as HTMLImageElement;
-    const previewNoImage = document.getElementById('previewNoImage')!;
+
+    // Preview elements
+    const previewAsin = document.getElementById('previewAsin')!;
+    const previewMarketplace = document.getElementById('previewMarketplace')!;
+    const previewUrl = document.getElementById('previewUrl')!;
     const previewTitle = document.getElementById('previewTitle')!;
-    const previewBrand = document.getElementById('previewBrand')!;
-    const previewCurrentPrice = document.getElementById('previewCurrentPrice')!;
-    const previewOriginalPrice = document.getElementById('previewOriginalPrice')!;
-    const previewDiscount = document.getElementById('previewDiscount')!;
-    const previewRating = document.getElementById('previewRating')!;
-    const fieldStatusContainer = document.getElementById('fieldStatus')!;
-    const metaAsin = document.getElementById('metaAsin')!;
-    const metaMarketplace = document.getElementById('metaMarketplace')!;
-    const metaDataSource = document.getElementById('metaDataSource')!;
-    const metaAffiliateUrl = document.getElementById('metaAffiliateUrl') as HTMLAnchorElement;
-    const modeButtons = document.querySelectorAll('.mode-btn');
-    const singleMode = document.getElementById('singleMode')!;
-    const bulkMode = document.getElementById('bulkMode')!;
-    const bulkUrls = document.getElementById('bulkUrls') as HTMLTextAreaElement;
-    const bulkImportBtn = document.getElementById('bulkImportBtn') as HTMLButtonElement;
-    const bulkResults = document.getElementById('bulkResults')!;
+    const suggestedTitleItem = document.getElementById('suggestedTitleItem')!;
 
-    const formFields = {
-      asin: document.getElementById('formAsin') as HTMLInputElement,
-      affiliateUrl: document.getElementById('formAffiliateUrl') as HTMLInputElement,
-      lang: document.getElementById('formLang') as HTMLInputElement,
-      langSelect: document.getElementById('formLangSelect') as HTMLSelectElement,
-      featuredImage: document.getElementById('formFeaturedImage') as HTMLInputElement,
-      title: document.getElementById('formTitle') as HTMLInputElement,
-      brand: document.getElementById('formBrand') as HTMLInputElement,
-      model: document.getElementById('formModel') as HTMLInputElement,
-      category: document.getElementById('formCategory') as HTMLSelectElement,
-      price: document.getElementById('formPrice') as HTMLInputElement,
-      originalPrice: document.getElementById('formOriginalPrice') as HTMLInputElement,
-      rating: document.getElementById('formRating') as HTMLInputElement,
-      totalReviews: document.getElementById('formTotalReviews') as HTMLInputElement,
-      shortDesc: document.getElementById('formShortDesc') as HTMLTextAreaElement,
-      description: document.getElementById('formDescription') as HTMLTextAreaElement,
-      imageUrl: document.getElementById('formImageUrl') as HTMLInputElement,
-      status: document.getElementById('formStatus') as HTMLSelectElement,
-      isFeatured: document.getElementById('formIsFeatured') as HTMLInputElement,
-      isOnSale: document.getElementById('formIsOnSale') as HTMLInputElement,
-    };
+    // Form elements
+    const formAsin = document.getElementById('formAsin') as HTMLInputElement;
+    const formAffiliateUrl = document.getElementById('formAffiliateUrl') as HTMLInputElement;
+    const formLang = document.getElementById('formLang') as HTMLInputElement;
+    const formTitle = document.getElementById('formTitle') as HTMLInputElement;
 
-    const imageGallery = document.getElementById('imageGallery')!;
-    const featuresSection = document.getElementById('featuresSection')!;
-    const featuresList = document.getElementById('featuresList')!;
-    const prosList = document.getElementById('prosList')!;
-    const consList = document.getElementById('consList')!;
-
-    let selectedImageUrl: string | null = null;
-    let currentMode: 'single' | 'bulk' = 'single';
-    let pendingDuplicateData: any = null;
-
-    modeButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const mode = btn.getAttribute('data-mode') as 'single' | 'bulk';
-        currentMode = mode;
-        modeButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        singleMode.style.display = mode === 'single' ? 'block' : 'none';
-        bulkMode.style.display = mode === 'bulk' ? 'block' : 'none';
-        hideStatus();
-        hideDuplicateWarning();
-      });
-    });
-
-    function showStatus(message: string, type: 'error' | 'success' | 'warning' | 'info') {
-      const icons: Record<string, string> = {
-        error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
-        success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>',
-        warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
-        info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>'
-      };
-      statusMessage.innerHTML = `<span class="status-icon">${icons[type]}</span><span>${message}</span>`;
+    function showStatus(message: string, type: 'error' | 'success') {
+      statusMessage.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          ${type === 'success'
+            ? '<polyline points="20 6 9 17 4 12"/>'
+            : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'}
+        </svg>
+        ${message}
+      `;
       statusMessage.className = `status-message ${type}`;
     }
 
@@ -1490,249 +657,221 @@ import categories from '@data/categories.json';
       statusMessage.className = 'status-message';
     }
 
-    function showDuplicateWarning(asin: string, products: any[]) {
-      duplicateWarning.innerHTML = `
-        <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Producto existente</h4>
-        <p>ASIN <strong>${asin}</strong> ya existe:</p>
-        <div class="existing-products">${products.map(p => `<a href="/admin/products/${p.productId}" class="existing-product" target="_blank">${p.title} (${p.lang.toUpperCase()})</a>`).join('')}</div>
-        <div class="duplicate-actions">
-          <button type="button" class="btn-sm btn-continue" id="continueImport">Importar igual</button>
-          <button type="button" class="btn-sm btn-cancel" id="cancelImport">Cancelar</button>
-        </div>
-      `;
-      duplicateWarning.classList.add('visible');
-      document.getElementById('continueImport')?.addEventListener('click', () => { hideDuplicateWarning(); if (pendingDuplicateData) processImportedData(pendingDuplicateData); });
-      document.getElementById('cancelImport')?.addEventListener('click', () => { hideDuplicateWarning(); pendingDuplicateData = null; });
-    }
-
-    function hideDuplicateWarning() {
-      duplicateWarning.classList.remove('visible');
-    }
-
-    function setAutoFilled(element: HTMLInputElement | HTMLTextAreaElement, value: string | number | null) {
-      if (value !== null && value !== undefined && value !== '') {
-        element.value = String(value);
-        element.classList.add('auto-filled');
-      }
-    }
-
-    function updatePreviewCard(data: any) {
-      previewCard.classList.add('visible');
-      if (data.images?.length > 0) {
-        previewImage.src = data.images[0];
-        previewImage.alt = data.title || '';
-        previewImage.style.display = 'block';
-        previewNoImage.style.display = 'none';
-      } else {
-        previewImage.style.display = 'none';
-        previewNoImage.style.display = 'block';
-      }
-      previewBrand.textContent = data.brand || 'Marca';
-      previewTitle.textContent = data.title || 'Sin titulo';
-      const currency = data.currency === 'USD' ? '$' : '\u20AC';
-      previewCurrentPrice.textContent = data.price ? `${currency}${data.price.toFixed(2)}` : '-';
-      if (data.originalPrice && data.originalPrice > data.price) {
-        previewOriginalPrice.textContent = `${currency}${data.originalPrice.toFixed(2)}`;
-        previewOriginalPrice.style.display = 'inline';
-        const discount = Math.round((1 - data.price / data.originalPrice) * 100);
-        previewDiscount.textContent = `-${discount}%`;
-        previewDiscount.style.display = 'inline';
-      } else {
-        previewOriginalPrice.style.display = 'none';
-        previewDiscount.style.display = 'none';
-      }
-      if (data.rating) {
-        previewRating.innerHTML = `<span class="stars">${'\u2605'.repeat(Math.floor(data.rating))}${'\u2606'.repeat(5 - Math.floor(data.rating))}</span> ${data.rating.toFixed(1)} <span class="count">(${data.totalReviews?.toLocaleString() || 0})</span>`;
-      } else {
-        previewRating.innerHTML = '<span class="count">Sin valoraciones</span>';
-      }
-    }
-
-    function updateFieldStatus(fieldStatus: Record<string, boolean>) {
-      const names: Record<string, string> = { title: 'Titulo', brand: 'Marca', price: 'Precio', originalPrice: 'Precio Orig.', rating: 'Rating', totalReviews: 'Resenas', images: 'Imagenes', features: 'Features', description: 'Desc.', category: 'Categoria' };
-      fieldStatusContainer.innerHTML = Object.entries(fieldStatus).map(([k, v]) => `<div class="field-indicator ${v ? 'success' : 'missing'}"><span class="dot"></span>${names[k] || k}</div>`).join('');
-      fieldStatusContainer.classList.add('visible');
-    }
-
-    function renderImages(images: string[]) {
-      if (!images?.length) { imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes</div>'; return; }
-      imageGallery.innerHTML = images.map((url, i) => `<div class="image-item ${i === 0 ? 'selected' : ''}" data-url="${url}"><img src="${url}" alt="Imagen ${i + 1}" loading="lazy" /><div class="check-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('');
-      if (images.length > 0) { selectedImageUrl = images[0]; formFields.featuredImage.value = images[0]; }
-      imageGallery.querySelectorAll('.image-item').forEach(item => {
-        item.addEventListener('click', () => {
-          imageGallery.querySelectorAll('.image-item').forEach(i => i.classList.remove('selected'));
-          item.classList.add('selected');
-          selectedImageUrl = item.getAttribute('data-url');
-          formFields.featuredImage.value = selectedImageUrl || '';
-        });
-      });
-    }
-
-    function renderFeatures(features: string[]) {
-      if (!features?.length) { featuresSection.style.display = 'none'; return; }
-      featuresSection.style.display = 'block';
-      featuresList.innerHTML = features.map((f, i) => `<div class="feature-checkbox"><input type="checkbox" id="feature-${i}" data-feature="${f}" /><label for="feature-${i}">${f}</label></div>`).join('');
-      featuresList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', (e) => {
-          const t = e.target as HTMLInputElement;
-          const f = t.getAttribute('data-feature') || '';
-          if (t.checked) createProsConsItem(prosList, f);
-          else prosList.querySelectorAll('.pros-cons-item input').forEach(inp => { if ((inp as HTMLInputElement).value === f) inp.closest('.pros-cons-item')?.remove(); });
-        });
-      });
-    }
-
-    function createProsConsItem(list: HTMLElement, value = '') {
-      const item = document.createElement('div');
-      item.className = 'pros-cons-item';
-      item.innerHTML = `<input type="text" value="${value}" placeholder="Escribe aqui..." /><button type="button"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
-      item.querySelector('button')?.addEventListener('click', () => item.remove());
-      list.appendChild(item);
-    }
-
-    function getProsCons(list: HTMLElement): string[] {
-      return Array.from(list.querySelectorAll('input')).map(i => (i as HTMLInputElement).value.trim()).filter(Boolean);
-    }
-
-    document.querySelectorAll('.add-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-target');
-        if (id) { const l = document.getElementById(id); if (l) createProsConsItem(l); }
-      });
-    });
-
-    createProsConsItem(prosList);
-    createProsConsItem(consList);
-
-    async function checkDuplicate(asin: string): Promise<{ exists: boolean; products: any[] }> {
-      try {
-        const r = await fetch('/api/admin/check-duplicate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asin }) });
-        const d = await r.json();
-        return { exists: d.exists, products: d.products || [] };
-      } catch { return { exists: false, products: [] }; }
-    }
-
-    function processImportedData(result: any) {
-      const data = result.data;
-      metaAsin.textContent = data.asin;
-      metaMarketplace.textContent = `amazon.${data.marketplace}`;
-      // Show data source with styled badge
-      const sourceLabel = result.dataSource === 'paapi' ? 'Amazon API' : 'Web Scraper';
-      const sourceColor = result.dataSource === 'paapi' ? '#10b981' : '#f59e0b';
-      metaDataSource.innerHTML = `<span style="color: ${sourceColor}; font-weight: 500;">${sourceLabel}</span>`;
-      metaAffiliateUrl.href = data.affiliateUrl;
-      formFields.asin.value = data.asin;
-      formFields.affiliateUrl.value = data.affiliateUrl;
-      formFields.lang.value = data.lang;
-      formFields.langSelect.value = data.lang;
-      setAutoFilled(formFields.title, data.title);
-      setAutoFilled(formFields.brand, data.brand);
-      setAutoFilled(formFields.price, data.price);
-      setAutoFilled(formFields.originalPrice, data.originalPrice);
-      setAutoFilled(formFields.rating, data.rating);
-      setAutoFilled(formFields.totalReviews, data.totalReviews);
-      setAutoFilled(formFields.shortDesc, data.shortDescription);
-      setAutoFilled(formFields.description, data.description);
-      if (data.originalPrice && data.price && data.originalPrice > data.price) formFields.isOnSale.checked = true;
-      updatePreviewCard(data);
-      if (data.fieldStatus) updateFieldStatus(data.fieldStatus);
-      renderImages(data.images || []);
-      renderFeatures(data.features || []);
-      productPreview.classList.add('visible');
-      if (result.scraped) showStatus(result.message || 'Datos importados.', 'success');
-      else showStatus('No se obtuvieron datos. Completa manualmente.', 'warning');
-      previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    async function importProduct() {
+    async function parseAmazonUrl() {
       const input = amazonUrlInput.value.trim();
-      if (!input) { showStatus('Ingresa una URL o ASIN', 'error'); return; }
-      hideStatus(); hideDuplicateWarning();
-      importBtn.classList.add('loading'); importBtn.disabled = true;
+      if (!input) {
+        showStatus('Por favor ingresa una URL de Amazon o un ASIN', 'error');
+        return;
+      }
+
+      hideStatus();
+      parseBtn.disabled = true;
+      parseBtn.innerHTML = `
+        <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Extrayendo...
+      `;
+
       try {
         const isAsin = /^[A-Z0-9]{10}$/i.test(input);
-        const r = await fetch('/api/admin/scrape-amazon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(isAsin ? { asin: input } : { url: input }) });
-        const result = await r.json();
-        if (!r.ok) { showStatus(result.error || 'Error al procesar', 'error'); return; }
-        const { exists, products } = await checkDuplicate(result.data.asin);
-        if (exists) { pendingDuplicateData = result; showDuplicateWarning(result.data.asin, products); return; }
-        processImportedData(result);
-      } catch (e) { showStatus('Error de conexion', 'error'); console.error(e); }
-      finally { importBtn.classList.remove('loading'); importBtn.disabled = false; }
-    }
 
-    async function bulkImport() {
-      const lines = bulkUrls.value.trim().split('\n').filter(l => l.trim());
-      if (!lines.length) { showStatus('Ingresa al menos una URL o ASIN', 'error'); return; }
-      hideStatus(); bulkImportBtn.classList.add('loading'); bulkImportBtn.disabled = true;
-      bulkResults.innerHTML = ''; bulkResults.classList.add('visible');
-      const results: { asin: string; success: boolean; message: string; productId?: string }[] = [];
-      for (const line of lines) {
-        const input = line.trim();
-        const isAsin = /^[A-Z0-9]{10}$/i.test(input);
+        // First, try PA-API for full product data
+        let paapiData = null;
         try {
-          const sr = await fetch('/api/admin/scrape-amazon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(isAsin ? { asin: input } : { url: input }) });
-          const sd = await sr.json();
-          if (!sr.ok) { results.push({ asin: input, success: false, message: sd.error || 'Error' }); renderBulkResults(results); continue; }
-          const data = sd.data;
-          const { exists } = await checkDuplicate(data.asin);
-          if (exists) { results.push({ asin: data.asin, success: false, message: 'Ya existe' }); renderBulkResults(results); continue; }
-          const cr = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asin: data.asin, affiliateUrl: data.affiliateUrl, lang: data.lang, title: data.title || `Producto ${data.asin}`, brand: data.brand || 'Desconocida', price: data.price || 0, originalPrice: data.originalPrice, rating: data.rating, totalReviews: data.totalReviews, shortDescription: data.shortDescription, description: data.description, featuredImage: data.images?.[0] ? { url: data.images[0], alt: data.title || '' } : undefined, status: 'draft', isFeatured: false, isOnSale: !!(data.originalPrice && data.price && data.originalPrice > data.price), pros: [], cons: [] }) });
-          const cd = await cr.json();
-          results.push(cr.ok ? { asin: data.asin, success: true, message: data.title || 'OK', productId: cd.productId } : { asin: data.asin, success: false, message: cd.error || 'Error' });
-        } catch { results.push({ asin: input, success: false, message: 'Error conexion' }); }
-        renderBulkResults(results);
+          const paapiResponse = await fetch('/api/admin/fetch-product-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+          });
+
+          if (paapiResponse.ok) {
+            const paapiResult = await paapiResponse.json();
+            if (paapiResult.success) {
+              paapiData = paapiResult.data;
+            }
+          }
+        } catch (e) {
+          // PA-API not available, continue with basic parsing
+          console.log('PA-API not available, using basic parsing');
+        }
+
+        // If PA-API worked, use that data
+        if (paapiData) {
+          previewAsin.textContent = paapiData.asin;
+          previewMarketplace.textContent = `amazon.com`;
+          previewUrl.textContent = paapiData.affiliateUrl;
+
+          if (paapiData.title) {
+            previewTitle.textContent = paapiData.title;
+            suggestedTitleItem.style.display = 'block';
+            formTitle.value = paapiData.title;
+          }
+
+          // Fill all form fields from PA-API
+          formAsin.value = paapiData.asin;
+          formAffiliateUrl.value = paapiData.affiliateUrl;
+          formLang.value = 'en';
+
+          const formBrand = document.getElementById('formBrand') as HTMLInputElement;
+          const formPrice = document.getElementById('formPrice') as HTMLInputElement;
+          const formOriginalPrice = document.getElementById('formOriginalPrice') as HTMLInputElement;
+          const formShortDesc = document.getElementById('formShortDesc') as HTMLTextAreaElement;
+          const formImage = document.getElementById('formImage') as HTMLInputElement;
+
+          if (paapiData.brand) formBrand.value = paapiData.brand;
+          if (paapiData.price) formPrice.value = paapiData.price.toString();
+          if (paapiData.originalPrice) formOriginalPrice.value = paapiData.originalPrice.toString();
+          if (paapiData.shortDescription) formShortDesc.value = paapiData.shortDescription;
+          if (paapiData.featuredImageUrl) formImage.value = paapiData.featuredImageUrl;
+
+          extractedSection.classList.add('visible');
+          showStatus('Datos completos extraidos via PA-API', 'success');
+          extractedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+
+        // Fallback to basic URL parsing
+        const response = await fetch('/api/admin/parse-amazon-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          showStatus(result.error || 'Error al procesar la URL', 'error');
+          return;
+        }
+
+        const data = result.data;
+
+        // Update preview
+        previewAsin.textContent = data.asin;
+        previewMarketplace.textContent = `amazon.${data.marketplace}`;
+        previewUrl.textContent = data.affiliateUrl;
+
+        if (data.suggestedTitle) {
+          previewTitle.textContent = data.suggestedTitle;
+          suggestedTitleItem.style.display = 'block';
+          formTitle.value = data.suggestedTitle;
+        } else {
+          suggestedTitleItem.style.display = 'none';
+        }
+
+        // Update hidden form fields
+        formAsin.value = data.asin;
+        formAffiliateUrl.value = data.affiliateUrl;
+        formLang.value = data.lang;
+
+        // Show extracted data section
+        extractedSection.classList.add('visible');
+        showStatus('Datos basicos extraidos (configura PA-API para datos completos)', 'success');
+
+        // Scroll to form
+        extractedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (error) {
+        showStatus('Error de conexion. Intenta de nuevo.', 'error');
+        console.error(error);
+      } finally {
+        parseBtn.disabled = false;
+        parseBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Extraer
+        `;
       }
-      bulkImportBtn.classList.remove('loading'); bulkImportBtn.disabled = false;
-      const ok = results.filter(r => r.success).length;
-      showStatus(`Completado: ${ok}/${results.length} importados.`, ok > 0 ? 'success' : 'warning');
     }
 
-    function renderBulkResults(results: any[]) {
-      bulkResults.innerHTML = results.map(r => `<div class="bulk-result-item ${r.success ? 'success' : 'error'}"><div class="result-icon">${r.success ? '\u2713' : '\u2717'}</div><span class="asin">${r.asin}</span><span class="message">${r.message}</span>${r.productId ? `<a href="/admin/products/${r.productId}" class="action-link">Editar</a>` : ''}</div>`).join('');
-    }
-
-    bulkImportBtn.addEventListener('click', bulkImport);
-
-    document.addEventListener('paste', async (e) => {
-      if (currentMode !== 'single') return;
-      const ae = document.activeElement;
-      if (ae !== amazonUrlInput && amazonUrlInput.value.trim()) return;
-      const txt = e.clipboardData?.getData('text')?.trim() || '';
-      const isUrl = txt.includes('amazon.') && (txt.includes('/dp/') || txt.includes('/gp/'));
-      const isAsin = /^[A-Z0-9]{10}$/i.test(txt);
-      if (isUrl || isAsin) { e.preventDefault(); amazonUrlInput.value = txt; setTimeout(importProduct, 100); }
+    parseBtn.addEventListener('click', parseAmazonUrl);
+    amazonUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        parseAmazonUrl();
+      }
     });
-
-    importBtn.addEventListener('click', importProduct);
-    amazonUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); importProduct(); } });
-    formFields.langSelect.addEventListener('change', () => { formFields.lang.value = formFields.langSelect.value; });
 
     productForm.addEventListener('submit', async (e) => {
-      e.preventDefault(); hideStatus();
-      const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
-      saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
-      const formData: Record<string, any> = { asin: formFields.asin.value, affiliateUrl: formFields.affiliateUrl.value, lang: formFields.lang.value, title: formFields.title.value, brand: formFields.brand.value, model: formFields.model.value || undefined, category: formFields.category.value, price: parseFloat(formFields.price.value) || 0, originalPrice: formFields.originalPrice.value ? parseFloat(formFields.originalPrice.value) : undefined, rating: formFields.rating.value ? parseFloat(formFields.rating.value) : undefined, totalReviews: formFields.totalReviews.value ? parseInt(formFields.totalReviews.value) : undefined, shortDescription: formFields.shortDesc.value || undefined, description: formFields.description.value || undefined, status: formFields.status.value, isFeatured: formFields.isFeatured.checked, isOnSale: formFields.isOnSale.checked, pros: getProsCons(prosList), cons: getProsCons(consList) };
-      const imgUrl = formFields.featuredImage.value || formFields.imageUrl.value;
-      if (imgUrl) formData.featuredImage = { url: imgUrl, alt: formFields.title.value };
+      e.preventDefault();
+      hideStatus();
+
+      const submitBtn = productForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Creando...
+      `;
+
+      const formData = new FormData(productForm);
+      const data: Record<string, any> = {};
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+
+      if (data.featuredImage) {
+        data.featuredImageUrl = data.featuredImage;
+        data.featuredImageAlt = data.title;
+        delete data.featuredImage;
+      }
+
       try {
-        const r = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
-        const d = await r.json();
-        if (!r.ok) { showStatus(d.error || 'Error al crear', 'error'); saveBtn.disabled = false; saveBtn.textContent = 'Guardar Producto'; return; }
-        showStatus(`"${formData.title}" creado!`, 'success');
-        setTimeout(() => { window.location.href = '/admin/products'; }, 1500);
-      } catch (err) { showStatus('Error de conexion', 'error'); console.error(err); saveBtn.disabled = false; saveBtn.textContent = 'Guardar Producto'; }
+        const response = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          showStatus(result.error || 'Error al crear el producto', 'error');
+          return;
+        }
+
+        showStatus(`Producto "${data.title}" creado exitosamente!`, 'success');
+
+        setTimeout(() => {
+          window.location.href = '/admin/products';
+        }, 1500);
+
+      } catch (error) {
+        showStatus('Error de conexion. Intenta de nuevo.', 'error');
+        console.error(error);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Crear Producto
+        `;
+      }
     });
 
     resetBtn.addEventListener('click', () => {
-      amazonUrlInput.value = ''; productForm.reset();
-      productPreview.classList.remove('visible'); previewCard.classList.remove('visible');
-      fieldStatusContainer.classList.remove('visible'); hideStatus(); hideDuplicateWarning();
-      document.querySelectorAll('.auto-filled').forEach(el => el.classList.remove('auto-filled'));
-      prosList.innerHTML = ''; consList.innerHTML = '';
-      createProsConsItem(prosList); createProsConsItem(consList);
-      imageGallery.innerHTML = '<div class="no-images">No se encontraron imagenes</div>';
-      selectedImageUrl = null; featuresSection.style.display = 'none';
+      amazonUrlInput.value = '';
+      productForm.reset();
+      extractedSection.classList.remove('visible');
+      hideStatus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   </script>
+
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
 </AdminLayout>

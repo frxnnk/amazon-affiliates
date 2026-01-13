@@ -1,51 +1,49 @@
 ---
+export const prerender = false;
+
 import BaseLayout from '@layouts/BaseLayout.astro';
 import ProductGrid from '@components/products/ProductGrid.astro';
-import { getCollection } from 'astro:content';
+import { getPublishedProducts } from '@lib/db';
 import { type Lang, getTranslation } from '@i18n/utils';
 import categories from '@data/categories.json';
 
-export function getStaticPaths() {
-  return [
-    { params: { lang: 'es' } },
-    { params: { lang: 'en' } }
-  ];
-}
-
-const { lang } = Astro.params as { lang: Lang };
+const { lang } = Astro.params;
 
 // Validate lang parameter - redirect to default locale if invalid
 const validLangs = ['es', 'en'];
-if (!validLangs.includes(lang)) {
+if (!lang || !validLangs.includes(lang)) {
   return Astro.redirect('/es/products/', 302);
 }
 
-const t = getTranslation(lang);
+const t = getTranslation(lang as Lang);
 
-const allProducts = await getCollection('products');
-const products = allProducts
-  .filter(p => p.data.lang === lang && p.data.status === 'published')
-  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
-  .map(p => ({
-    productId: p.data.productId,
-    asin: p.data.asin,
-    title: p.data.title,
-    brand: p.data.brand,
-    price: p.data.price,
-    originalPrice: p.data.originalPrice,
-    currency: p.data.currency,
-    rating: p.data.rating,
-    featuredImage: p.data.featuredImage,
-    affiliateUrl: p.data.affiliateUrl,
-    isOnSale: p.data.isOnSale,
-    isFeatured: p.data.isFeatured,
-  }));
+// Get products from database
+const dbProducts = await getPublishedProducts(lang);
+
+// Transform DB products to the format expected by ProductGrid
+const products = dbProducts.map(p => ({
+  productId: p.productId,
+  asin: p.asin,
+  title: p.title,
+  brand: p.brand,
+  price: p.price,
+  originalPrice: p.originalPrice,
+  currency: p.currency,
+  rating: p.rating,
+  featuredImage: {
+    url: p.featuredImageUrl,
+    alt: p.featuredImageAlt || p.title,
+  },
+  affiliateUrl: p.affiliateUrl,
+  isOnSale: p.isOnSale,
+  isFeatured: p.isFeatured,
+}));
 ---
 
 <BaseLayout
   title={t('nav.products')}
   description={lang === 'es' ? 'Descubre nuestra seleccion de productos con las mejores ofertas y reviews' : 'Discover our selection of products with the best deals and reviews'}
-  lang={lang}
+  lang={lang as Lang}
 >
   <div class="max-w-7xl mx-auto px-4 py-12">
     <!-- Header -->
@@ -73,14 +71,14 @@ const products = allProducts
           href={`/${lang}/categories/${cat.id}`}
           class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition-colors"
         >
-          {cat.name[lang]}
+          {cat.name[lang as Lang]}
         </a>
       ))}
     </div>
 
     <!-- Products Grid -->
     {products.length > 0 ? (
-      <ProductGrid products={products} lang={lang} columns={4} />
+      <ProductGrid products={products} lang={lang as Lang} columns={4} />
     ) : (
       <div class="text-center py-16">
         <div class="text-gray-400 mb-4">

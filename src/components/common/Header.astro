@@ -16,7 +16,6 @@ const navItems = [
   { href: `/${lang}`, label: t('nav.home'), exact: true },
   { href: `/${lang}/products`, label: t('nav.products') },
   { href: `/${lang}/categories`, label: t('nav.categories') },
-  { href: `/${lang}/lists`, label: t('nav.lists') },
 ];
 
 function isActive(href: string, exact?: boolean) {
@@ -72,15 +71,6 @@ function isActive(href: string, exact?: boolean) {
           <a href={`/${lang}/login`} class="btn-login">{t('nav.login')}</a>
         </SignedOut>
         <SignedIn>
-          <a href={`/${lang}/dashboard`} class="btn-dashboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="3" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/>
-            </svg>
-            <span>{t('nav.dashboard')}</span>
-          </a>
           <UserButton />
         </SignedIn>
       </div>
@@ -111,11 +101,6 @@ function isActive(href: string, exact?: boolean) {
         {item.label}
       </a>
     ))}
-    <SignedIn>
-      <a href={`/${lang}/dashboard`} class="nav-mobile-link">
-        {t('nav.dashboard')}
-      </a>
-    </SignedIn>
   </nav>
 </header>
 
@@ -278,35 +263,6 @@ function isActive(href: string, exact?: boolean) {
     background: var(--color-ink-light, #2D2926);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(26, 24, 21, 0.15);
-  }
-
-  .btn-dashboard {
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-stone, #6B6560);
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
-
-  @media (min-width: 640px) {
-    .btn-dashboard {
-      display: flex;
-    }
-  }
-
-  .btn-dashboard:hover {
-    background: var(--color-sand, #E8E4DD);
-    color: var(--color-ink, #1A1815);
-  }
-
-  .btn-dashboard svg {
-    width: 1rem;
-    height: 1rem;
   }
 
   /* Mobile Menu Button */

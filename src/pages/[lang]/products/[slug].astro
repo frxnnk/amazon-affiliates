@@ -1,4 +1,6 @@
 ---
+export const prerender = false;
+
 import ProductLayout from '@layouts/ProductLayout.astro';
 import BuyButton from '@components/affiliate/BuyButton.astro';
 import PriceDisplay from '@components/affiliate/PriceDisplay.astro';
@@ -7,58 +9,54 @@ import ProsConsList from '@components/products/ProsConsList.astro';
 import ProductGrid from '@components/products/ProductGrid.astro';
 import ProductSchema from '@components/seo/ProductSchema.astro';
 import BreadcrumbSchema from '@components/seo/BreadcrumbSchema.astro';
-import { getCollection, render } from 'astro:content';
+import { getProductBySlug, getRelatedProducts as getRelatedProductsFromDB } from '@lib/db';
 import { type Lang, getTranslation, formatDate } from '@i18n/utils';
 import siteConfig from '@data/site-config.json';
 
-export async function getStaticPaths() {
-  const products = await getCollection('products');
+const { lang, slug } = Astro.params;
 
-  return products.map((product) => ({
-    params: {
-      lang: product.data.lang,
-      slug: product.data.productId
-    },
-    props: { product }
-  }));
-}
-
-const { product } = Astro.props;
-
-// Handle case where product doesn't exist (invalid slug)
-if (!product) {
+// Validate lang parameter
+if (!lang || !['en', 'es'].includes(lang)) {
   return Astro.redirect('/es/products/', 302);
 }
 
-const { data } = product;
-const { Content } = await render(product);
-const lang = data.lang as Lang;
-const t = getTranslation(lang);
+// Get product from database
+const product = await getProductBySlug(slug!, lang);
+
+// Handle case where product doesn't exist or is not published
+if (!product || product.status !== 'published') {
+  return Astro.redirect(`/${lang}/products/`, 302);
+}
+
+const t = getTranslation(lang as Lang);
 
 // Get related products
-const allProducts = await getCollection('products');
-const relatedProducts = data.relatedProducts
-  ? allProducts
-      .filter(p => data.relatedProducts?.includes(p.data.productId) && p.data.lang === lang)
-      .map(p => ({
-        productId: p.data.productId,
-        asin: p.data.asin,
-        title: p.data.title,
-        brand: p.data.brand,
-        price: p.data.price,
-        originalPrice: p.data.originalPrice,
-        currency: p.data.currency,
-        rating: p.data.rating,
-        featuredImage: p.data.featuredImage,
-        affiliateUrl: p.data.affiliateUrl,
-        isOnSale: p.data.isOnSale,
-        isFeatured: p.data.isFeatured,
-      }))
+const relatedProducts = product.relatedProducts
+  ? await getRelatedProductsFromDB(product.relatedProducts as string[], lang)
   : [];
+
+// Transform related products for ProductGrid component
+const relatedProductsForGrid = relatedProducts.map(p => ({
+  productId: p.productId,
+  asin: p.asin,
+  title: p.title,
+  brand: p.brand,
+  price: p.price,
+  originalPrice: p.originalPrice,
+  currency: p.currency,
+  rating: p.rating,
+  featuredImage: {
+    url: p.featuredImageUrl,
+    alt: p.featuredImageAlt || p.title,
+  },
+  affiliateUrl: p.affiliateUrl,
+  isOnSale: p.isOnSale,
+  isFeatured: p.isFeatured,
+}));
 
 // Build URLs for schema
 const siteUrl = siteConfig.site.url;
-const productUrl = `${siteUrl}/${lang}/products/${data.productId}`;
+const productUrl = `${siteUrl}/${lang}/products/${product.productId}`;
 const productsUrl = `${siteUrl}/${lang}/products`;
 const homeUrl = `${siteUrl}/${lang}`;
 
@@ -66,37 +64,43 @@ const homeUrl = `${siteUrl}/${lang}`;
 const breadcrumbItems = [
   { name: lang === 'es' ? 'Inicio' : 'Home', url: homeUrl },
   { name: lang === 'es' ? 'Productos' : 'Products', url: productsUrl },
-  { name: data.title, url: productUrl },
+  { name: product.title, url: productUrl },
 ];
 
 // Product images for schema
-const productImages = [data.featuredImage.url];
-if (data.gallery) {
-  productImages.push(...data.gallery.map(img => img.url));
+const productImages = [product.featuredImageUrl];
+if (product.gallery && Array.isArray(product.gallery)) {
+  productImages.push(...(product.gallery as {url: string}[]).map(img => img.url));
 }
+
+// Parse JSON fields
+const pros = Array.isArray(product.pros) ? product.pros : [];
+const cons = Array.isArray(product.cons) ? product.cons : [];
+const specifications = product.specifications as Record<string, string> | null;
+const gallery = product.gallery as {url: string, alt: string}[] | null;
 ---
 
 <ProductSchema
-  name={data.title}
-  description={data.shortDescription || data.description}
+  name={product.title}
+  description={product.shortDescription || product.description}
   image={productImages}
-  brand={data.brand}
-  sku={data.asin}
-  price={data.price}
-  originalPrice={data.originalPrice}
-  currency={data.currency}
-  rating={data.rating}
-  reviewCount={data.totalReviews}
+  brand={product.brand}
+  sku={product.asin}
+  price={product.price}
+  originalPrice={product.originalPrice}
+  currency={product.currency}
+  rating={product.rating}
+  reviewCount={product.totalReviews}
   url={productUrl}
 />
 
 <BreadcrumbSchema items={breadcrumbItems} />
 
 <ProductLayout
-  title={data.title}
-  description={data.shortDescription}
-  lang={lang}
-  image={data.featuredImage.url}
+  title={product.title}
+  description={product.shortDescription || product.description}
+  lang={lang as Lang}
+  image={product.featuredImageUrl}
 >
   <article class="bg-white rounded-xl shadow-sm overflow-hidden">
     <div class="grid lg:grid-cols-2 gap-8 p-6 lg:p-8">
@@ -104,15 +108,15 @@ if (data.gallery) {
       <div class="space-y-4">
         <div class="aspect-square bg-gray-50 rounded-xl overflow-hidden">
           <img
-            src={data.featuredImage.url}
-            alt={data.featuredImage.alt}
+            src={product.featuredImageUrl}
+            alt={product.featuredImageAlt || product.title}
             class="w-full h-full object-contain p-8"
           />
         </div>
 
-        {data.gallery && data.gallery.length > 0 && (
+        {gallery && gallery.length > 0 && (
           <div class="grid grid-cols-4 gap-2">
-            {data.gallery.slice(0, 4).map((img) => (
+            {gallery.slice(0, 4).map((img) => (
               <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
                 <img
                   src={img.url}
@@ -128,55 +132,57 @@ if (data.gallery) {
       <!-- Product Info -->
       <div class="space-y-6">
         <div>
-          <p class="text-sm text-gray-500 uppercase tracking-wide mb-2">{data.brand}</p>
-          <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">{data.title}</h1>
+          <p class="text-sm text-gray-500 uppercase tracking-wide mb-2">{product.brand}</p>
+          <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">{product.title}</h1>
 
           <div class="flex items-center gap-4 mb-4">
-            <ProductRating rating={data.rating} totalReviews={data.totalReviews} size="md" />
-            {data.ourRating && (
+            <ProductRating rating={product.rating} totalReviews={product.totalReviews} size="md" />
+            {product.ourRating && (
               <span class="px-3 py-1 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
-                {lang === 'es' ? 'Nuestra puntuacion' : 'Our score'}: {data.ourRating}/10
+                {lang === 'es' ? 'Nuestra puntuacion' : 'Our score'}: {product.ourRating}/10
               </span>
             )}
           </div>
         </div>
 
         <PriceDisplay
-          price={data.price}
-          originalPrice={data.originalPrice}
-          currency={data.currency}
-          lang={lang}
+          price={product.price}
+          originalPrice={product.originalPrice}
+          currency={product.currency}
+          lang={lang as Lang}
           size="lg"
         />
 
-        <p class="text-gray-600">{data.description}</p>
+        <p class="text-gray-600">{product.description}</p>
 
         <BuyButton
-          productId={data.productId}
-          asin={data.asin}
-          affiliateUrl={data.affiliateUrl}
-          lang={lang}
+          productId={product.productId}
+          asin={product.asin}
+          affiliateUrl={product.affiliateUrl}
+          lang={lang as Lang}
           size="lg"
           fullWidth
         />
 
         <p class="text-xs text-gray-400">
-          {t('product.lastUpdated')}: {formatDate(data.updatedAt, lang)}
+          {t('product.lastUpdated')}: {formatDate(product.updatedAt, lang as Lang)}
         </p>
       </div>
     </div>
 
     <!-- Pros and Cons -->
-    <div class="p-6 lg:p-8 border-t">
-      <ProsConsList pros={data.pros} cons={data.cons} lang={lang} />
-    </div>
+    {(pros.length > 0 || cons.length > 0) && (
+      <div class="p-6 lg:p-8 border-t">
+        <ProsConsList pros={pros as string[]} cons={cons as string[]} lang={lang as Lang} />
+      </div>
+    )}
 
     <!-- Specifications -->
-    {data.specifications && Object.keys(data.specifications).length > 0 && (
+    {specifications && Object.keys(specifications).length > 0 && (
       <div class="p-6 lg:p-8 border-t">
         <h2 class="text-xl font-bold text-gray-900 mb-4">{t('product.specifications')}</h2>
         <div class="grid sm:grid-cols-2 gap-4">
-          {Object.entries(data.specifications).map(([key, value]) => (
+          {Object.entries(specifications).map(([key, value]) => (
             <div class="flex justify-between py-2 border-b border-gray-100">
               <span class="text-gray-600">{key}</span>
               <span class="font-medium text-gray-900">{value}</span>
@@ -186,17 +192,17 @@ if (data.gallery) {
       </div>
     )}
 
-    <!-- Content -->
-    <div class="p-6 lg:p-8 border-t prose prose-gray max-w-none">
-      <Content />
-    </div>
+    <!-- Content (markdown) -->
+    {product.content && (
+      <div class="p-6 lg:p-8 border-t prose prose-gray max-w-none" set:html={product.content} />
+    )}
   </article>
 
   <!-- Related Products -->
-  {relatedProducts.length > 0 && (
+  {relatedProductsForGrid.length > 0 && (
     <section class="mt-12">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">{t('product.relatedProducts')}</h2>
-      <ProductGrid products={relatedProducts} lang={lang} columns={4} />
+      <ProductGrid products={relatedProductsForGrid} lang={lang as Lang} columns={4} />
     </section>
   )}
 </ProductLayout>

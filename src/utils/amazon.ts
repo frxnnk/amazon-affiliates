@@ -147,6 +147,7 @@ export interface ProductPrefillData {
 
 /**
  * Obtiene datos para pre-rellenar el formulario de producto
+ * Si la URL ya contiene un tag de afiliado (como SiteStripe), lo preserva
  */
 export function getProductPrefillFromUrl(url: string, affiliateTag?: string): ProductPrefillData | null {
   const urlData = parseAmazonUrl(url);
@@ -156,11 +157,43 @@ export function getProductPrefillFromUrl(url: string, affiliateTag?: string): Pr
 
   const lang = urlData.marketplace === 'com' ? 'en' : 'es';
 
+  // Priorizar: tag pasado explícitamente > tag en la URL > ninguno
+  const finalTag = affiliateTag || urlData.affiliateTag;
+
+  // Si es una URL de SiteStripe (tiene linkCode, linkId), preservar la URL completa
+  // ya que contiene tracking adicional
+  let affiliateUrl: string;
+  if (urlData.affiliateTag && isSiteStripeUrl(url)) {
+    // Limpiar la URL de SiteStripe manteniendo solo los parámetros esenciales
+    affiliateUrl = buildCleanAffiliateUrl(urlData.asin, urlData.marketplace, urlData.affiliateTag);
+  } else {
+    affiliateUrl = generateAffiliateUrl(urlData.asin, urlData.marketplace, finalTag);
+  }
+
   return {
     asin: urlData.asin,
     marketplace: urlData.marketplace,
-    affiliateUrl: generateAffiliateUrl(urlData.asin, urlData.marketplace, affiliateTag),
+    affiliateUrl,
     suggestedTitle: extractTitleFromUrl(url),
     lang,
   };
+}
+
+/**
+ * Detecta si una URL es generada por SiteStripe
+ */
+function isSiteStripeUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.searchParams.has('linkCode') || urlObj.searchParams.has('linkId');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Construye una URL de afiliado limpia con el tag
+ */
+function buildCleanAffiliateUrl(asin: string, marketplace: string, tag: string): string {
+  return `https://www.amazon.${marketplace}/dp/${asin}?tag=${tag}`;
 }
