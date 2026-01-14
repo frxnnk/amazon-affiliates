@@ -31,6 +31,10 @@ export default defineConfig({
     clerk({
       afterSignInUrl: '/admin',
       afterSignUpUrl: '/admin',
+      allowedRedirectOrigins: [
+        'https://bestedeals.vercel.app',
+        'https://select-cattle-15.accounts.dev',
+      ],
     }),
     sitemap({
       filter: (page) => !page.includes('/admin'),
