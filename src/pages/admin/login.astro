@@ -1,9 +1,7 @@
 ---
 export const prerender = false;
 
-// En satellite mode, redirigir a Clerk hosted sign-in
-const clerkSignInUrl = import.meta.env.PUBLIC_CLERK_SIGN_IN_URL || 'https://select-cattle-15.clerk.accounts.dev/sign-in';
-const redirectUrl = `${clerkSignInUrl}?redirect_url=${encodeURIComponent(new URL('/admin', Astro.url).toString())}`;
+import { SignIn } from '@clerk/astro/components';
 
 // Check if user is already signed in
 const auth = Astro.locals.auth?.();
@@ -38,37 +36,12 @@ if (auth?.userId) {
     }
     .login-container {
       text-align: center;
-      padding: 2rem;
     }
     .logo {
       font-size: 1.5rem;
       font-weight: 700;
       color: #fbbf24;
       margin-bottom: 2rem;
-    }
-    .login-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem 2rem;
-      background: #fbbf24;
-      color: #000;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .login-btn:hover {
-      background: #f59e0b;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-    }
-    .login-btn svg {
-      width: 20px;
-      height: 20px;
     }
     .back-link {
       margin-top: 2rem;
@@ -87,14 +60,15 @@ if (auth?.userId) {
 <body>
   <div class="login-container">
     <div class="logo">BestDeals Admin</div>
-    <a href={redirectUrl} class="login-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-        <polyline points="10 17 15 12 10 7"/>
-        <line x1="15" y1="12" x2="3" y2="12"/>
-      </svg>
-      Iniciar sesión con Clerk
-    </a>
+    <SignIn
+      fallbackRedirectUrl="/admin"
+      appearance={{
+        elements: {
+          rootBox: "mx-auto",
+          card: "shadow-xl"
+        }
+      }}
+    />
     <div class="back-link">
       <a href="/">&larr; Volver al sitio</a>
     </div>

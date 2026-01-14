@@ -1,5 +1,4 @@
-import { sequence } from 'astro:middleware';
-import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
+import { defineMiddleware } from 'astro:middleware';
 import { clerkClient } from '@clerk/astro/server';
 
 // Admin emails from environment
@@ -8,21 +7,26 @@ const getAdminEmails = (): string[] => {
   return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
 };
 
-const isProtectedAdminRoute = createRouteMatcher([
-  '/admin',
-  '/admin/products(.*)',
-  '/api/admin(.*)'
-]);
-
-// Use clerkMiddleware but let it handle auth state without blocking
-export const onRequest = clerkMiddleware(async (auth, context, next) => {
+export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = new URL(context.request.url).pathname;
 
-  // For admin routes that need protection
-  if (isProtectedAdminRoute(context.request)) {
-    const { userId } = auth();
+  // Public routes - no auth needed
+  if (
+    pathname === '/admin/login' ||
+    pathname.startsWith('/admin/sso-callback') ||
+    pathname === '/admin/unauthorized' ||
+    !pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')
+  ) {
+    return next();
+  }
+
+  // Protected admin routes
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    const auth = context.locals.auth?.();
+    const userId = auth?.userId;
     const isApiRoute = pathname.startsWith('/api/');
 
+    // Not authenticated
     if (!userId) {
       if (isApiRoute) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -51,10 +55,15 @@ export const onRequest = clerkMiddleware(async (auth, context, next) => {
       }
     } catch (error) {
       console.error('Admin check error:', error);
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Auth error' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return context.redirect('/admin/unauthorized');
     }
   }
 
-  // Let everything else through
   return next();
-}, { debug: false });
+});
