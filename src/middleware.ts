@@ -8,12 +8,6 @@ const isPublicAdminRoute = createRouteMatcher([
   '/admin/unauthorized',
 ]);
 
-// Admin emails from environment
-const getAdminEmails = (): string[] => {
-  const emails = import.meta.env.ADMIN_EMAILS || '';
-  return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
-};
-
 export const onRequest = clerkMiddleware(async (auth, context) => {
   const pathname = new URL(context.request.url).pathname;
 
@@ -38,11 +32,10 @@ export const onRequest = clerkMiddleware(async (auth, context) => {
       return context.redirect('/admin/login');
     }
 
-    // Check if user email is in admin list
-    const userEmail = (sessionClaims?.email as string)?.toLowerCase();
-    const adminEmails = getAdminEmails();
+    // Check if user has admin role in Clerk metadata
+    const userRole = (sessionClaims?.metadata as { role?: string })?.role;
 
-    if (adminEmails.length > 0 && userEmail && !adminEmails.includes(userEmail)) {
+    if (userRole !== 'admin') {
       if (isApiRoute) {
         return new Response(JSON.stringify({ error: 'Forbidden: Not an admin' }), {
           status: 403,
