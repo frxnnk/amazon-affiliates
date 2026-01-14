@@ -3,7 +3,6 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
 const isProtectedRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
 const isPublicAdminRoute = createRouteMatcher([
   '/admin/login',
-  '/admin/signup',
   '/admin/sso-callback(.*)',
   '/admin/unauthorized',
 ]);
