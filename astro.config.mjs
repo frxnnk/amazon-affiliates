@@ -29,9 +29,6 @@ export default defineConfig({
   integrations: [
     db(),
     clerk({
-      isSatellite: true,
-      domain: 'bestedeals.vercel.app',
-      signInUrl: 'https://select-cattle-15.clerk.accounts.dev/sign-in',
       afterSignInUrl: '/admin',
       afterSignUpUrl: '/admin',
     }),
