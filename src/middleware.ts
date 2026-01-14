@@ -1,51 +1,33 @@
-import { defineMiddleware } from 'astro:middleware';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
 
-// Admin emails from environment
-const getAdminEmails = (): string[] => {
-  const emails = import.meta.env.ADMIN_EMAILS || '';
-  return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
-};
+const isProtectedRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
+const isPublicAdminRoute = createRouteMatcher([
+  '/admin/login',
+  '/admin/sso-callback(.*)',
+  '/admin/unauthorized',
+]);
 
-export const onRequest = defineMiddleware(async (context, next) => {
+export const onRequest = clerkMiddleware((auth, context) => {
   const pathname = new URL(context.request.url).pathname;
 
-  // Public routes - no auth needed
-  if (
-    pathname === '/admin/login' ||
-    pathname.startsWith('/admin/sso-callback') ||
-    pathname === '/admin/unauthorized' ||
-    !pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')
-  ) {
-    return next();
+  // Skip auth check for public admin routes
+  if (isPublicAdminRoute(context.request)) {
+    return;
   }
 
-  // Protected admin routes
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    try {
-      const auth = context.locals.auth?.();
-      const userId = auth?.userId;
-      const isApiRoute = pathname.startsWith('/api/');
+  // Protect admin routes
+  if (isProtectedRoute(context.request)) {
+    const { userId } = auth();
+    const isApiRoute = pathname.startsWith('/api/');
 
-      // Not authenticated
-      if (!userId) {
-        if (isApiRoute) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-        return context.redirect('/admin/login');
+    if (!userId) {
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-
-      // For now, skip email check - just verify auth works
-      // TODO: Re-enable admin email check once auth is stable
-
-    } catch (error) {
-      console.error('Middleware error:', error);
-      // On error, redirect to login instead of crashing
       return context.redirect('/admin/login');
     }
   }
-
-  return next();
 });
