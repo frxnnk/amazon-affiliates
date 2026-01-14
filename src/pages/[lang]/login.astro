@@ -110,11 +110,8 @@ const t = content[lang];
     <p class="subtitle">{t.subtitle}</p>
 
     <SignIn
-      path={`/${lang}/login`}
-      routing="path"
-      signUpUrl={`/${lang}/login`}
-      afterSignInUrl={`/${lang}/dashboard`}
-      afterSignUpUrl={`/${lang}/dashboard`}
+      routing="hash"
+      forceRedirectUrl={`/${lang}/dashboard`}
     />
 
     <div class="back-link">
