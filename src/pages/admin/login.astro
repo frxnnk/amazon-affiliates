@@ -8,7 +8,7 @@ if (auth?.userId) {
 }
 
 // Build Clerk Account Portal sign-in URL
-const clerkDomain = 'select-cattle-15.clerk.accounts.dev';
+const clerkDomain = 'select-cattle-15.accounts.dev';
 const returnUrl = new URL('/admin', Astro.url).toString();
 const signInUrl = `https://${clerkDomain}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
 ---
