@@ -1,13 +1,16 @@
 ---
 export const prerender = false;
 
-import { SignIn } from '@clerk/astro/components';
-
 // Check if user is already signed in
 const auth = Astro.locals.auth?.();
 if (auth?.userId) {
   return Astro.redirect('/admin');
 }
+
+// Build Clerk Account Portal sign-in URL
+const clerkDomain = 'select-cattle-15.clerk.accounts.dev';
+const returnUrl = new URL('/admin', Astro.url).toString();
+const signInUrl = `https://${clerkDomain}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
 ---
 
 <!DOCTYPE html>
@@ -36,39 +39,72 @@ if (auth?.userId) {
     }
     .login-container {
       text-align: center;
+      padding: 2rem;
     }
     .logo {
-      font-size: 1.5rem;
+      font-size: 2rem;
       font-weight: 700;
       color: #fbbf24;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
+    }
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 2.5rem;
+      font-size: 0.95rem;
+    }
+    .login-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem 2.5rem;
+      background: #fbbf24;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(251, 191, 36, 0.3);
+    }
+    .login-btn:hover {
+      background: #f59e0b;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+    }
+    .login-btn svg {
+      width: 22px;
+      height: 22px;
     }
     .back-link {
-      margin-top: 2rem;
+      margin-top: 2.5rem;
       display: block;
     }
     .back-link a {
-      color: #9ca3af;
+      color: #6b7280;
       text-decoration: none;
       font-size: 0.875rem;
+      transition: color 0.2s;
     }
     .back-link a:hover {
-      color: white;
+      color: #d1d5db;
     }
   </style>
 </head>
 <body>
   <div class="login-container">
     <div class="logo">BestDeals Admin</div>
-    <SignIn
-      fallbackRedirectUrl="/admin"
-      appearance={{
-        elements: {
-          rootBox: "mx-auto",
-          card: "shadow-xl"
-        }
-      }}
-    />
+    <p class="subtitle">Panel de administración</p>
+    <a href={signInUrl} class="login-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/>
+        <line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Iniciar sesión
+    </a>
     <div class="back-link">
       <a href="/">&larr; Volver al sitio</a>
     </div>
