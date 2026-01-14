@@ -1,6 +1,6 @@
 ---
 export const prerender = false;
-import { SignIn } from '@clerk/astro/components';
+import { SignUp } from '@clerk/astro/components';
 
 // Check if user is already signed in
 const auth = Astro.locals.auth?.();
@@ -14,7 +14,7 @@ if (auth?.userId) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login | Admin Panel</title>
+  <title>Sign Up | Admin Panel</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,7 +33,7 @@ if (auth?.userId) {
       align-items: center;
       justify-content: center;
     }
-    .login-container {
+    .signup-container {
       text-align: center;
       padding: 2rem;
     }
@@ -69,18 +69,18 @@ if (auth?.userId) {
   </style>
 </head>
 <body>
-  <div class="login-container">
+  <div class="signup-container">
     <div class="logo">RewardHive Admin</div>
-    <p class="subtitle">Panel de administración</p>
+    <p class="subtitle">Crear cuenta de administrador</p>
     <div class="clerk-wrapper">
-      <SignIn
+      <SignUp
         routing="hash"
-        signUpUrl="/admin/signup"
+        signInUrl="/admin/login"
         forceRedirectUrl="/admin"
       />
     </div>
     <div class="back-link">
-      <a href="/">&larr; Volver al sitio</a>
+      <a href="/admin/login">&larr; Ya tengo cuenta</a>
     </div>
   </div>
 </body>
