@@ -27,12 +27,12 @@ const isPublicAuthRoute = createRouteMatcher([
   '/:lang/login(.*)'
 ]);
 
-export const onRequest = clerkMiddleware(async (auth, context) => {
+export const onRequest = clerkMiddleware(async (auth, context, next) => {
   const { userId, redirectToSignIn } = auth();
 
-  // Si es la pagina de login o unauthorized, permitir acceso
+  // Si es la pagina de login o unauthorized, permitir acceso sin interferencia de Clerk
   if (isPublicAuthRoute(context.request)) {
-    return;
+    return next();
   }
 
   // Si es ruta de admin
