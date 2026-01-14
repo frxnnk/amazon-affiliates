@@ -7,13 +7,6 @@ const isPublicAdminRoute = createRouteMatcher([
   '/admin/unauthorized',
 ]);
 
-// Satellite domain configuration for development
-const clerkConfig = {
-  signInUrl: 'https://select-cattle-15.accounts.dev/sign-in',
-  isSatellite: true,
-  domain: 'bestedeals.vercel.app',
-};
-
 export const onRequest = clerkMiddleware((auth, context) => {
   const pathname = new URL(context.request.url).pathname;
 
@@ -37,4 +30,4 @@ export const onRequest = clerkMiddleware((auth, context) => {
       return context.redirect('/admin/login');
     }
   }
-}, clerkConfig);
+});

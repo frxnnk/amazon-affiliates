@@ -8,7 +8,7 @@ import db from '@astrojs/db';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://amazon-affiliates.vercel.app',
+  site: 'https://rewardhive.store',
   output: 'server', // SSR para APIs
 
   i18n: {
@@ -31,10 +31,6 @@ export default defineConfig({
     clerk({
       afterSignInUrl: '/admin',
       afterSignUpUrl: '/admin',
-      allowedRedirectOrigins: [
-        'https://bestedeals.vercel.app',
-        'https://select-cattle-15.accounts.dev',
-      ],
     }),
     sitemap({
       filter: (page) => !page.includes('/admin'),
