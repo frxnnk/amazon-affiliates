@@ -7,9 +7,23 @@ const getAdminEmails = (): string[] => {
   return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
 };
 
-// Rutas que requieren ser ADMIN
-const isAdminRoute = createRouteMatcher([
-  '/admin(.*)',
+// Rutas publicas que NO requieren autenticacion
+const isPublicRoute = createRouteMatcher([
+  '/admin/login',
+  '/admin/login/(.*)',
+  '/admin/sso-callback(.*)',
+  '/admin/unauthorized',
+  '/:lang/login(.*)',
+  '/:lang',
+  '/:lang/(.*)',
+  '/api/products(.*)',
+  '/'
+]);
+
+// Rutas protegidas que requieren ser ADMIN
+const isProtectedAdminRoute = createRouteMatcher([
+  '/admin',
+  '/admin/products(.*)',
   '/api/admin(.*)'
 ]);
 
@@ -19,25 +33,20 @@ const isUserRoute = createRouteMatcher([
   '/api/user(.*)'
 ]);
 
-// Rutas publicas (login, callbacks)
-const isPublicAuthRoute = createRouteMatcher([
-  '/admin/login(.*)',
-  '/admin/sso-callback(.*)',
-  '/admin/unauthorized(.*)',
-  '/:lang/login(.*)'
-]);
-
 export const onRequest = clerkMiddleware(async (auth, context, next) => {
-  const { userId, redirectToSignIn } = auth();
+  const url = new URL(context.request.url);
+  const pathname = url.pathname;
 
-  // Si es la pagina de login o unauthorized, permitir acceso sin interferencia de Clerk
-  if (isPublicAuthRoute(context.request)) {
+  // Rutas completamente publicas - pasar directamente
+  if (isPublicRoute(context.request)) {
     return next();
   }
 
-  // Si es ruta de admin
-  if (isAdminRoute(context.request)) {
-    const isApiRoute = context.request.url.includes('/api/');
+  const { userId, redirectToSignIn } = auth();
+
+  // Si es ruta de admin protegida
+  if (isProtectedAdminRoute(context.request)) {
+    const isApiRoute = pathname.includes('/api/');
 
     // Si no esta autenticado
     if (!userId) {
@@ -77,7 +86,7 @@ export const onRequest = clerkMiddleware(async (auth, context, next) => {
       return context.redirect('/admin/unauthorized');
     }
 
-    return;
+    return next();
   }
 
   // Si es ruta de usuario normal (dashboard, etc.)
@@ -85,6 +94,9 @@ export const onRequest = clerkMiddleware(async (auth, context, next) => {
     if (!userId) {
       return redirectToSignIn();
     }
-    return;
+    return next();
   }
+
+  // Para cualquier otra ruta, continuar
+  return next();
 });
