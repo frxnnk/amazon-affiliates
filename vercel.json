@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/deal-agent",
-      "schedule": "0 9,15,21 * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
