@@ -14,7 +14,7 @@
 import type { APIRoute } from 'astro';
 import { getDealAgentKeywords, updateKeywordSearched, createProduct, setDealAgentConfig, getDealAgentConfig } from '@lib/db';
 import { searchProductsRainforest, isRainforestConfigured } from '@lib/rainforest-api';
-import { analyzeDealPotential } from '@lib/deal-analyzer';
+import { calculateQuickScore, type AnalyzableProduct } from '@lib/deal-analyzer';
 import { sendDealAlert, isTelegramConfigured, type ProductMessage } from '@lib/telegram-bot';
 
 export const prerender = false;
@@ -151,14 +151,20 @@ export const POST: APIRoute = async ({ request }) => {
 
           result.dealsAnalyzed++;
 
-          // Quick score check - analyze with GPT if configured
-          let shouldImport = true;
-          try {
-            const analysis = await analyzeDealPotential(deal, 'es');
-            shouldImport = analysis.recommendation !== 'skip';
-          } catch {
-            // Continue without analysis
-          }
+          // Quick score check
+          const analyzable: AnalyzableProduct = {
+            asin: deal.asin,
+            title: deal.title,
+            price: deal.price!,
+            originalPrice: deal.originalPrice,
+            currency: deal.currency,
+            rating: deal.rating,
+            totalReviews: deal.totalReviews,
+            brand: deal.brand,
+            imageUrl: deal.imageUrl,
+          };
+          const quickScore = calculateQuickScore(analyzable);
+          const shouldImport = quickScore >= 40; // Only import deals with score >= 40
 
           if (shouldImport && autoImport) {
             // Generate affiliate URL
