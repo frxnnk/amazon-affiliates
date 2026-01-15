@@ -1,0 +1,656 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getDealAgentKeywords } from '@lib/db';
+
+const keywords = await getDealAgentKeywords();
+
+const categories = [
+  { id: 'electronics', name: 'Electrónica' },
+  { id: 'computers', name: 'Computadoras' },
+  { id: 'smartphones', name: 'Smartphones' },
+  { id: 'audio', name: 'Audio' },
+  { id: 'gaming', name: 'Gaming' },
+  { id: 'home', name: 'Hogar' },
+  { id: 'kitchen', name: 'Cocina' },
+  { id: 'sports', name: 'Deportes' },
+];
+
+const marketplaces = [
+  { id: 'com', name: 'Amazon.com (US)' },
+  { id: 'es', name: 'Amazon.es (España)' },
+  { id: 'de', name: 'Amazon.de (Alemania)' },
+  { id: 'co.uk', name: 'Amazon.co.uk (UK)' },
+];
+---
+
+<AdminLayout title="Agent Config">
+  <style>
+    .agent-config {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* Header */
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .page-title svg {
+      width: 28px;
+      height: 28px;
+      color: #10b981;
+    }
+
+    .page-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Card */
+    .config-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-md);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Add Keyword Form */
+    .add-form {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      padding: var(--space-md);
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group.grow {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .form-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-input,
+    .form-select {
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: #10b981;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      border: none;
+    }
+
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-base);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Keywords List */
+    .keywords-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .keyword-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      transition: all var(--duration) var(--ease);
+    }
+
+    .keyword-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .keyword-item.inactive {
+      opacity: 0.5;
+    }
+
+    .keyword-toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--border-default);
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background var(--duration) var(--ease);
+      flex-shrink: 0;
+    }
+
+    .keyword-toggle.active {
+      background: #10b981;
+    }
+
+    .keyword-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform var(--duration) var(--ease);
+    }
+
+    .keyword-toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    .keyword-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .keyword-text {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .keyword-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .keyword-badge {
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    .keyword-badge.category {
+      background: rgba(139, 92, 246, 0.15);
+      color: #8b5cf6;
+    }
+
+    .keyword-badge.marketplace {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .keyword-stats {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .keyword-results {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .keyword-last-search {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .keyword-actions {
+      display: flex;
+      gap: var(--space-xs);
+    }
+
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .btn-icon.delete:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-xl);
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: var(--space-md);
+      opacity: 0.3;
+    }
+
+    /* Info Box */
+    .info-box {
+      padding: var(--space-md);
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+
+    .info-box strong {
+      color: var(--text-primary);
+    }
+  </style>
+
+  <div class="agent-config">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Configuración del Agente
+      </h1>
+      <p class="page-subtitle">
+        Configura las palabras clave que el agente automático usará para buscar ofertas
+      </p>
+    </div>
+
+    <!-- Info -->
+    <div class="info-box">
+      <strong>Cómo funciona:</strong> El agente buscará automáticamente productos usando estas palabras clave. 
+      Puedes activar/desactivar cada keyword y asignarle una categoría y marketplace específico.
+    </div>
+
+    <!-- Keywords Card -->
+    <div class="config-card">
+      <div class="card-header">
+        <h2 class="card-title">Palabras clave de búsqueda</h2>
+      </div>
+
+      <!-- Add Form -->
+      <form id="addForm" class="add-form">
+        <div class="form-group grow">
+          <label class="form-label">Palabra clave</label>
+          <input type="text" id="keywordInput" class="form-input" placeholder="ej: auriculares bluetooth" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select id="categorySelect" class="form-select">
+            <option value="">Sin categoría</option>
+            {categories.map((cat) => (
+              <option value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marketplace</label>
+          <select id="marketplaceSelect" class="form-select">
+            {marketplaces.map((mp) => (
+              <option value={mp.id}>{mp.name}</option>
+            ))}
+          </select>
+        </div>
+        <div class="form-group" style="justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Agregar
+          </button>
+        </div>
+      </form>
+
+      <!-- Keywords List -->
+      <div id="keywordsList" class="keywords-list">
+        {keywords.length > 0 ? (
+          keywords.map((kw) => (
+            <div class="keyword-item" data-id={kw.id} data-active={kw.isActive}>
+              <div 
+                class={`keyword-toggle ${kw.isActive ? 'active' : ''}`}
+                data-action="toggle"
+              ></div>
+              <div class="keyword-info">
+                <div class="keyword-text">{kw.keyword}</div>
+                <div class="keyword-meta">
+                  {kw.category && <span class="keyword-badge category">{kw.category}</span>}
+                  <span class="keyword-badge marketplace">{kw.marketplace}</span>
+                </div>
+              </div>
+              <div class="keyword-stats">
+                <div class="keyword-results">{kw.resultsCount} resultados</div>
+                {kw.lastSearchedAt && (
+                  <div class="keyword-last-search">
+                    Última: {new Date(kw.lastSearchedAt).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+              <div class="keyword-actions">
+                <button type="button" class="btn-icon delete" data-action="delete">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <p>No hay palabras clave configuradas</p>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- Agent Status -->
+    <div class="config-card">
+      <div class="card-header">
+        <h2 class="card-title">Estado del Agente Automático</h2>
+      </div>
+      <div id="agentStatus" style="margin-bottom: var(--space-md); padding: var(--space-md); background: var(--bg-base); border-radius: var(--radius-sm);">
+        <p style="color: var(--text-muted);">Cargando estado...</p>
+      </div>
+      <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="btnRunAgent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Ejecutar agente ahora
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnAddDefaults">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          Agregar keywords populares
+        </button>
+        <a href="/admin/tools/deal-agent" class="btn btn-secondary" style="text-decoration: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          Ir al Deal Agent
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const addForm = document.getElementById('addForm') as HTMLFormElement;
+    const keywordInput = document.getElementById('keywordInput') as HTMLInputElement;
+    const categorySelect = document.getElementById('categorySelect') as HTMLSelectElement;
+    const marketplaceSelect = document.getElementById('marketplaceSelect') as HTMLSelectElement;
+    const keywordsList = document.getElementById('keywordsList')!;
+    const btnAddDefaults = document.getElementById('btnAddDefaults') as HTMLButtonElement;
+    const btnRunAgent = document.getElementById('btnRunAgent') as HTMLButtonElement;
+    const agentStatus = document.getElementById('agentStatus')!;
+
+    // Load agent status
+    async function loadAgentStatus() {
+      try {
+        const response = await fetch('/api/cron/deal-agent');
+        const data = await response.json();
+        
+        if (data.success) {
+          let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md);">`;
+          html += `<div><strong style="color: var(--text-primary);">${data.activeKeywords}</strong><br/><span style="font-size: 0.75rem; color: var(--text-muted);">Keywords activos</span></div>`;
+          html += `<div><strong style="color: ${data.configured ? '#10b981' : '#ef4444'};">${data.configured ? 'Si' : 'No'}</strong><br/><span style="font-size: 0.75rem; color: var(--text-muted);">RapidAPI</span></div>`;
+          html += `<div><strong style="color: ${data.telegramConfigured ? '#10b981' : '#ef4444'};">${data.telegramConfigured ? 'Si' : 'No'}</strong><br/><span style="font-size: 0.75rem; color: var(--text-muted);">Telegram</span></div>`;
+          if (data.lastRunAt) {
+            html += `<div><strong style="color: var(--text-primary);">${new Date(data.lastRunAt).toLocaleString()}</strong><br/><span style="font-size: 0.75rem; color: var(--text-muted);">Última ejecución</span></div>`;
+          }
+          html += `</div>`;
+          
+          if (data.lastRunResult) {
+            html += `<div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border-subtle);">`;
+            html += `<span style="font-size: 0.75rem; color: var(--text-muted);">Último resultado: </span>`;
+            html += `<span style="font-size: 0.8125rem; color: var(--text-secondary);">${data.lastRunResult.productsImported} importados de ${data.lastRunResult.productsFound} encontrados</span>`;
+            html += `</div>`;
+          }
+          
+          agentStatus.innerHTML = html;
+        }
+      } catch (error) {
+        agentStatus.innerHTML = `<p style="color: var(--error);">Error al cargar estado</p>`;
+      }
+    }
+
+    // Run agent manually
+    btnRunAgent.addEventListener('click', async () => {
+      if (!confirm('¿Ejecutar el agente de búsqueda ahora? Esto buscará productos con las keywords activas.')) return;
+      
+      btnRunAgent.disabled = true;
+      btnRunAgent.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></span> Ejecutando...';
+      
+      try {
+        const response = await fetch('/api/cron/deal-agent', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✓ Agente ejecutado:\n- Keywords buscados: ${data.keywordsSearched}\n- Productos encontrados: ${data.productsFound}\n- Productos importados: ${data.productsImported}\n- Telegram enviado: ${data.telegramSent ? 'Sí' : 'No'}`);
+          loadAgentStatus();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        alert('Error al ejecutar el agente');
+      } finally {
+        btnRunAgent.disabled = false;
+        btnRunAgent.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg> Ejecutar agente ahora`;
+      }
+    });
+
+    // Load status on page load
+    loadAgentStatus();
+
+    // Add keyword
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const keyword = keywordInput.value.trim();
+      if (!keyword) return;
+
+      try {
+        const response = await fetch('/api/admin/agent/keywords', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            keyword,
+            category: categorySelect.value || undefined,
+            marketplace: marketplaceSelect.value,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        alert('Error al agregar keyword');
+      }
+    });
+
+    // Toggle and delete actions
+    keywordsList.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const action = target.closest('[data-action]')?.getAttribute('data-action');
+      const item = target.closest('.keyword-item') as HTMLElement;
+      
+      if (!action || !item) return;
+
+      const id = item.dataset.id;
+
+      if (action === 'toggle') {
+        try {
+          const response = await fetch(`/api/admin/agent/keywords?id=${id}`, {
+            method: 'PATCH',
+          });
+          const data = await response.json();
+          if (data.success) {
+            const toggle = item.querySelector('.keyword-toggle')!;
+            toggle.classList.toggle('active');
+            item.classList.toggle('inactive');
+          }
+        } catch (error) {
+          alert('Error al cambiar estado');
+        }
+      } else if (action === 'delete') {
+        if (!confirm('¿Eliminar esta palabra clave?')) return;
+        
+        try {
+          const response = await fetch(`/api/admin/agent/keywords?id=${id}`, {
+            method: 'DELETE',
+          });
+          const data = await response.json();
+          if (data.success) {
+            item.remove();
+          } else {
+            alert(`Error: ${data.error}`);
+          }
+        } catch (error) {
+          alert('Error al eliminar');
+        }
+      }
+    });
+
+    // Add default keywords
+    btnAddDefaults.addEventListener('click', async () => {
+      const defaults = [
+        { keyword: 'auriculares bluetooth', category: 'audio', marketplace: 'es' },
+        { keyword: 'wireless earbuds', category: 'audio', marketplace: 'com' },
+        { keyword: 'gaming headset', category: 'gaming', marketplace: 'com' },
+        { keyword: 'smartwatch', category: 'electronics', marketplace: 'com' },
+        { keyword: 'portable charger', category: 'electronics', marketplace: 'com' },
+        { keyword: 'ofertas electronica', category: 'electronics', marketplace: 'es' },
+      ];
+
+      btnAddDefaults.disabled = true;
+      btnAddDefaults.textContent = 'Agregando...';
+
+      try {
+        for (const kw of defaults) {
+          await fetch('/api/admin/agent/keywords', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(kw),
+          });
+        }
+        location.reload();
+      } catch (error) {
+        alert('Error al agregar keywords');
+        btnAddDefaults.disabled = false;
+        btnAddDefaults.textContent = 'Agregar keywords populares';
+      }
+    });
+  </script>
+</AdminLayout>

@@ -1,0 +1,1561 @@
+---
+export const prerender = false;
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { type Lang } from '@i18n/utils';
+import { SignedIn, SignedOut, UserButton } from '@clerk/astro/components';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/profile');
+}
+
+const texts = {
+  es: {
+    title: 'Mi Perfil',
+    welcome: 'Bienvenido de nuevo',
+    likes: 'Me gusta',
+    saved: 'Guardados',
+    preferences: 'Preferencias',
+    noLikes: 'Aún no has dado me gusta a ningún producto',
+    noLikesDesc: 'Explora el feed y dale me gusta a los productos que te interesen',
+    noSaved: 'Aún no has guardado ningún producto',
+    noSavedDesc: 'Guarda productos para verlos más tarde',
+    exploreCta: 'Explorar productos',
+    loading: 'Cargando...',
+    login: 'Inicia sesión para ver tu perfil',
+    loginDesc: 'Guarda tus productos favoritos y personaliza tus recomendaciones',
+    loginBtn: 'Iniciar sesión',
+    removeFromSaved: 'Quitar',
+    viewProduct: 'Ver en Amazon',
+    // Preferences
+    prefsTitle: 'Personalización',
+    prefsDesc: 'Ajusta tus preferencias para recibir mejores recomendaciones',
+    budget: 'Presupuesto',
+    budgetOptions: { low: 'Económico (<50€)', mid: 'Medio (50-200€)', high: 'Alto (200-500€)', premium: 'Premium (>500€)' },
+    categories: 'Categorías favoritas',
+    categoriesOptions: {
+      electronics: 'Electrónica', audio: 'Audio', gaming: 'Gaming', home: 'Hogar',
+      computers: 'Computación', wearables: 'Wearables', kitchen: 'Cocina', sports: 'Deportes',
+      beauty: 'Belleza', fashion: 'Moda'
+    },
+    brands: 'Marcas favoritas',
+    brandsPlaceholder: 'Escribe y presiona Enter',
+    dealSensitivity: 'Sensibilidad a ofertas',
+    dealOptions: { low: 'Calidad primero', medium: 'Equilibrado', high: 'Cazador de ofertas' },
+    primeOnly: 'Solo productos Prime',
+    savePrefs: 'Guardar cambios',
+    resetPrefs: 'Restablecer',
+    savedMsg: 'Guardado',
+    retakeQuiz: 'Repetir quiz',
+    discoverMore: 'Descubrir más',
+  },
+  en: {
+    title: 'My Profile',
+    welcome: 'Welcome back',
+    likes: 'Likes',
+    saved: 'Saved',
+    preferences: 'Preferences',
+    noLikes: "You haven't liked any products yet",
+    noLikesDesc: 'Explore the feed and like products you find interesting',
+    noSaved: "You haven't saved any products yet",
+    noSavedDesc: 'Save products to view them later',
+    exploreCta: 'Explore products',
+    loading: 'Loading...',
+    login: 'Sign in to view your profile',
+    loginDesc: 'Save your favorite products and personalize your recommendations',
+    loginBtn: 'Sign In',
+    removeFromSaved: 'Remove',
+    viewProduct: 'View on Amazon',
+    // Preferences
+    prefsTitle: 'Personalization',
+    prefsDesc: 'Adjust your preferences to get better recommendations',
+    budget: 'Budget',
+    budgetOptions: { low: 'Budget (<$50)', mid: 'Mid-range ($50-200)', high: 'High-end ($200-500)', premium: 'Premium (>$500)' },
+    categories: 'Favorite categories',
+    categoriesOptions: {
+      electronics: 'Electronics', audio: 'Audio', gaming: 'Gaming', home: 'Home',
+      computers: 'Computers', wearables: 'Wearables', kitchen: 'Kitchen', sports: 'Sports',
+      beauty: 'Beauty', fashion: 'Fashion'
+    },
+    brands: 'Favorite brands',
+    brandsPlaceholder: 'Type and press Enter',
+    dealSensitivity: 'Deal sensitivity',
+    dealOptions: { low: 'Quality first', medium: 'Balanced', high: 'Deal hunter' },
+    primeOnly: 'Prime products only',
+    savePrefs: 'Save changes',
+    resetPrefs: 'Reset',
+    savedMsg: 'Saved',
+    retakeQuiz: 'Retake quiz',
+    discoverMore: 'Discover more',
+  }
+};
+
+const t = texts[lang];
+---
+
+<BaseLayout title={t.title} lang={lang}>
+  <div class="profile-page">
+    <SignedOut>
+      <div class="auth-prompt">
+        <div class="auth-visual">
+          <div class="auth-icon-ring">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+        </div>
+        <h1 class="auth-title">{t.login}</h1>
+        <p class="auth-desc">{t.loginDesc}</p>
+        <a href={`/${lang}/login?redirect=/${lang}/profile`} class="auth-btn">
+          {t.loginBtn}
+        </a>
+      </div>
+    </SignedOut>
+
+    <SignedIn>
+      <!-- Profile Hero -->
+      <header class="profile-hero">
+        <div class="hero-content">
+          <div class="user-section">
+            <div class="user-avatar-wrapper">
+              <UserButton 
+                appearance={{
+                  elements: {
+                    avatarBox: "profile-avatar-box",
+                    userButtonTrigger: "profile-avatar-trigger"
+                  }
+                }}
+              />
+            </div>
+            <div class="user-info">
+              <p class="welcome-text">{t.welcome}</p>
+              <h1 class="user-name" id="user-display-name">...</h1>
+            </div>
+          </div>
+          <div class="user-stats">
+            <div class="stat-item">
+              <span class="stat-value" id="stat-likes">0</span>
+              <span class="stat-label">{t.likes}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value" id="stat-saved">0</span>
+              <span class="stat-label">{t.saved}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Tabs Navigation -->
+      <nav class="profile-nav" role="tablist">
+        <button type="button" class="nav-tab active" data-tab="likes" role="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+          </svg>
+          <span>{t.likes}</span>
+        </button>
+        <button type="button" class="nav-tab" data-tab="saved" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/>
+          </svg>
+          <span>{t.saved}</span>
+        </button>
+        <button type="button" class="nav-tab" data-tab="preferences" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.204-.107-.397.165-.71.505-.78.929l-.15.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>{t.preferences}</span>
+        </button>
+      </nav>
+
+      <!-- Content Panels -->
+      <main class="profile-content">
+        <!-- Likes Tab -->
+        <section class="tab-panel active" id="panel-likes" role="tabpanel">
+          <div class="loading-state" id="likes-loading">
+            <div class="loader">
+              <div class="loader-dot"></div>
+              <div class="loader-dot"></div>
+              <div class="loader-dot"></div>
+            </div>
+            <span>{t.loading}</span>
+          </div>
+          <div class="empty-state hidden" id="likes-empty">
+            <div class="empty-illustration">
+              <svg viewBox="0 0 120 120" fill="none">
+                <circle cx="60" cy="60" r="50" fill="var(--color-honey-muted)" opacity="0.3"/>
+                <path d="M60 85c-13.807 0-25-11.193-25-25s11.193-25 25-25 25 11.193 25 25-11.193 25-25 25z" fill="var(--color-cream-dark)"/>
+                <path d="M72 52c0-3.866-3.358-7-7.5-7-3.097 0-5.756 1.802-6.5 4.373-.744-2.571-3.403-4.373-6.5-4.373-4.142 0-7.5 3.134-7.5 7 0 11.233 14 18.667 14 18.667s14-7.434 14-18.667z" fill="var(--color-honey)" stroke="var(--color-honey-dark)" stroke-width="2"/>
+              </svg>
+            </div>
+            <h3>{t.noLikes}</h3>
+            <p>{t.noLikesDesc}</p>
+            <a href={`/${lang}`} class="btn btn-primary">{t.exploreCta}</a>
+          </div>
+          <div class="products-grid hidden" id="likes-grid"></div>
+        </section>
+
+        <!-- Saved Tab -->
+        <section class="tab-panel hidden" id="panel-saved" role="tabpanel">
+          <div class="empty-state hidden" id="saved-empty">
+            <div class="empty-illustration">
+              <svg viewBox="0 0 120 120" fill="none">
+                <circle cx="60" cy="60" r="50" fill="var(--color-sage-muted)" opacity="0.3"/>
+                <path d="M60 85c-13.807 0-25-11.193-25-25s11.193-25 25-25 25 11.193 25 25-11.193 25-25 25z" fill="var(--color-cream-dark)"/>
+                <path d="M50 42c1.657.194 2.878 1.63 2.878 3.299V78L60 74.5l7.122 3.5V45.299c0-1.67 1.221-3.105 2.878-3.299a36.38 36.38 0 0110.686 0" fill="var(--color-honey)" stroke="var(--color-honey-dark)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>{t.noSaved}</h3>
+            <p>{t.noSavedDesc}</p>
+            <a href={`/${lang}`} class="btn btn-primary">{t.exploreCta}</a>
+          </div>
+          <div class="products-grid hidden" id="saved-grid"></div>
+        </section>
+
+        <!-- Preferences Tab -->
+        <section class="tab-panel hidden" id="panel-preferences" role="tabpanel">
+          <div class="prefs-container">
+            <div class="prefs-intro">
+              <h2>{t.prefsTitle}</h2>
+              <p>{t.prefsDesc}</p>
+            </div>
+
+            <form id="prefs-form" class="prefs-form">
+              <!-- Budget -->
+              <div class="form-section">
+                <label class="section-label">{t.budget}</label>
+                <div class="pill-group" id="budget-options">
+                  {Object.entries(t.budgetOptions).map(([key, label]) => (
+                    <label class="pill-option">
+                      <input type="radio" name="budgetRange" value={key} />
+                      <span class="pill">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Categories -->
+              <div class="form-section">
+                <label class="section-label">{t.categories}</label>
+                <div class="chip-group" id="categories-options">
+                  {Object.entries(t.categoriesOptions).map(([key, label]) => (
+                    <label class="chip-option">
+                      <input type="checkbox" name="categories" value={key} />
+                      <span class="chip">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Brands -->
+              <div class="form-section">
+                <label class="section-label">{t.brands}</label>
+                <div class="tags-field" id="brands-input-container">
+                  <div class="tags-wrap" id="brands-tags"></div>
+                  <input type="text" id="brands-input" class="tags-input" placeholder={t.brandsPlaceholder} />
+                </div>
+              </div>
+
+              <!-- Deal Sensitivity -->
+              <div class="form-section">
+                <label class="section-label">{t.dealSensitivity}</label>
+                <div class="pill-group" id="deal-options">
+                  {Object.entries(t.dealOptions).map(([key, label]) => (
+                    <label class="pill-option">
+                      <input type="radio" name="dealSensitivity" value={key} />
+                      <span class="pill">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Prime Only -->
+              <div class="form-section">
+                <label class="switch-option">
+                  <span class="switch-text">{t.primeOnly}</span>
+                  <div class="switch-control">
+                    <input type="checkbox" name="primeOnly" id="prime-only" />
+                    <span class="switch-track"></span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Actions -->
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="reset-prefs-btn">{t.resetPrefs}</button>
+                <button type="submit" class="btn btn-primary" id="save-prefs-btn">{t.savePrefs}</button>
+              </div>
+            </form>
+
+            <!-- Quick Actions -->
+            <div class="quick-links">
+              <a href={`/${lang}/onboarding`} class="quick-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                </svg>
+                <span>{t.retakeQuiz}</span>
+              </a>
+              <button type="button" class="quick-link" id="swipe-discover-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                </svg>
+                <span>{t.discoverMore}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </SignedIn>
+  </div>
+</BaseLayout>
+
+<script define:vars={{ lang, t: texts[lang] }}>
+  class ProfileController {
+    constructor() {
+      this.likesGrid = document.getElementById('likes-grid');
+      this.savedGrid = document.getElementById('saved-grid');
+      this.likesLoading = document.getElementById('likes-loading');
+      this.likesEmpty = document.getElementById('likes-empty');
+      this.savedEmpty = document.getElementById('saved-empty');
+      this.statLikes = document.getElementById('stat-likes');
+      this.statSaved = document.getElementById('stat-saved');
+      this.prefsForm = document.getElementById('prefs-form');
+      this.brandsInput = document.getElementById('brands-input');
+      this.brandsTags = document.getElementById('brands-tags');
+      this.userDisplayName = document.getElementById('user-display-name');
+      this.lang = lang;
+      this.texts = t;
+      this.brands = [];
+
+      this.init();
+    }
+
+    async init() {
+      this.setupTabs();
+      this.setupPreferencesForm();
+      this.loadUserInfo();
+      await this.loadLikes();
+      this.loadSaved();
+      await this.loadPreferences();
+    }
+
+    loadUserInfo() {
+      // Try to get user info from Clerk
+      const tryGetUser = () => {
+        if (window.Clerk?.user) {
+          const user = window.Clerk.user;
+          const name = user.firstName || user.username || user.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'User';
+          if (this.userDisplayName) {
+            this.userDisplayName.textContent = name;
+          }
+        } else {
+          setTimeout(tryGetUser, 100);
+        }
+      };
+      tryGetUser();
+    }
+
+    setupTabs() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      const panels = document.querySelectorAll('.tab-panel');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.tab;
+
+          tabs.forEach(t => {
+            t.classList.toggle('active', t.dataset.tab === targetTab);
+            t.setAttribute('aria-selected', t.dataset.tab === targetTab);
+          });
+
+          panels.forEach(p => {
+            p.classList.toggle('active', p.id === `panel-${targetTab}`);
+            p.classList.toggle('hidden', p.id !== `panel-${targetTab}`);
+          });
+        });
+      });
+    }
+
+    async loadLikes() {
+      try {
+        const response = await fetch('/api/user/profile?tab=likes');
+        const data = await response.json();
+
+        this.likesLoading?.classList.add('hidden');
+
+        if (data.success && data.items.length > 0) {
+          this.likesGrid?.classList.remove('hidden');
+          const count = data.total || data.items.length;
+          if (this.statLikes) this.statLikes.textContent = String(count);
+          this.renderLikes(data.items);
+        } else {
+          this.likesEmpty?.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Failed to load likes:', error);
+        this.likesLoading?.classList.add('hidden');
+        this.likesEmpty?.classList.remove('hidden');
+      }
+    }
+
+    renderLikes(items) {
+      if (!this.likesGrid) return;
+
+      this.likesGrid.innerHTML = items.map(item => `
+        <article class="product-card" data-asin="${item.asin}">
+          <div class="card-media">
+            ${item.featuredImage 
+              ? `<img src="${item.featuredImage}" alt="${item.title || 'Product'}" loading="lazy" />`
+              : `<div class="card-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                  </svg>
+                </div>`
+            }
+          </div>
+          <div class="card-body">
+            ${item.brand ? `<span class="card-label">${item.brand}</span>` : ''}
+            <h3 class="card-title">${item.title || `ASIN: ${item.asin}`}</h3>
+            ${item.price ? `
+              <span class="card-price">
+                ${new Intl.NumberFormat(this.lang === 'es' ? 'es-ES' : 'en-US', {
+                  style: 'currency',
+                  currency: item.currency || 'EUR'
+                }).format(item.price)}
+              </span>
+            ` : ''}
+          </div>
+          ${item.affiliateUrl ? `
+            <a href="${item.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="card-action">
+              ${this.texts.viewProduct}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 17L17 7M17 7H7M17 7v10"/>
+              </svg>
+            </a>
+          ` : ''}
+        </article>
+      `).join('');
+    }
+
+    loadSaved() {
+      const savedAsins = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+      
+      if (this.statSaved) this.statSaved.textContent = String(savedAsins.length);
+
+      if (savedAsins.length === 0) {
+        this.savedEmpty?.classList.remove('hidden');
+        return;
+      }
+
+      this.savedGrid?.classList.remove('hidden');
+      
+      if (this.savedGrid) {
+        this.savedGrid.innerHTML = savedAsins.map(asin => `
+          <article class="product-card saved-card" data-asin="${asin}">
+            <div class="card-media">
+              <div class="card-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">ASIN: ${asin}</h3>
+            </div>
+            <button type="button" class="card-remove" data-asin="${asin}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              ${this.texts.removeFromSaved}
+            </button>
+          </article>
+        `).join('');
+
+        this.savedGrid.querySelectorAll('.card-remove').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const asin = btn.dataset.asin;
+            const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+            const newSaved = saved.filter(a => a !== asin);
+            localStorage.setItem('savedProducts', JSON.stringify(newSaved));
+            
+            btn.closest('.product-card')?.remove();
+            if (this.statSaved) this.statSaved.textContent = String(newSaved.length);
+            
+            if (newSaved.length === 0) {
+              this.savedGrid?.classList.add('hidden');
+              this.savedEmpty?.classList.remove('hidden');
+            }
+          });
+        });
+      }
+    }
+
+    setupPreferencesForm() {
+      this.brandsInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const value = this.brandsInput.value.trim();
+          if (value && !this.brands.includes(value)) {
+            this.brands.push(value);
+            this.renderBrandTags();
+            this.brandsInput.value = '';
+          }
+        }
+      });
+
+      this.prefsForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.savePreferences();
+      });
+
+      document.getElementById('reset-prefs-btn')?.addEventListener('click', async () => {
+        await this.resetPreferences();
+      });
+
+      document.getElementById('swipe-discover-btn')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('swipe:open'));
+      });
+    }
+
+    renderBrandTags() {
+      if (!this.brandsTags) return;
+      
+      this.brandsTags.innerHTML = this.brands.map(brand => `
+        <span class="tag">
+          ${brand}
+          <button type="button" class="tag-remove" data-brand="${brand}">&times;</button>
+        </span>
+      `).join('');
+
+      this.brandsTags.querySelectorAll('.tag-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.brands = this.brands.filter(b => b !== btn.dataset.brand);
+          this.renderBrandTags();
+        });
+      });
+    }
+
+    async loadPreferences() {
+      try {
+        const response = await fetch('/api/user/preferences');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!data.success || !data.preferences) return;
+
+        const prefs = data.preferences;
+
+        if (prefs.budgetRange) {
+          const radio = this.prefsForm?.querySelector(`input[name="budgetRange"][value="${prefs.budgetRange}"]`);
+          if (radio) radio.checked = true;
+        }
+
+        const categories = prefs.categories || [];
+        categories.forEach(cat => {
+          const checkbox = this.prefsForm?.querySelector(`input[name="categories"][value="${cat}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+
+        this.brands = prefs.brands || [];
+        this.renderBrandTags();
+
+        if (prefs.dealSensitivity) {
+          const radio = this.prefsForm?.querySelector(`input[name="dealSensitivity"][value="${prefs.dealSensitivity}"]`);
+          if (radio) radio.checked = true;
+        }
+
+        const primeCheckbox = document.getElementById('prime-only');
+        if (primeCheckbox) primeCheckbox.checked = prefs.primeOnly || false;
+
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+      }
+    }
+
+    async savePreferences() {
+      const saveBtn = document.getElementById('save-prefs-btn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '...';
+      }
+
+      try {
+        const formData = new FormData(this.prefsForm);
+        
+        const data = {
+          budgetRange: formData.get('budgetRange') || null,
+          categories: formData.getAll('categories'),
+          brands: this.brands,
+          dealSensitivity: formData.get('dealSensitivity') || 'medium',
+          primeOnly: formData.get('primeOnly') === 'on',
+          quizCompleted: true,
+        };
+
+        const response = await fetch('/api/user/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          if (saveBtn) {
+            saveBtn.textContent = this.texts.savedMsg || 'Saved';
+            saveBtn.classList.add('success');
+            setTimeout(() => {
+              saveBtn.textContent = this.texts.savePrefs;
+              saveBtn.disabled = false;
+              saveBtn.classList.remove('success');
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save preferences:', error);
+        if (saveBtn) {
+          saveBtn.textContent = 'Error';
+          saveBtn.disabled = false;
+        }
+      }
+    }
+
+    async resetPreferences() {
+      try {
+        await fetch('/api/user/preferences', { method: 'DELETE' });
+        this.prefsForm?.reset();
+        this.brands = [];
+        this.renderBrandTags();
+      } catch (error) {
+        console.error('Failed to reset preferences:', error);
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => new ProfileController());
+  } else {
+    new ProfileController();
+  }
+</script>
+
+<style>
+  /* ===========================================
+     PROFILE PAGE - Warm Minimalism Design
+     =========================================== */
+
+  .profile-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg) var(--space-4xl);
+  }
+
+  /* ===========================================
+     AUTH PROMPT (Signed Out State)
+     =========================================== */
+
+  .auth-prompt {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-xl);
+    animation: fadeInUp 0.6s var(--ease-out);
+  }
+
+  .auth-visual {
+    margin-bottom: var(--space-xl);
+  }
+
+  .auth-icon-ring {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-honey-muted) 0%, var(--color-cream-dark) 100%);
+    border-radius: 50%;
+    color: var(--color-honey-dark);
+  }
+
+  .auth-icon-ring svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .auth-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-sm);
+    letter-spacing: -0.02em;
+  }
+
+  .auth-desc {
+    font-size: 1rem;
+    color: var(--color-stone);
+    margin: 0 0 var(--space-xl);
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .auth-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 2.5rem;
+    background: var(--color-ink);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+
+  .auth-btn:hover {
+    background: var(--color-ink-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* ===========================================
+     PROFILE HERO
+     =========================================== */
+
+  .profile-hero {
+    background: var(--color-white);
+    border: 1px solid var(--color-sand);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+    animation: fadeInUp 0.5s var(--ease-out);
+  }
+
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  @media (min-width: 640px) {
+    .hero-content {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .user-section {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+
+  .user-avatar-wrapper {
+    flex-shrink: 0;
+  }
+
+  .user-avatar-wrapper :global(.cl-avatarBox) {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .user-avatar-wrapper :global(.cl-userButtonTrigger) {
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px var(--color-honey-muted);
+  }
+
+  .user-info {
+    min-width: 0;
+  }
+
+  .welcome-text {
+    font-size: 0.8125rem;
+    color: var(--color-stone);
+    margin: 0 0 var(--space-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  .user-name {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .user-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-cream-dark);
+    border-radius: var(--radius-lg);
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    line-height: 1.2;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--color-stone);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--color-sand-dark);
+  }
+
+  /* ===========================================
+     NAVIGATION TABS
+     =========================================== */
+
+  .profile-nav {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-sand);
+    animation: fadeInUp 0.5s var(--ease-out) 0.1s backwards;
+  }
+
+  .nav-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-stone);
+    cursor: pointer;
+    position: relative;
+    transition: color var(--duration-fast);
+  }
+
+  .nav-tab svg {
+    width: 20px;
+    height: 20px;
+    transition: color var(--duration-fast);
+  }
+
+  .nav-tab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: var(--space-lg);
+    right: var(--space-lg);
+    height: 2px;
+    background: var(--color-honey);
+    border-radius: 1px;
+    opacity: 0;
+    transform: scaleX(0);
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+
+  .nav-tab:hover {
+    color: var(--color-ink);
+  }
+
+  .nav-tab.active {
+    color: var(--color-ink);
+  }
+
+  .nav-tab.active svg {
+    color: var(--color-honey);
+  }
+
+  .nav-tab.active::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  /* ===========================================
+     TAB PANELS
+     =========================================== */
+
+  .tab-panel {
+    animation: fadeIn 0.3s var(--ease-out);
+  }
+
+  .tab-panel.hidden {
+    display: none;
+  }
+
+  /* ===========================================
+     LOADING STATE
+     =========================================== */
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-4xl) var(--space-xl);
+    color: var(--color-stone);
+  }
+
+  .loading-state.hidden {
+    display: none;
+  }
+
+  .loader {
+    display: flex;
+    gap: 6px;
+  }
+
+  .loader-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--color-honey);
+    border-radius: 50%;
+    animation: loaderPulse 1.4s infinite ease-in-out both;
+  }
+
+  .loader-dot:nth-child(1) { animation-delay: -0.32s; }
+  .loader-dot:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes loaderPulse {
+    0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* ===========================================
+     EMPTY STATE
+     =========================================== */
+
+  .empty-state {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-xl);
+    animation: fadeInUp 0.5s var(--ease-out);
+  }
+
+  .empty-state.hidden {
+    display: none;
+  }
+
+  .empty-illustration {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--space-lg);
+  }
+
+  .empty-illustration svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .empty-state h3 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-sm);
+  }
+
+  .empty-state p {
+    font-size: 0.9375rem;
+    color: var(--color-stone);
+    margin: 0 0 var(--space-xl);
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ===========================================
+     PRODUCTS GRID
+     =========================================== */
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-lg);
+    animation: fadeInUp 0.5s var(--ease-out);
+  }
+
+  .products-grid.hidden {
+    display: none;
+  }
+
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-white);
+    border: 1px solid var(--color-sand);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+
+  .product-card:hover {
+    border-color: var(--color-honey-muted);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  .card-media {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-cream-dark);
+    padding: var(--space-lg);
+    overflow: hidden;
+  }
+
+  .card-media img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  .product-card:hover .card-media img {
+    transform: scale(1.05);
+  }
+
+  .card-placeholder {
+    width: 48px;
+    height: 48px;
+    color: var(--color-mist);
+  }
+
+  .card-placeholder svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .card-body {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    flex: 1;
+  }
+
+  .card-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-stone-light);
+  }
+
+  .card-title {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-price {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-honey-dark);
+    margin-top: auto;
+    padding-top: var(--space-xs);
+  }
+
+  .card-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: var(--color-ink);
+    color: var(--color-cream);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--duration-fast);
+  }
+
+  .card-action svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .card-action:hover {
+    background: var(--color-ink-light);
+  }
+
+  .card-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: var(--color-cream-dark);
+    border: none;
+    color: var(--color-coral);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--duration-fast);
+  }
+
+  .card-remove svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .card-remove:hover {
+    background: #FEE2E2;
+  }
+
+  /* ===========================================
+     PREFERENCES SECTION
+     =========================================== */
+
+  .prefs-container {
+    max-width: 640px;
+    animation: fadeInUp 0.5s var(--ease-out);
+  }
+
+  .prefs-intro {
+    margin-bottom: var(--space-xl);
+  }
+
+  .prefs-intro h2 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-sm);
+    letter-spacing: -0.02em;
+  }
+
+  .prefs-intro p {
+    font-size: 0.9375rem;
+    color: var(--color-stone);
+    margin: 0;
+  }
+
+  .prefs-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+  }
+
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .section-label {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink-light);
+  }
+
+  /* Pills (Radio buttons) */
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .pill-option {
+    cursor: pointer;
+  }
+
+  .pill-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 0.625rem 1.25rem;
+    background: var(--color-white);
+    border: 1px solid var(--color-sand-dark);
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-stone);
+    transition: all var(--duration-fast);
+  }
+
+  .pill:hover {
+    border-color: var(--color-honey);
+    color: var(--color-ink);
+  }
+
+  .pill-option input:checked + .pill {
+    background: var(--color-honey-muted);
+    border-color: var(--color-honey);
+    color: var(--color-honey-dark);
+  }
+
+  /* Chips (Checkboxes) */
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .chip-option {
+    cursor: pointer;
+  }
+
+  .chip-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .chip {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--color-white);
+    border: 1px solid var(--color-sand-dark);
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-stone);
+    transition: all var(--duration-fast);
+  }
+
+  .chip:hover {
+    border-color: var(--color-honey);
+    color: var(--color-ink);
+  }
+
+  .chip-option input:checked + .chip {
+    background: var(--color-honey-muted);
+    border-color: var(--color-honey);
+    color: var(--color-honey-dark);
+  }
+
+  /* Tags Field */
+  .tags-field {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-white);
+    border: 1px solid var(--color-sand-dark);
+    border-radius: var(--radius-md);
+    min-height: 52px;
+    transition: border-color var(--duration-fast);
+  }
+
+  .tags-field:focus-within {
+    border-color: var(--color-honey);
+    box-shadow: 0 0 0 3px var(--color-honey-muted);
+  }
+
+  .tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0.375rem 0.75rem;
+    background: var(--color-honey-muted);
+    border-radius: var(--radius-full);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-honey-dark);
+  }
+
+  .tag-remove {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    margin-left: 2px;
+    opacity: 0.7;
+    transition: opacity var(--duration-fast);
+  }
+
+  .tag-remove:hover {
+    opacity: 1;
+  }
+
+  .tags-input {
+    flex: 1;
+    min-width: 140px;
+    border: none;
+    outline: none;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    background: transparent;
+    color: var(--color-ink);
+  }
+
+  .tags-input::placeholder {
+    color: var(--color-mist);
+  }
+
+  /* Switch */
+  .switch-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-white);
+    border: 1px solid var(--color-sand);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color var(--duration-fast);
+  }
+
+  .switch-option:hover {
+    border-color: var(--color-sand-dark);
+  }
+
+  .switch-text {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .switch-control {
+    position: relative;
+  }
+
+  .switch-control input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .switch-track {
+    display: block;
+    width: 44px;
+    height: 24px;
+    background: var(--color-sand-dark);
+    border-radius: var(--radius-full);
+    position: relative;
+    transition: background var(--duration-fast);
+  }
+
+  .switch-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: var(--color-white);
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .switch-control input:checked + .switch-track {
+    background: var(--color-honey);
+  }
+
+  .switch-control input:checked + .switch-track::after {
+    transform: translateX(20px);
+  }
+
+  /* Form Actions */
+  .form-actions {
+    display: flex;
+    gap: var(--space-md);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-sand);
+  }
+
+  .btn {
+    padding: 0.875rem 1.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+
+  .btn-primary {
+    flex: 1;
+    background: var(--color-ink);
+    color: var(--color-cream);
+    border: none;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-ink-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-primary.success {
+    background: var(--color-sage);
+  }
+
+  .btn-secondary {
+    background: var(--color-white);
+    color: var(--color-stone);
+    border: 1px solid var(--color-sand-dark);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--color-mist);
+    color: var(--color-ink);
+  }
+
+  /* Quick Links */
+  .quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--color-sand);
+  }
+
+  .quick-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: none;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-stone);
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all var(--duration-fast);
+  }
+
+  .quick-link svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .quick-link:hover {
+    color: var(--color-honey-dark);
+    background: var(--color-honey-muted);
+  }
+
+  /* ===========================================
+     ANIMATIONS
+     =========================================== */
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ===========================================
+     RESPONSIVE
+     =========================================== */
+
+  @media (max-width: 640px) {
+    .profile-page {
+      padding: var(--space-lg) var(--space-md) var(--space-3xl);
+    }
+
+    .profile-hero {
+      padding: var(--space-lg);
+    }
+
+    .user-stats {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .nav-tab {
+      padding: var(--space-md) var(--space-sm);
+      flex: 1;
+      justify-content: center;
+    }
+
+    .nav-tab span {
+      display: none;
+    }
+
+    .nav-tab::after {
+      left: var(--space-sm);
+      right: var(--space-sm);
+    }
+
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+</style>

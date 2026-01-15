@@ -1,0 +1,204 @@
+---
+/**
+ * CategoryBar - Horizontal scrollable category navigation
+ * Used in the infinite feed to filter products by category
+ */
+
+interface Props {
+  lang: string;
+  activeCategory?: string;
+}
+
+const { lang, activeCategory = 'all' } = Astro.props;
+
+const categories = [
+  { 
+    id: 'all', 
+    icon: 'sparkles',
+    label: { es: 'Todo', en: 'All' }
+  },
+  { 
+    id: 'electronics', 
+    icon: 'cpu',
+    label: { es: 'Electrónica', en: 'Electronics' }
+  },
+  { 
+    id: 'audio', 
+    icon: 'headphones',
+    label: { es: 'Audio', en: 'Audio' }
+  },
+  { 
+    id: 'gaming', 
+    icon: 'gamepad',
+    label: { es: 'Gaming', en: 'Gaming' }
+  },
+  { 
+    id: 'smartphones', 
+    icon: 'smartphone',
+    label: { es: 'Móviles', en: 'Phones' }
+  },
+  { 
+    id: 'home', 
+    icon: 'home',
+    label: { es: 'Hogar', en: 'Home' }
+  },
+  { 
+    id: 'wearables', 
+    icon: 'watch',
+    label: { es: 'Wearables', en: 'Wearables' }
+  },
+  { 
+    id: 'computers', 
+    icon: 'laptop',
+    label: { es: 'Ordenadores', en: 'Computers' }
+  },
+];
+
+// SVG icons mapping
+const icons: Record<string, string> = {
+  sparkles: `<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>`,
+  cpu: `<path d="M8.25 3v1.5M4.5 8.25H3M21 8.25h-1.5M4.5 12H3M21 12h-1.5M4.5 15.75H3M21 15.75h-1.5M8.25 19.5V21M12 3v1.5M12 19.5V21M15.75 3v1.5M15.75 19.5V21M6.75 6.75h10.5v10.5H6.75V6.75z"/>`,
+  headphones: `<path d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>`,
+  gamepad: `<path d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/>`,
+  smartphone: `<path d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/>`,
+  home: `<path d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>`,
+  watch: `<path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
+  laptop: `<path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/>`,
+};
+---
+
+<div class="category-bar" id="category-bar">
+  <div class="category-scroll">
+    {categories.map((cat) => (
+      <button 
+        type="button"
+        class={`category-btn ${cat.id === activeCategory ? 'active' : ''}`}
+        data-category={cat.id}
+      >
+        <svg 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="1.5"
+          class="category-icon"
+        >
+          <Fragment set:html={icons[cat.icon]} />
+        </svg>
+        <span class="category-label">{cat.label[lang as 'es' | 'en'] || cat.label.en}</span>
+      </button>
+    ))}
+  </div>
+</div>
+
+<script>
+  function initCategoryBar() {
+    const categoryBar = document.getElementById('category-bar');
+    if (!categoryBar) return;
+
+    const buttons = categoryBar.querySelectorAll('.category-btn');
+    
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const category = btn.getAttribute('data-category');
+        
+        // Update active state
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Dispatch custom event for the feed to listen
+        window.dispatchEvent(new CustomEvent('category:change', { 
+          detail: { category } 
+        }));
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCategoryBar);
+  } else {
+    initCategoryBar();
+  }
+  document.addEventListener('astro:page-load', initCategoryBar);
+</script>
+
+<style>
+  .category-bar {
+    position: relative;
+    width: 100%;
+    padding: 0.75rem 0;
+    z-index: 10;
+  }
+
+  .category-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+  }
+
+  .category-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  .category-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .category-btn.active {
+    background: linear-gradient(135deg, #ff9500, #ff6b00);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
+  }
+
+  .category-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .category-label {
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+  }
+
+  @media (min-width: 768px) {
+    .category-scroll {
+      justify-content: center;
+      padding: 0 2rem;
+    }
+
+    .category-btn {
+      padding: 0.6rem 1.1rem;
+      font-size: 0.85rem;
+    }
+
+    .category-icon {
+      width: 18px;
+      height: 18px;
+    }
+  }
+</style>

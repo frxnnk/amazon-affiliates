@@ -81,6 +81,193 @@ const AffiliateClicks = defineTable({
   },
 });
 
+// Deal Agent configuration
+const DealAgentConfig = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    key: column.text({ unique: true }), // Setting key
+    value: column.json(), // Setting value (flexible)
+    updatedAt: column.date({ default: new Date() }),
+    updatedBy: column.text({ optional: true }), // Admin Clerk ID
+  },
+});
+
+// Deal Agent search keywords
+const DealAgentKeywords = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    keyword: column.text(),
+    category: column.text({ optional: true }),
+    marketplace: column.text({ default: 'com' }), // com, es, de, etc.
+    isActive: column.boolean({ default: true }),
+    lastSearchedAt: column.date({ optional: true }),
+    resultsCount: column.number({ default: 0 }),
+    createdAt: column.date({ default: new Date() }),
+  },
+});
+
+// Product Likes - track user likes on products
+const ProductLikes = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id }),
+    asin: column.text(), // Product ASIN for RapidAPI products
+    productId: column.text({ optional: true }), // Optional reference to Products table
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['userId', 'asin'], unique: true }, // One like per user per product
+    { on: ['asin'] }, // For counting likes
+  ],
+});
+
+// Product Comments - user comments on products
+const ProductComments = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id }),
+    asin: column.text(), // Product ASIN
+    productId: column.text({ optional: true }), // Optional reference to Products table
+    content: column.text(),
+    isVisible: column.boolean({ default: true }), // For moderation
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['asin'] }, // For fetching product comments
+    { on: ['userId'] }, // For fetching user's comments
+  ],
+});
+
+// Product Search Cache - cache RapidAPI product searches to minimize API calls
+// Cache duration: 4 hours for searches, 24 hours for individual products
+const ProductSearchCache = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    cacheKey: column.text({ unique: true }), // Hash of search params (keywords + marketplace + page)
+    searchType: column.text(), // 'search' | 'product' | 'deals'
+    marketplace: column.text({ default: 'com' }),
+    
+    // Cached response data
+    products: column.json(), // Array of product data
+    totalResults: column.number({ default: 0 }),
+    
+    // Cache metadata
+    fetchedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // When this cache entry expires
+    hitCount: column.number({ default: 0 }), // How many times served from cache
+  },
+  indexes: [
+    { on: ['cacheKey'], unique: true },
+    { on: ['expiresAt'] }, // For cleanup queries
+    { on: ['searchType', 'marketplace'] },
+  ],
+});
+
+// Video Cache - cache YouTube video lookups to minimize API calls
+// Cache duration: 30 days for found videos, 7 days for not found
+const VideoCache = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    searchKey: column.text({ unique: true }), // Hash of ASIN + normalized title
+    asin: column.text({ optional: true }), // Product ASIN
+    productTitle: column.text(), // Original product title searched
+    
+    // Video data (null if no video found)
+    videoId: column.text({ optional: true }),
+    videoTitle: column.text({ optional: true }),
+    channelTitle: column.text({ optional: true }),
+    thumbnail: column.text({ optional: true }),
+    thumbnailHigh: column.text({ optional: true }),
+    isShort: column.boolean({ default: true }),
+    
+    // Cache metadata
+    fetchedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // When this cache entry expires
+    hitCount: column.number({ default: 0 }), // How many times this was served from cache
+  },
+  indexes: [
+    { on: ['asin'] }, // For lookup by product
+    { on: ['expiresAt'] }, // For cleanup queries
+  ],
+});
+
+// User Preferences - for personalized recommendations
+const UserPreferences = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id, unique: true }),
+    // Quiz responses
+    budgetRange: column.text({ optional: true }), // 'low' | 'mid' | 'high' | 'premium'
+    categories: column.json({ default: [] }), // string[] of favorite categories
+    brands: column.json({ default: [] }), // string[] of favorite brands
+    dealSensitivity: column.text({ default: 'medium' }), // 'low' | 'medium' | 'high'
+    primeOnly: column.boolean({ default: false }),
+    // Swipe learning
+    likedAsins: column.json({ default: [] }), // ASINs liked in swipe mode
+    dislikedAsins: column.json({ default: [] }), // ASINs rejected in swipe mode
+    // Metadata
+    quizCompleted: column.boolean({ default: false }),
+    lastUpdated: column.date({ optional: true }),
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['userId'], unique: true },
+  ],
+});
+
+// Price History - for deal validation
+const PriceHistory = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    asin: column.text(),
+    marketplace: column.text({ default: 'com' }), // com, es, de, etc.
+    price: column.number(),
+    originalPrice: column.number({ optional: true }),
+    currency: column.text({ default: 'USD' }),
+    source: column.text({ default: 'rainforest' }), // 'rainforest' | 'keepa' | 'manual'
+    recordedAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['asin', 'marketplace'] },
+    { on: ['recordedAt'] },
+  ],
+});
+
+// Curated Deals - manually or AI-curated deals
+const CuratedDeals = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    asin: column.text(),
+    marketplace: column.text({ default: 'com' }),
+    curationType: column.text(), // 'admin' | 'ai' | 'trending'
+    priority: column.number({ default: 0 }), // 0-100, higher = more featured
+    reason: column.text({ optional: true }), // Why this is a good deal
+    validUntil: column.date({ optional: true }), // Expiration date
+    isActive: column.boolean({ default: true }),
+    createdBy: column.text({ optional: true }), // Admin ID or 'system'
+    aiScore: column.number({ optional: true }), // AI confidence score
+    // Cached product data for display
+    title: column.text({ optional: true }),
+    brand: column.text({ optional: true }),
+    price: column.number({ optional: true }),
+    originalPrice: column.number({ optional: true }),
+    currency: column.text({ optional: true }),
+    imageUrl: column.text({ optional: true }),
+    affiliateUrl: column.text({ optional: true }),
+    rating: column.number({ optional: true }),
+    totalReviews: column.number({ optional: true }),
+    // Timestamps
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ optional: true }),
+  },
+  indexes: [
+    { on: ['asin', 'marketplace'] },
+    { on: ['isActive', 'priority'] },
+    { on: ['curationType'] },
+  ],
+});
+
 // Products table - main product catalog
 const Products = defineTable({
   columns: {
@@ -157,5 +344,14 @@ export default defineDb({
     PayoutRequests,
     AffiliateClicks,
     Products,
+    DealAgentConfig,
+    DealAgentKeywords,
+    ProductLikes,
+    ProductComments,
+    UserPreferences,
+    PriceHistory,
+    CuratedDeals,
+    ProductSearchCache,
+    VideoCache,
   },
 });

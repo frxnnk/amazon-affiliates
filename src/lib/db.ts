@@ -1,4 +1,4 @@
-import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, eq, desc, and, like, or } from 'astro:db';
+import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, eq, desc, and, like, or, gte, lte, asc } from 'astro:db';
 
 // Tier thresholds
 const TIER_THRESHOLDS = {
@@ -800,4 +800,449 @@ export async function getProductStats() {
   }
 
   return stats;
+}
+
+// ==================== DEAL AGENT FUNCTIONS ====================
+
+export interface DealAgentKeywordInput {
+  keyword: string;
+  category?: string;
+  marketplace?: string;
+  isActive?: boolean;
+}
+
+// Get all keywords
+export async function getDealAgentKeywords(activeOnly = false) {
+  if (activeOnly) {
+    return db.select()
+      .from(DealAgentKeywords)
+      .where(eq(DealAgentKeywords.isActive, true))
+      .orderBy(desc(DealAgentKeywords.createdAt))
+      .all();
+  }
+  return db.select()
+    .from(DealAgentKeywords)
+    .orderBy(desc(DealAgentKeywords.createdAt))
+    .all();
+}
+
+// Add a keyword
+export async function addDealAgentKeyword(data: DealAgentKeywordInput) {
+  await db.insert(DealAgentKeywords).values({
+    keyword: data.keyword,
+    category: data.category,
+    marketplace: data.marketplace || 'com',
+    isActive: data.isActive !== false,
+    createdAt: new Date(),
+  });
+
+  return db.select()
+    .from(DealAgentKeywords)
+    .where(eq(DealAgentKeywords.keyword, data.keyword))
+    .get();
+}
+
+// Toggle keyword active status
+export async function toggleDealAgentKeyword(id: number) {
+  const keyword = await db.select()
+    .from(DealAgentKeywords)
+    .where(eq(DealAgentKeywords.id, id))
+    .get();
+  
+  if (keyword) {
+    await db.update(DealAgentKeywords)
+      .set({ isActive: !keyword.isActive })
+      .where(eq(DealAgentKeywords.id, id));
+  }
+  
+  return db.select()
+    .from(DealAgentKeywords)
+    .where(eq(DealAgentKeywords.id, id))
+    .get();
+}
+
+// Delete a keyword
+export async function deleteDealAgentKeyword(id: number) {
+  await db.delete(DealAgentKeywords).where(eq(DealAgentKeywords.id, id));
+}
+
+// Update keyword last searched
+export async function updateKeywordSearched(id: number, resultsCount: number) {
+  await db.update(DealAgentKeywords)
+    .set({
+      lastSearchedAt: new Date(),
+      resultsCount,
+    })
+    .where(eq(DealAgentKeywords.id, id));
+}
+
+// Get agent config value
+export async function getDealAgentConfig(key: string) {
+  const config = await db.select()
+    .from(DealAgentConfig)
+    .where(eq(DealAgentConfig.key, key))
+    .get();
+  return config?.value;
+}
+
+// Set agent config value
+export async function setDealAgentConfig(key: string, value: unknown, adminId?: string) {
+  const existing = await db.select()
+    .from(DealAgentConfig)
+    .where(eq(DealAgentConfig.key, key))
+    .get();
+
+  if (existing) {
+    await db.update(DealAgentConfig)
+      .set({
+        value: value as any,
+        updatedAt: new Date(),
+        updatedBy: adminId,
+      })
+      .where(eq(DealAgentConfig.key, key));
+  } else {
+    await db.insert(DealAgentConfig).values({
+      key,
+      value: value as any,
+      updatedAt: new Date(),
+      updatedBy: adminId,
+    });
+  }
+}
+
+// Get all agent config
+export async function getAllDealAgentConfig() {
+  const configs = await db.select().from(DealAgentConfig).all();
+  const result: Record<string, unknown> = {};
+  for (const config of configs) {
+    result[config.key] = config.value;
+  }
+  return result;
+}
+
+// ==================== USER PREFERENCES FUNCTIONS ====================
+
+export type BudgetRange = 'low' | 'mid' | 'high' | 'premium';
+export type DealSensitivity = 'low' | 'medium' | 'high';
+
+export interface UserPreferencesInput {
+  budgetRange?: BudgetRange;
+  categories?: string[];
+  brands?: string[];
+  dealSensitivity?: DealSensitivity;
+  primeOnly?: boolean;
+  likedAsins?: string[];
+  dislikedAsins?: string[];
+  quizCompleted?: boolean;
+}
+
+// Get user preferences
+export async function getUserPreferences(userId: string) {
+  return db.select()
+    .from(UserPreferences)
+    .where(eq(UserPreferences.userId, userId))
+    .get();
+}
+
+// Create or update user preferences
+export async function saveUserPreferences(userId: string, data: UserPreferencesInput) {
+  const existing = await getUserPreferences(userId);
+  const now = new Date();
+
+  if (existing) {
+    await db.update(UserPreferences)
+      .set({
+        ...data,
+        lastUpdated: now,
+      })
+      .where(eq(UserPreferences.userId, userId));
+  } else {
+    await db.insert(UserPreferences).values({
+      userId,
+      ...data,
+      lastUpdated: now,
+      createdAt: now,
+    });
+  }
+
+  return getUserPreferences(userId);
+}
+
+// Add liked ASIN from swipe
+export async function addLikedAsin(userId: string, asin: string) {
+  const prefs = await getUserPreferences(userId);
+  const likedAsins = (prefs?.likedAsins as string[]) || [];
+  
+  if (!likedAsins.includes(asin)) {
+    likedAsins.push(asin);
+    await saveUserPreferences(userId, { likedAsins });
+  }
+}
+
+// Add disliked ASIN from swipe
+export async function addDislikedAsin(userId: string, asin: string) {
+  const prefs = await getUserPreferences(userId);
+  const dislikedAsins = (prefs?.dislikedAsins as string[]) || [];
+  
+  if (!dislikedAsins.includes(asin)) {
+    dislikedAsins.push(asin);
+    await saveUserPreferences(userId, { dislikedAsins });
+  }
+}
+
+// Reset user preferences
+export async function resetUserPreferences(userId: string) {
+  const existing = await getUserPreferences(userId);
+  if (existing) {
+    await db.update(UserPreferences)
+      .set({
+        budgetRange: null,
+        categories: [],
+        brands: [],
+        dealSensitivity: 'medium',
+        primeOnly: false,
+        likedAsins: [],
+        dislikedAsins: [],
+        quizCompleted: false,
+        lastUpdated: new Date(),
+      })
+      .where(eq(UserPreferences.userId, userId));
+  }
+  return getUserPreferences(userId);
+}
+
+// ==================== PRICE HISTORY FUNCTIONS ====================
+
+export interface PriceHistoryInput {
+  asin: string;
+  marketplace?: string;
+  price: number;
+  originalPrice?: number;
+  currency?: string;
+  source?: string;
+}
+
+// Record a price point
+export async function recordPrice(data: PriceHistoryInput) {
+  await db.insert(PriceHistory).values({
+    asin: data.asin,
+    marketplace: data.marketplace || 'com',
+    price: data.price,
+    originalPrice: data.originalPrice,
+    currency: data.currency || 'USD',
+    source: data.source || 'rainforest',
+    recordedAt: new Date(),
+  });
+}
+
+// Get price history for a product
+export async function getPriceHistory(asin: string, marketplace: string = 'com', days: number = 90) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  return db.select()
+    .from(PriceHistory)
+    .where(and(
+      eq(PriceHistory.asin, asin),
+      eq(PriceHistory.marketplace, marketplace),
+      gte(PriceHistory.recordedAt, startDate)
+    ))
+    .orderBy(asc(PriceHistory.recordedAt))
+    .all();
+}
+
+// Get price statistics for a product
+export async function getPriceStats(asin: string, marketplace: string = 'com') {
+  const history30 = await getPriceHistory(asin, marketplace, 30);
+  const history90 = await getPriceHistory(asin, marketplace, 90);
+
+  if (history90.length === 0) {
+    return null;
+  }
+
+  const prices30 = history30.map(h => h.price);
+  const prices90 = history90.map(h => h.price);
+
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const min = (arr: number[]) => arr.length > 0 ? Math.min(...arr) : 0;
+  const max = (arr: number[]) => arr.length > 0 ? Math.max(...arr) : 0;
+
+  return {
+    avg30Day: Math.round(avg(prices30) * 100) / 100,
+    avg90Day: Math.round(avg(prices90) * 100) / 100,
+    min30Day: min(prices30),
+    min90Day: min(prices90),
+    max30Day: max(prices30),
+    max90Day: max(prices90),
+    lowestEver: min(prices90),
+    highestEver: max(prices90),
+    dataPoints30: history30.length,
+    dataPoints90: history90.length,
+    lastRecorded: history90[history90.length - 1]?.recordedAt || null,
+  };
+}
+
+// Cleanup old price history (keep last 90 days)
+export async function cleanupPriceHistory(daysToKeep: number = 90) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+  await db.delete(PriceHistory)
+    .where(lte(PriceHistory.recordedAt, cutoffDate));
+}
+
+// ==================== CURATED DEALS FUNCTIONS ====================
+
+export type CurationType = 'admin' | 'ai' | 'trending';
+
+export interface CuratedDealInput {
+  asin: string;
+  marketplace?: string;
+  curationType: CurationType;
+  priority?: number;
+  reason?: string;
+  validUntil?: Date;
+  isActive?: boolean;
+  createdBy?: string;
+  aiScore?: number;
+  // Cached product data
+  title?: string;
+  brand?: string;
+  price?: number;
+  originalPrice?: number;
+  currency?: string;
+  imageUrl?: string;
+  affiliateUrl?: string;
+  rating?: number;
+  totalReviews?: number;
+}
+
+// Get all active curated deals
+export async function getActiveCuratedDeals(marketplace: string = 'com', limit: number = 20) {
+  const now = new Date();
+  
+  return db.select()
+    .from(CuratedDeals)
+    .where(and(
+      eq(CuratedDeals.marketplace, marketplace),
+      eq(CuratedDeals.isActive, true)
+    ))
+    .orderBy(desc(CuratedDeals.priority), desc(CuratedDeals.createdAt))
+    .limit(limit)
+    .all();
+}
+
+// Get curated deal by ASIN
+export async function getCuratedDealByAsin(asin: string, marketplace: string = 'com') {
+  return db.select()
+    .from(CuratedDeals)
+    .where(and(
+      eq(CuratedDeals.asin, asin),
+      eq(CuratedDeals.marketplace, marketplace)
+    ))
+    .get();
+}
+
+// Create or update curated deal
+export async function saveCuratedDeal(data: CuratedDealInput) {
+  const existing = await getCuratedDealByAsin(data.asin, data.marketplace || 'com');
+  const now = new Date();
+
+  if (existing) {
+    await db.update(CuratedDeals)
+      .set({
+        ...data,
+        updatedAt: now,
+      })
+      .where(eq(CuratedDeals.id, existing.id));
+    return getCuratedDealByAsin(data.asin, data.marketplace || 'com');
+  } else {
+    await db.insert(CuratedDeals).values({
+      ...data,
+      marketplace: data.marketplace || 'com',
+      isActive: data.isActive !== false,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return getCuratedDealByAsin(data.asin, data.marketplace || 'com');
+  }
+}
+
+// Toggle curated deal active status
+export async function toggleCuratedDeal(id: number) {
+  const deal = await db.select()
+    .from(CuratedDeals)
+    .where(eq(CuratedDeals.id, id))
+    .get();
+
+  if (deal) {
+    await db.update(CuratedDeals)
+      .set({ 
+        isActive: !deal.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(CuratedDeals.id, id));
+  }
+
+  return db.select()
+    .from(CuratedDeals)
+    .where(eq(CuratedDeals.id, id))
+    .get();
+}
+
+// Delete curated deal
+export async function deleteCuratedDeal(id: number) {
+  await db.delete(CuratedDeals).where(eq(CuratedDeals.id, id));
+}
+
+// Get all curated deals (for admin)
+export async function getAllCuratedDeals(options?: {
+  marketplace?: string;
+  curationType?: CurationType;
+  activeOnly?: boolean;
+  limit?: number;
+}) {
+  let query = db.select().from(CuratedDeals);
+
+  const conditions = [];
+
+  if (options?.marketplace) {
+    conditions.push(eq(CuratedDeals.marketplace, options.marketplace));
+  }
+  if (options?.curationType) {
+    conditions.push(eq(CuratedDeals.curationType, options.curationType));
+  }
+  if (options?.activeOnly) {
+    conditions.push(eq(CuratedDeals.isActive, true));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
+  }
+
+  query = query.orderBy(desc(CuratedDeals.priority), desc(CuratedDeals.createdAt)) as typeof query;
+
+  if (options?.limit) {
+    query = query.limit(options.limit) as typeof query;
+  }
+
+  return query.all();
+}
+
+// Expire old curated deals
+export async function expireCuratedDeals() {
+  const now = new Date();
+
+  await db.update(CuratedDeals)
+    .set({ isActive: false, updatedAt: now })
+    .where(and(
+      eq(CuratedDeals.isActive, true),
+      lte(CuratedDeals.validUntil, now)
+    ));
+}
+
+// Check if ASIN is curated
+export async function isCuratedDeal(asin: string, marketplace: string = 'com'): Promise<boolean> {
+  const deal = await getCuratedDealByAsin(asin, marketplace);
+  return deal !== undefined && deal.isActive === true;
 }

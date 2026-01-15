@@ -1,0 +1,786 @@
+---
+/**
+ * LegalModal - Professional modal for legal content (Terms, Privacy, About)
+ * 
+ * Features:
+ * - Smooth slide-up animation
+ * - Scrollable content with proper header
+ * - Keyboard accessible (Escape to close)
+ * - Click outside to close
+ * - Mobile-optimized full-screen on small devices
+ */
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const content = {
+  es: {
+    close: 'Cerrar',
+    lastUpdated: 'Última actualización',
+    terms: {
+      title: 'Términos de Servicio',
+      updated: '5 de enero, 2025'
+    },
+    privacy: {
+      title: 'Política de Privacidad',
+      updated: '5 de enero, 2025'
+    },
+    about: {
+      title: 'Sobre Nosotros',
+      updated: '5 de enero, 2025'
+    }
+  },
+  en: {
+    close: 'Close',
+    lastUpdated: 'Last updated',
+    terms: {
+      title: 'Terms of Service',
+      updated: 'January 5, 2025'
+    },
+    privacy: {
+      title: 'Privacy Policy',
+      updated: 'January 5, 2025'
+    },
+    about: {
+      title: 'About Us',
+      updated: 'January 5, 2025'
+    }
+  }
+};
+
+const t = content[lang];
+const siteName = siteConfig.site.name;
+---
+
+<!-- Modal Overlay -->
+<div class="legal-modal-overlay" id="legal-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="legal-modal" id="legal-modal">
+    
+    <!-- Modal Header -->
+    <header class="modal-header">
+      <div class="modal-header-content">
+        <h2 class="modal-title" id="modal-title"></h2>
+        <p class="modal-meta" id="modal-meta"></p>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label={t.close}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </header>
+    
+    <!-- Modal Body -->
+    <div class="modal-body" id="modal-body">
+      <!-- Content loaded dynamically -->
+    </div>
+    
+  </div>
+</div>
+
+<!-- Modal Content Templates (hidden, used for JS injection) -->
+<template id="terms-content-es">
+  <p>
+    Bienvenido a {siteName}. Estos Términos de Servicio rigen tu acceso
+    y uso de nuestra plataforma, incluyendo nuestro sitio web, servicios de cashback, y todas
+    las funcionalidades relacionadas.
+  </p>
+  <p>
+    <strong>Al crear una cuenta o usar nuestros servicios, aceptas estos Términos en su totalidad.</strong>
+    Si no estás de acuerdo con alguna parte, no utilices nuestros servicios.
+  </p>
+
+  <h3>1. Definiciones</h3>
+  <ul>
+    <li><strong>"Plataforma":</strong> El sitio web {siteName} y todos sus servicios asociados</li>
+    <li><strong>"Usuario":</strong> Cualquier persona que accede o usa la Plataforma</li>
+    <li><strong>"Cashback":</strong> El porcentaje de comisión que compartimos contigo por compras calificadas</li>
+  </ul>
+
+  <h3>2. Elegibilidad</h3>
+  <p>Para usar nuestros servicios debes:</p>
+  <ul>
+    <li>Tener al menos 18 años de edad</li>
+    <li>Tener capacidad legal para celebrar contratos vinculantes</li>
+    <li>Proporcionar información veraz y actualizada</li>
+  </ul>
+
+  <h3>3. Programa de Cashback</h3>
+  <p>El cashback se calcula como un porcentaje de la comisión que recibimos de Amazon:</p>
+  <ul>
+    <li><strong>Tasa base:</strong> 2% del precio del producto</li>
+    <li>Las tasas pueden variar según la categoría del producto</li>
+    <li>Bonificaciones de nivel se aplican según tu historial de compras</li>
+  </ul>
+
+  <h3>4. Retiros</h3>
+  <ul>
+    <li><strong>Saldo mínimo:</strong> $15 USD</li>
+    <li><strong>Métodos:</strong> PayPal o Criptomonedas (USDT TRC-20)</li>
+    <li>Procesamiento: 1-3 días hábiles</li>
+  </ul>
+
+  <h3>5. Conducta Prohibida</h3>
+  <p>Está prohibido:</p>
+  <ul>
+    <li>Crear múltiples cuentas</li>
+    <li>Enviar pedidos falsos o manipulados</li>
+    <li>Usar bots o herramientas automatizadas</li>
+    <li>Cualquier actividad fraudulenta</li>
+  </ul>
+
+  <h3>6. Contacto</h3>
+  <p>Para preguntas sobre estos Términos: <strong>legal@rewardhive.store</strong></p>
+</template>
+
+<template id="terms-content-en">
+  <p>
+    Welcome to {siteName}. These Terms of Service govern your access
+    to and use of our platform, including our website, cashback services, and all
+    related features.
+  </p>
+  <p>
+    <strong>By creating an account or using our services, you accept these Terms in their entirety.</strong>
+    If you disagree with any part, do not use our services.
+  </p>
+
+  <h3>1. Definitions</h3>
+  <ul>
+    <li><strong>"Platform":</strong> The {siteName} website and all associated services</li>
+    <li><strong>"User":</strong> Any person who accesses or uses the Platform</li>
+    <li><strong>"Cashback":</strong> The percentage of commission we share with you for qualifying purchases</li>
+  </ul>
+
+  <h3>2. Eligibility</h3>
+  <p>To use our services you must:</p>
+  <ul>
+    <li>Be at least 18 years of age</li>
+    <li>Have the legal capacity to enter binding contracts</li>
+    <li>Provide accurate and current information</li>
+  </ul>
+
+  <h3>3. Cashback Program</h3>
+  <p>Cashback is calculated as a percentage of the commission we receive from Amazon:</p>
+  <ul>
+    <li><strong>Base rate:</strong> 2% of the product price</li>
+    <li>Rates may vary depending on product category</li>
+    <li>Tier bonuses apply based on your purchase history</li>
+  </ul>
+
+  <h3>4. Withdrawals</h3>
+  <ul>
+    <li><strong>Minimum balance:</strong> $15 USD</li>
+    <li><strong>Methods:</strong> PayPal or Cryptocurrency (USDT TRC-20)</li>
+    <li>Processing: 1-3 business days</li>
+  </ul>
+
+  <h3>5. Prohibited Conduct</h3>
+  <p>It is prohibited to:</p>
+  <ul>
+    <li>Create multiple accounts</li>
+    <li>Submit false or manipulated orders</li>
+    <li>Use bots or automated tools</li>
+    <li>Any fraudulent activity</li>
+  </ul>
+
+  <h3>6. Contact</h3>
+  <p>For questions about these Terms: <strong>legal@rewardhive.store</strong></p>
+</template>
+
+<template id="privacy-content-es">
+  <p>
+    En {siteName} nos comprometemos a proteger tu privacidad. Esta Política de Privacidad 
+    explica cómo recopilamos, usamos, compartimos y protegemos tu información personal.
+  </p>
+
+  <h3>1. Información que Recopilamos</h3>
+  <h4>Datos que nos proporcionas:</h4>
+  <ul>
+    <li><strong>Datos de cuenta:</strong> Nombre, email, foto de perfil</li>
+    <li><strong>Datos de pago:</strong> PayPal o dirección de billetera crypto</li>
+    <li><strong>Datos de compras:</strong> Números de pedido para verificación</li>
+  </ul>
+
+  <h4>Datos automáticos:</h4>
+  <ul>
+    <li>Tipo de navegador y dispositivo</li>
+    <li>Páginas visitadas y patrones de uso</li>
+    <li>Dirección IP (para seguridad)</li>
+  </ul>
+
+  <h3>2. Cómo Usamos Tu Información</h3>
+  <ul>
+    <li>Gestionar tu cuenta y procesar cashback</li>
+    <li>Personalizar recomendaciones de productos</li>
+    <li>Detectar y prevenir fraudes</li>
+    <li>Enviarte actualizaciones importantes</li>
+  </ul>
+
+  <h3>3. Cookies</h3>
+  <p>Utilizamos cookies esenciales para:</p>
+  <ul>
+    <li>Autenticación de sesión</li>
+    <li>Preferencias de idioma</li>
+    <li>Atribución de enlaces de afiliado (Amazon)</li>
+  </ul>
+
+  <h3>4. Compartir Datos</h3>
+  <p><strong>No vendemos tu información personal.</strong> Solo compartimos datos con:</p>
+  <ul>
+    <li>Clerk (autenticación)</li>
+    <li>Turso (base de datos)</li>
+    <li>PayPal (pagos)</li>
+    <li>Amazon Associates (verificación de compras)</li>
+  </ul>
+
+  <h3>5. Tus Derechos</h3>
+  <ul>
+    <li>Acceder a tus datos personales</li>
+    <li>Corregir datos inexactos</li>
+    <li>Solicitar eliminación de tu cuenta</li>
+    <li>Oponerte al procesamiento</li>
+  </ul>
+
+  <h3>6. Contacto</h3>
+  <p>Para consultas de privacidad: <strong>privacy@rewardhive.store</strong></p>
+</template>
+
+<template id="privacy-content-en">
+  <p>
+    At {siteName} we are committed to protecting your privacy. This Privacy Policy 
+    explains how we collect, use, share, and protect your personal information.
+  </p>
+
+  <h3>1. Information We Collect</h3>
+  <h4>Information you provide:</h4>
+  <ul>
+    <li><strong>Account data:</strong> Name, email, profile photo</li>
+    <li><strong>Payment data:</strong> PayPal or crypto wallet address</li>
+    <li><strong>Purchase data:</strong> Order numbers for verification</li>
+  </ul>
+
+  <h4>Automatic data:</h4>
+  <ul>
+    <li>Browser type and device</li>
+    <li>Pages visited and usage patterns</li>
+    <li>IP address (for security)</li>
+  </ul>
+
+  <h3>2. How We Use Your Information</h3>
+  <ul>
+    <li>Manage your account and process cashback</li>
+    <li>Personalize product recommendations</li>
+    <li>Detect and prevent fraud</li>
+    <li>Send you important updates</li>
+  </ul>
+
+  <h3>3. Cookies</h3>
+  <p>We use essential cookies for:</p>
+  <ul>
+    <li>Session authentication</li>
+    <li>Language preferences</li>
+    <li>Affiliate link attribution (Amazon)</li>
+  </ul>
+
+  <h3>4. Data Sharing</h3>
+  <p><strong>We do not sell your personal information.</strong> We only share data with:</p>
+  <ul>
+    <li>Clerk (authentication)</li>
+    <li>Turso (database)</li>
+    <li>PayPal (payments)</li>
+    <li>Amazon Associates (purchase verification)</li>
+  </ul>
+
+  <h3>5. Your Rights</h3>
+  <ul>
+    <li>Access your personal data</li>
+    <li>Correct inaccurate data</li>
+    <li>Request account deletion</li>
+    <li>Object to processing</li>
+  </ul>
+
+  <h3>6. Contact</h3>
+  <p>For privacy inquiries: <strong>privacy@rewardhive.store</strong></p>
+</template>
+
+<template id="about-content-es">
+  <p>
+    {siteName} nació de una idea simple: hacer que las compras online sean más gratificantes.
+    Somos un equipo apasionado por la tecnología y el ahorro inteligente.
+  </p>
+
+  <h3>Nuestra Misión</h3>
+  <p>
+    Democratizar el acceso a las comisiones de afiliados. Tradicionalmente, estas comisiones 
+    beneficiaban solo a los creadores de contenido. Nosotros cambiamos eso: compartimos 
+    nuestras ganancias contigo, el comprador.
+  </p>
+
+  <blockquote>
+    "Creemos que cada compra debe ser una oportunidad de ahorro."
+  </blockquote>
+
+  <h3>Cómo Funciona</h3>
+  <ol>
+    <li><strong>Explora productos curados</strong> - Seleccionamos los mejores productos de Amazon</li>
+    <li><strong>Compra a través de nuestros enlaces</strong> - Amazon nos paga una comisión</li>
+    <li><strong>Recibe tu cashback</strong> - Compartimos un porcentaje contigo</li>
+    <li><strong>Retira cuando quieras</strong> - PayPal o crypto desde $15</li>
+  </ol>
+
+  <h3>Sistema de Niveles</h3>
+  <div class="tier-table">
+    <div class="tier-row tier-header">
+      <span>Nivel</span>
+      <span>Compras</span>
+      <span>Bonus</span>
+    </div>
+    <div class="tier-row">
+      <span>Bronce</span>
+      <span>0-9</span>
+      <span>2% base</span>
+    </div>
+    <div class="tier-row">
+      <span>Plata</span>
+      <span>10-49</span>
+      <span>+5%</span>
+    </div>
+    <div class="tier-row">
+      <span>Oro</span>
+      <span>50+</span>
+      <span>+10%</span>
+    </div>
+  </div>
+
+  <h3>Nuestros Valores</h3>
+  <ul>
+    <li><strong>Transparencia total</strong> - Sin costos ocultos ni sorpresas</li>
+    <li><strong>Honestidad</strong> - Recomendaciones genuinas</li>
+    <li><strong>Usuario primero</strong> - Tu beneficio es nuestra prioridad</li>
+  </ul>
+
+  <h3>Divulgación de Afiliados</h3>
+  <p>
+    {siteName} es participante del Programa de Afiliados de Amazon. Como asociados de Amazon, 
+    ganamos comisiones de compras que califican.
+  </p>
+
+  <h3>Contacto</h3>
+  <p>Email: <strong>soporte@rewardhive.store</strong></p>
+</template>
+
+<template id="about-content-en">
+  <p>
+    {siteName} was born from a simple idea: make online shopping more rewarding.
+    We are a team passionate about technology and smart savings.
+  </p>
+
+  <h3>Our Mission</h3>
+  <p>
+    Democratize access to affiliate commissions. Traditionally, these commissions 
+    only benefited content creators. We changed that: we share our earnings 
+    with you, the buyer.
+  </p>
+
+  <blockquote>
+    "We believe every purchase should be an opportunity to save."
+  </blockquote>
+
+  <h3>How It Works</h3>
+  <ol>
+    <li><strong>Explore curated products</strong> - We select the best Amazon products</li>
+    <li><strong>Purchase through our links</strong> - Amazon pays us a commission</li>
+    <li><strong>Receive your cashback</strong> - We share a percentage with you</li>
+    <li><strong>Withdraw anytime</strong> - PayPal or crypto from $15</li>
+  </ol>
+
+  <h3>Tier System</h3>
+  <div class="tier-table">
+    <div class="tier-row tier-header">
+      <span>Tier</span>
+      <span>Purchases</span>
+      <span>Bonus</span>
+    </div>
+    <div class="tier-row">
+      <span>Bronze</span>
+      <span>0-9</span>
+      <span>2% base</span>
+    </div>
+    <div class="tier-row">
+      <span>Silver</span>
+      <span>10-49</span>
+      <span>+5%</span>
+    </div>
+    <div class="tier-row">
+      <span>Gold</span>
+      <span>50+</span>
+      <span>+10%</span>
+    </div>
+  </div>
+
+  <h3>Our Values</h3>
+  <ul>
+    <li><strong>Total transparency</strong> - No hidden costs or surprises</li>
+    <li><strong>Honesty</strong> - Genuine recommendations</li>
+    <li><strong>User first</strong> - Your benefit is our priority</li>
+  </ul>
+
+  <h3>Affiliate Disclosure</h3>
+  <p>
+    {siteName} is a participant in the Amazon Associates Program. As Amazon Associates, 
+    we earn commissions from qualifying purchases.
+  </p>
+
+  <h3>Contact</h3>
+  <p>Email: <strong>support@rewardhive.store</strong></p>
+</template>
+
+<script define:vars={{ lang, t: content[lang] }}>
+class LegalModal {
+  constructor() {
+    this.overlay = document.getElementById('legal-modal-overlay');
+    this.modal = document.getElementById('legal-modal');
+    this.title = document.getElementById('modal-title');
+    this.meta = document.getElementById('modal-meta');
+    this.body = document.getElementById('modal-body');
+    this.closeBtn = document.getElementById('modal-close');
+    
+    this.lang = lang;
+    this.texts = t;
+    this.isOpen = false;
+    
+    this.init();
+  }
+  
+  init() {
+    // Close button
+    this.closeBtn?.addEventListener('click', () => this.close());
+    
+    // Click outside to close
+    this.overlay?.addEventListener('click', (e) => {
+      if (e.target === this.overlay) this.close();
+    });
+    
+    // Escape key to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isOpen) this.close();
+    });
+    
+    // Listen for open events
+    document.addEventListener('legal-modal:open', (e) => {
+      this.open(e.detail.type);
+    });
+  }
+  
+  open(type) {
+    if (!this.overlay || !this.modal) return;
+    
+    const typeInfo = this.texts[type];
+    if (!typeInfo) return;
+    
+    // Set title and meta
+    this.title.textContent = typeInfo.title;
+    this.meta.textContent = `${this.texts.lastUpdated}: ${typeInfo.updated}`;
+    
+    // Load content from template
+    const template = document.getElementById(`${type}-content-${this.lang}`);
+    if (template) {
+      this.body.innerHTML = template.innerHTML;
+    }
+    
+    // Show modal
+    this.overlay.classList.add('open');
+    this.overlay.setAttribute('aria-hidden', 'false');
+    this.isOpen = true;
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Focus close button for accessibility
+    setTimeout(() => this.closeBtn?.focus(), 100);
+  }
+  
+  close() {
+    if (!this.overlay) return;
+    
+    this.overlay.classList.remove('open');
+    this.overlay.setAttribute('aria-hidden', 'true');
+    this.isOpen = false;
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    // Clear content after animation
+    setTimeout(() => {
+      if (!this.isOpen) {
+        this.body.innerHTML = '';
+      }
+    }, 300);
+  }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  new LegalModal();
+});
+
+// Re-initialize on page navigation (Astro)
+document.addEventListener('astro:page-load', () => {
+  new LegalModal();
+});
+</script>
+
+<style is:global>
+  /* Modal Overlay */
+  .legal-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    visibility: hidden;
+    transition: background 0.3s ease, visibility 0.3s ease;
+  }
+  
+  .legal-modal-overlay.open {
+    visibility: visible;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  
+  /* Modal Container */
+  .legal-modal {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90dvh;
+    background: var(--bg, #fff);
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .legal-modal-overlay.open .legal-modal {
+    transform: translateY(0);
+  }
+  
+  /* Modal Header */
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    flex-shrink: 0;
+  }
+  
+  .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: var(--border, #e5e7eb);
+    border-radius: 2px;
+  }
+  
+  .modal-header-content {
+    flex: 1;
+    padding-top: 8px;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text, #111827);
+    margin: 0 0 4px;
+    line-height: 1.3;
+  }
+  
+  .modal-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted, #9ca3af);
+    margin: 0;
+  }
+  
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary, #f9fafb);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 4px;
+    transition: all 0.15s ease;
+  }
+  
+  .modal-close:hover {
+    background: var(--bg-tertiary, #f3f4f6);
+    color: var(--text, #111827);
+  }
+  
+  .modal-close svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Modal Body */
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Content Styles */
+  .modal-body p {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--text, #111827);
+    margin: 0 0 16px;
+  }
+  
+  .modal-body h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text, #111827);
+    margin: 28px 0 12px;
+  }
+  
+  .modal-body h3:first-child {
+    margin-top: 0;
+  }
+  
+  .modal-body h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text, #111827);
+    margin: 20px 0 10px;
+  }
+  
+  .modal-body ul,
+  .modal-body ol {
+    margin: 0 0 16px;
+    padding-left: 20px;
+  }
+  
+  .modal-body li {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text, #111827);
+    margin-bottom: 8px;
+  }
+  
+  .modal-body strong {
+    font-weight: 600;
+    color: var(--text, #111827);
+  }
+  
+  .modal-body blockquote {
+    margin: 20px 0;
+    padding: 16px 20px;
+    background: var(--bg-secondary, #f9fafb);
+    border-left: 3px solid var(--accent, #f59e0b);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: var(--text-secondary, #6b7280);
+  }
+  
+  .modal-body blockquote p {
+    margin: 0;
+  }
+  
+  /* Tier Table */
+  .tier-table {
+    margin: 16px 0 20px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .tier-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+  }
+  
+  .tier-row:last-child {
+    border-bottom: none;
+  }
+  
+  .tier-row.tier-header {
+    background: var(--bg-secondary, #f9fafb);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary, #6b7280);
+  }
+  
+  /* Desktop */
+  @media (min-width: 640px) {
+    .legal-modal {
+      max-height: 85dvh;
+      border-radius: 20px;
+      margin: auto;
+    }
+    
+    .legal-modal-overlay {
+      align-items: center;
+      padding: 24px;
+    }
+    
+    .legal-modal-overlay.open .legal-modal {
+      transform: translateY(0);
+    }
+    
+    .legal-modal {
+      transform: translateY(20px) scale(0.98);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .legal-modal-overlay.open .legal-modal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    
+    .modal-header::before {
+      display: none;
+    }
+    
+    .modal-header {
+      padding: 24px 24px 20px;
+    }
+    
+    .modal-header-content {
+      padding-top: 0;
+    }
+    
+    .modal-body {
+      padding: 24px;
+    }
+    
+    .modal-title {
+      font-size: 1.375rem;
+    }
+  }
+</style>

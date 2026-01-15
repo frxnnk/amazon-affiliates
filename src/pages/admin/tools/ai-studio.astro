@@ -1,0 +1,859 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getCollection } from 'astro:content';
+
+// Get all products for the selector
+const allProducts = await getCollection('products');
+const products = allProducts
+  .filter(p => p.data.status === 'published' || p.data.status === 'draft')
+  .map(p => ({
+    productId: p.data.productId,
+    title: p.data.title,
+    brand: p.data.brand,
+    category: p.data.category,
+    lang: p.data.lang,
+    imageUrl: p.data.featuredImage?.url,
+    has3dModel: !!p.data.model3dUrl,
+    shortDescription: p.data.shortDescription,
+  }));
+---
+
+<AdminLayout title="AI Studio">
+  <style>
+    .ai-studio {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* Header */
+    .studio-header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .studio-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .studio-title svg {
+      width: 28px;
+      height: 28px;
+      color: var(--accent);
+    }
+
+    .studio-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Product Selector */
+    .selector-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .selector-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .product-select {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.9375rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 40px;
+    }
+
+    .product-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+    }
+
+    /* Tools Grid */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+
+    @media (min-width: 768px) {
+      .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Tool Card */
+    .tool-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .tool-card.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .tool-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tool-icon.purple {
+      background: rgba(139, 92, 246, 0.15);
+      color: #8b5cf6;
+    }
+
+    .tool-icon.blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .tool-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .tool-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tool-desc {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Preview Area */
+    .preview-area {
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-area img {
+      max-width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+    }
+
+    .preview-placeholder {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      text-align: center;
+      padding: var(--space-md);
+    }
+
+    .preview-placeholder svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: var(--space-sm);
+      opacity: 0.3;
+    }
+
+    /* 3D Viewer */
+    .model-viewer-container {
+      width: 100%;
+      height: 200px;
+    }
+
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-badge.ready {
+      background: var(--success-muted);
+      color: var(--success);
+    }
+
+    .status-badge.pending {
+      background: var(--warning-muted);
+      color: var(--warning);
+    }
+
+    .status-badge.processing {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .status-badge.error {
+      background: var(--error-muted);
+      color: var(--error);
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-base);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #f59e0b);
+      border-radius: 3px;
+      transition: width 0.3s ease-out;
+    }
+
+    /* Generate Button */
+    .btn-generate {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      border: none;
+      width: 100%;
+    }
+
+    .btn-generate.primary {
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      color: white;
+    }
+
+    .btn-generate.primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-generate.secondary {
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+      color: white;
+    }
+
+    .btn-generate.secondary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-generate svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Generated Content */
+    .generated-content {
+      display: none;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .generated-content.visible {
+      display: flex;
+    }
+
+    .content-field {
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+    }
+
+    .content-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .content-value {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .content-value.title {
+      font-weight: 600;
+    }
+
+    .pros-cons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+
+    .pros-list, .cons-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.8125rem;
+    }
+
+    .pros-list li::before {
+      content: '✓ ';
+      color: var(--success);
+    }
+
+    .cons-list li::before {
+      content: '✗ ';
+      color: var(--error);
+    }
+
+    /* Apply Button */
+    .btn-apply {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .btn-apply:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    }
+
+    /* Animations */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .animate-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+  </style>
+
+  <div class="ai-studio">
+    <!-- Header -->
+    <div class="studio-header">
+      <h1 class="studio-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        AI Studio
+      </h1>
+      <p class="studio-subtitle">Genera modelos 3D y contenido con inteligencia artificial</p>
+    </div>
+
+    <!-- Product Selector -->
+    <div class="selector-card">
+      <div class="selector-label">Selecciona un producto</div>
+      <select id="productSelect" class="product-select">
+        <option value="">-- Elige un producto --</option>
+        {products.map((p) => (
+          <option 
+            value={p.productId}
+            data-title={p.title}
+            data-brand={p.brand}
+            data-category={p.category}
+            data-lang={p.lang}
+            data-image={p.imageUrl || ''}
+            data-has3d={p.has3dModel ? 'true' : 'false'}
+            data-description={p.shortDescription || ''}
+          >
+            {p.title} ({p.brand}) {p.has3dModel ? '✓ 3D' : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <!-- Tools Grid -->
+    <div class="tools-grid">
+      <!-- 3D Generator -->
+      <div class="tool-card disabled" id="tool3d">
+        <div class="tool-header">
+          <div class="tool-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="tool-title">Generar Modelo 3D</h3>
+          </div>
+        </div>
+
+        <p class="tool-desc">Convierte la imagen del producto en un modelo 3D interactivo usando Tripo3D.</p>
+
+        <div class="preview-area" id="preview3d">
+          <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <div>Selecciona un producto para ver la vista previa</div>
+          </div>
+        </div>
+
+        <div id="status3d" style="display: none;">
+          <span class="status-badge pending" id="statusBadge3d">Pendiente</span>
+          <div class="progress-container" id="progressContainer3d" style="display: none; margin-top: 8px;">
+            <div class="progress-bar" id="progressBar3d" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-generate primary" id="btn3d" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          Generar 3D
+        </button>
+      </div>
+
+      <!-- Content Generator -->
+      <div class="tool-card disabled" id="toolContent">
+        <div class="tool-header">
+          <div class="tool-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10,9 9,9 8,9"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="tool-title">Generar Contenido</h3>
+          </div>
+        </div>
+
+        <p class="tool-desc">Genera titulo, descripcion y pros/cons usando GPT-4o-mini.</p>
+
+        <div class="generated-content" id="generatedContent">
+          <div class="content-field">
+            <div class="content-label">Titulo</div>
+            <div class="content-value title" id="genTitle">-</div>
+          </div>
+          <div class="content-field">
+            <div class="content-label">Descripcion Corta</div>
+            <div class="content-value" id="genShortDesc">-</div>
+          </div>
+          <div class="content-field">
+            <div class="content-label">Pros y Contras</div>
+            <div class="pros-cons">
+              <ul class="pros-list" id="genPros"></ul>
+              <ul class="cons-list" id="genCons"></ul>
+            </div>
+          </div>
+          <button type="button" class="btn-apply" id="btnApplyContent">
+            Aplicar al producto
+          </button>
+        </div>
+
+        <div id="statusContent" style="display: none;">
+          <span class="status-badge pending" id="statusBadgeContent">Pendiente</span>
+        </div>
+
+        <button type="button" class="btn-generate secondary" id="btnContent" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+          </svg>
+          Generar Contenido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load model-viewer for 3D preview -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
+  <script>
+    const productSelect = document.getElementById('productSelect') as HTMLSelectElement;
+    const tool3d = document.getElementById('tool3d')!;
+    const toolContent = document.getElementById('toolContent')!;
+    const preview3d = document.getElementById('preview3d')!;
+    const btn3d = document.getElementById('btn3d') as HTMLButtonElement;
+    const btnContent = document.getElementById('btnContent') as HTMLButtonElement;
+    const status3d = document.getElementById('status3d')!;
+    const statusBadge3d = document.getElementById('statusBadge3d')!;
+    const progressContainer3d = document.getElementById('progressContainer3d')!;
+    const progressBar3d = document.getElementById('progressBar3d')!;
+    const statusContent = document.getElementById('statusContent')!;
+    const statusBadgeContent = document.getElementById('statusBadgeContent')!;
+    const generatedContent = document.getElementById('generatedContent')!;
+
+    let selectedProduct: {
+      productId: string;
+      title: string;
+      brand: string;
+      category: string;
+      lang: string;
+      imageUrl: string;
+      has3d: boolean;
+      description: string;
+    } | null = null;
+
+    let generatedContentData: any = null;
+
+    // Product selection handler
+    productSelect.addEventListener('change', () => {
+      const option = productSelect.selectedOptions[0];
+      
+      if (!option || !option.value) {
+        selectedProduct = null;
+        tool3d.classList.add('disabled');
+        toolContent.classList.add('disabled');
+        btn3d.disabled = true;
+        btnContent.disabled = true;
+        preview3d.innerHTML = `
+          <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <div>Selecciona un producto para ver la vista previa</div>
+          </div>
+        `;
+        return;
+      }
+
+      selectedProduct = {
+        productId: option.value,
+        title: option.dataset.title || '',
+        brand: option.dataset.brand || '',
+        category: option.dataset.category || '',
+        lang: option.dataset.lang || 'es',
+        imageUrl: option.dataset.image || '',
+        has3d: option.dataset.has3d === 'true',
+        description: option.dataset.description || '',
+      };
+
+      // Enable tools
+      tool3d.classList.remove('disabled');
+      toolContent.classList.remove('disabled');
+      btn3d.disabled = false;
+      btnContent.disabled = false;
+
+      // Update 3D preview
+      if (selectedProduct.has3d) {
+        preview3d.innerHTML = `
+          <div class="model-viewer-container">
+            <model-viewer
+              src="/models/${selectedProduct.productId}.glb"
+              alt="${selectedProduct.title}"
+              auto-rotate
+              camera-controls
+              shadow-intensity="1"
+              style="width: 100%; height: 100%;"
+            ></model-viewer>
+          </div>
+        `;
+        status3d.style.display = 'block';
+        statusBadge3d.className = 'status-badge ready';
+        statusBadge3d.textContent = '✓ Modelo 3D disponible';
+      } else if (selectedProduct.imageUrl) {
+        preview3d.innerHTML = `<img src="${selectedProduct.imageUrl}" alt="${selectedProduct.title}" />`;
+        status3d.style.display = 'block';
+        statusBadge3d.className = 'status-badge pending';
+        statusBadge3d.textContent = 'Sin modelo 3D';
+      } else {
+        preview3d.innerHTML = `
+          <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+            <div>Sin imagen disponible</div>
+          </div>
+        `;
+        btn3d.disabled = true;
+      }
+
+      // Reset content generator
+      generatedContent.classList.remove('visible');
+      statusContent.style.display = 'none';
+    });
+
+    // Generate 3D button
+    btn3d.addEventListener('click', async () => {
+      if (!selectedProduct || !selectedProduct.imageUrl) return;
+
+      btn3d.disabled = true;
+      btn3d.innerHTML = `
+        <svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Generando...
+      `;
+
+      status3d.style.display = 'block';
+      statusBadge3d.className = 'status-badge processing';
+      statusBadge3d.textContent = 'Iniciando...';
+      progressContainer3d.style.display = 'block';
+      progressBar3d.style.width = '0%';
+
+      try {
+        // Start the task
+        const startResponse = await fetch('/api/admin/generate-3d', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: selectedProduct.productId,
+            imageUrl: selectedProduct.imageUrl,
+            waitForCompletion: false,
+          }),
+        });
+
+        const startResult = await startResponse.json();
+
+        if (!startResult.success || !startResult.taskId) {
+          throw new Error(startResult.error || 'Failed to start task');
+        }
+
+        const taskId = startResult.taskId;
+        statusBadge3d.textContent = 'Procesando en Tripo3D...';
+
+        // Poll for status
+        let attempts = 0;
+        const maxAttempts = 60; // 3 minutes max
+
+        const pollStatus = async () => {
+          if (attempts >= maxAttempts) {
+            throw new Error('Timeout: Task took too long');
+          }
+
+          const statusResponse = await fetch(
+            `/api/admin/generate-3d?taskId=${taskId}&productId=${selectedProduct!.productId}`
+          );
+          const statusResult = await statusResponse.json();
+
+          progressBar3d.style.width = `${statusResult.progress}%`;
+
+          if (statusResult.status === 'success') {
+            statusBadge3d.className = 'status-badge ready';
+            statusBadge3d.textContent = '✓ Modelo generado';
+            progressBar3d.style.width = '100%';
+
+            // Show the model
+            const modelUrl = statusResult.localModelUrl || `/models/${selectedProduct!.productId}.glb`;
+            preview3d.innerHTML = `
+              <div class="model-viewer-container">
+                <model-viewer
+                  src="${modelUrl}"
+                  alt="${selectedProduct!.title}"
+                  auto-rotate
+                  camera-controls
+                  shadow-intensity="1"
+                  style="width: 100%; height: 100%;"
+                ></model-viewer>
+              </div>
+            `;
+
+            btn3d.disabled = false;
+            btn3d.innerHTML = `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+              Regenerar 3D
+            `;
+            return;
+          }
+
+          if (statusResult.status === 'failed' || statusResult.status === 'cancelled') {
+            throw new Error(statusResult.error || 'Task failed');
+          }
+
+          // Still processing, poll again
+          attempts++;
+          setTimeout(pollStatus, 3000);
+        };
+
+        await pollStatus();
+
+      } catch (error) {
+        statusBadge3d.className = 'status-badge error';
+        statusBadge3d.textContent = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        progressContainer3d.style.display = 'none';
+
+        btn3d.disabled = false;
+        btn3d.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          Reintentar
+        `;
+      }
+    });
+
+    // Generate Content button
+    btnContent.addEventListener('click', async () => {
+      if (!selectedProduct) return;
+
+      btnContent.disabled = true;
+      btnContent.innerHTML = `
+        <svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Generando...
+      `;
+
+      statusContent.style.display = 'block';
+      statusBadgeContent.className = 'status-badge processing';
+      statusBadgeContent.textContent = 'Consultando GPT...';
+
+      try {
+        const response = await fetch('/api/admin/generate-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: selectedProduct.productId,
+            title: selectedProduct.title,
+            brand: selectedProduct.brand,
+            category: selectedProduct.category,
+            imageUrl: selectedProduct.imageUrl,
+            currentDescription: selectedProduct.description,
+            lang: selectedProduct.lang as 'es' | 'en',
+            type: 'full',
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to generate content');
+        }
+
+        generatedContentData = result.content;
+
+        // Display generated content
+        document.getElementById('genTitle')!.textContent = result.content.title;
+        document.getElementById('genShortDesc')!.textContent = result.content.shortDescription;
+        
+        const prosEl = document.getElementById('genPros')!;
+        prosEl.innerHTML = result.content.pros.map((p: string) => `<li>${p}</li>`).join('');
+        
+        const consEl = document.getElementById('genCons')!;
+        consEl.innerHTML = result.content.cons.map((c: string) => `<li>${c}</li>`).join('');
+
+        generatedContent.classList.add('visible');
+        statusBadgeContent.className = 'status-badge ready';
+        statusBadgeContent.textContent = `✓ Generado (${result.tokensUsed || '?'} tokens)`;
+
+      } catch (error) {
+        statusBadgeContent.className = 'status-badge error';
+        statusBadgeContent.textContent = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      } finally {
+        btnContent.disabled = false;
+        btnContent.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+          </svg>
+          Regenerar
+        `;
+      }
+    });
+
+    // Apply content button
+    document.getElementById('btnApplyContent')?.addEventListener('click', async () => {
+      if (!selectedProduct || !generatedContentData) return;
+
+      const btn = document.getElementById('btnApplyContent') as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = 'Aplicando...';
+
+      try {
+        const response = await fetch(`/api/admin/products/${selectedProduct.productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: generatedContentData.title,
+            shortDescription: generatedContentData.shortDescription,
+            description: generatedContentData.description,
+            pros: generatedContentData.pros,
+            cons: generatedContentData.cons,
+          }),
+        });
+
+        if (response.ok) {
+          btn.textContent = '✓ Aplicado';
+          btn.style.background = 'var(--success)';
+        } else {
+          throw new Error('Failed to update product');
+        }
+      } catch (error) {
+        btn.textContent = 'Error al aplicar';
+        btn.style.background = 'var(--error)';
+      }
+    });
+  </script>
+</AdminLayout>

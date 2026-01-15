@@ -1,11 +1,13 @@
 import type { APIRoute } from 'astro';
-import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
+import { unauthorizedResponse } from '@lib/auth';
 import { getProductByAsin, type PAAPIProductData } from '@lib/amazon-paapi';
 import { parseAmazonUrl, isValidAsin } from '@utils/amazon';
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Check authentication
-  const userId = locals.auth?.userId;
+  // Check authentication using Clerk
+  const auth = locals.auth?.();
+  const userId = auth?.userId;
+
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -13,9 +15,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  // Check admin role
-  const isAdmin = await isUserAdmin(userId, { locals });
-  if (!isAdmin) {
+  // Check admin role from Clerk metadata
+  const userRole = (auth?.sessionClaims?.metadata as { role?: string })?.role;
+  if (userRole !== 'admin') {
     return unauthorizedResponse('Admin access required');
   }
 

@@ -1,0 +1,494 @@
+---
+/**
+ * HeroVideo - Featured product with YouTube video
+ * 
+ * Displays a hero section with an embedded YouTube video (or image fallback)
+ * and product information overlay.
+ */
+
+import { type Lang } from '@i18n/utils';
+
+interface Props {
+  product?: {
+    productId: string;
+    asin: string;
+    title: string;
+    brand: string;
+    price: number;
+    originalPrice?: number;
+    currency: string;
+    featuredImage: { url: string; alt: string };
+    affiliateUrl: string;
+    discountPercent?: number;
+    youtubeVideo?: {
+      videoId: string;
+      title: string;
+      embedUrl: string;
+      thumbnail: string;
+    } | null;
+  } | null;
+  lang: Lang;
+}
+
+const { product, lang } = Astro.props;
+
+const texts = {
+  es: {
+    featuredDeal: 'Oferta Destacada',
+    viewDeal: 'Ver Oferta',
+    loading: 'Cargando...',
+    noDeals: 'Descubre ofertas increíbles',
+    explore: 'Explorar',
+  },
+  en: {
+    featuredDeal: 'Featured Deal',
+    viewDeal: 'View Deal',
+    loading: 'Loading...',
+    noDeals: 'Discover amazing deals',
+    explore: 'Explore',
+  },
+};
+
+const t = texts[lang];
+
+// Format price
+const formattedPrice = product?.price
+  ? new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+      style: 'currency',
+      currency: product.currency || 'EUR',
+    }).format(product.price)
+  : '';
+
+const formattedOldPrice = product?.originalPrice
+  ? new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+      style: 'currency',
+      currency: product.currency || 'EUR',
+    }).format(product.originalPrice)
+  : '';
+---
+
+<section class="hero-video" id="hero-video">
+  {product ? (
+    <div class="hero-content">
+      <!-- Video or Image Background -->
+      <div class="hero-media">
+        {product.youtubeVideo ? (
+          <iframe
+            src={product.youtubeVideo.embedUrl}
+            title={product.youtubeVideo.title}
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            loading="eager"
+            class="hero-video-frame"
+            id="hero-iframe"
+            data-video-id={product.youtubeVideo.videoId}
+          ></iframe>
+        ) : (
+          <div class="hero-image">
+            <img src={product.featuredImage.url} alt={product.featuredImage.alt} loading="eager" />
+          </div>
+        )}
+        
+        <!-- Gradient Overlay -->
+        <div class="hero-overlay"></div>
+      </div>
+      
+      <!-- Product Info -->
+      <div class="hero-info">
+        <span class="hero-badge">{t.featuredDeal}</span>
+        
+        {product.discountPercent && product.discountPercent > 0 && (
+          <span class="hero-discount">-{product.discountPercent}%</span>
+        )}
+        
+        <span class="hero-brand">{product.brand}</span>
+        <h2 class="hero-title">{product.title}</h2>
+        
+        <div class="hero-pricing">
+          <span class="hero-price">{formattedPrice}</span>
+          {formattedOldPrice && (
+            <span class="hero-old-price">{formattedOldPrice}</span>
+          )}
+        </div>
+        
+        <a 
+          href={product.affiliateUrl} 
+          target="_blank" 
+          rel="noopener noreferrer nofollow" 
+          class="hero-cta"
+        >
+          {t.viewDeal}
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+          </svg>
+        </a>
+      </div>
+      
+      <!-- Mute button for video -->
+      {product.youtubeVideo && (
+        <button class="hero-mute-btn" id="hero-mute-btn" data-muted="true" title="Tap to unmute">
+          <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+          <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+            <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/>
+            <path d="M15.54 8.46a5 5 0 010 7.07"/>
+            <path d="M19.07 4.93a10 10 0 010 14.14"/>
+          </svg>
+          <span class="mute-label">{lang === 'es' ? 'Tocar para audio' : 'Tap for audio'}</span>
+        </button>
+      )}
+    </div>
+  ) : (
+    <!-- Skeleton/Empty State -->
+    <div class="hero-skeleton">
+      <div class="skeleton-content">
+        <div class="skeleton-badge"></div>
+        <div class="skeleton-title"></div>
+        <div class="skeleton-price"></div>
+        <div class="skeleton-cta"></div>
+      </div>
+    </div>
+  )}
+</section>
+
+<script>
+  // Mute/unmute functionality
+  const muteBtn = document.getElementById('hero-mute-btn');
+  const iframe = document.getElementById('hero-iframe') as HTMLIFrameElement;
+  
+  if (muteBtn && iframe) {
+    muteBtn.addEventListener('click', () => {
+      const isMuted = muteBtn.dataset.muted === 'true';
+      const videoId = iframe.dataset.videoId;
+      
+      if (!videoId) return;
+      
+      const muteParam = isMuted ? '' : '&mute=1';
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}`;
+      
+      muteBtn.dataset.muted = isMuted ? 'false' : 'true';
+      
+      const iconMuted = muteBtn.querySelector('.icon-muted') as HTMLElement;
+      const iconUnmuted = muteBtn.querySelector('.icon-unmuted') as HTMLElement;
+      const muteLabel = muteBtn.querySelector('.mute-label') as HTMLElement;
+      
+      if (iconMuted) iconMuted.style.display = isMuted ? 'none' : 'block';
+      if (iconUnmuted) iconUnmuted.style.display = isMuted ? 'block' : 'none';
+      if (muteLabel) muteLabel.style.display = isMuted ? 'none' : 'inline';
+      
+      muteBtn.classList.toggle('active', !isMuted);
+    });
+  }
+  
+  // Pause video when out of view
+  const heroSection = document.getElementById('hero-video');
+  if (heroSection && iframe) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const videoId = iframe.dataset.videoId;
+        if (!videoId) return;
+        
+        if (entry.isIntersecting) {
+          // Resume video
+          const isMuted = muteBtn?.dataset.muted === 'true';
+          const muteParam = isMuted ? '&mute=1' : '';
+          iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}`;
+        } else {
+          // Pause by loading without autoplay
+          iframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`;
+        }
+      });
+    }, { threshold: 0.3 });
+    
+    observer.observe(heroSection);
+  }
+</script>
+
+<style>
+  .hero-video {
+    position: relative;
+    width: 100%;
+    height: 45vh;
+    min-height: 320px;
+    max-height: 480px;
+    overflow: hidden;
+    background: #1a1a1a;
+  }
+  
+  .hero-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .hero-media {
+    position: absolute;
+    inset: 0;
+  }
+  
+  .hero-video-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 177.78vh; /* 16:9 aspect ratio */
+    height: 100%;
+    min-width: 100%;
+    min-height: 56.25vw;
+    border: none;
+    pointer-events: none;
+  }
+  
+  .hero-image {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .hero-image img {
+    max-width: 60%;
+    max-height: 70%;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+  }
+  
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.9) 0%,
+      rgba(0, 0, 0, 0.5) 40%,
+      rgba(0, 0, 0, 0.2) 70%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  
+  .hero-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 20px;
+    z-index: 10;
+  }
+  
+  .hero-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #f59e0b;
+    color: #000;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  
+  .hero-discount {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 6px 12px;
+    background: #10b981;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+  
+  .hero-brand {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
+  }
+  
+  .hero-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.3;
+    margin: 0 0 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .hero-pricing {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  
+  .hero-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  
+  .hero-old-price {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: line-through;
+  }
+  
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: #f59e0b;
+    color: #000;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+  }
+  
+  .hero-cta:hover {
+    background: #fbbf24;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+  }
+  
+  .hero-mute-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 24px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .hero-mute-btn:hover {
+    background: rgba(0, 0, 0, 0.85);
+    transform: scale(1.02);
+  }
+  
+  .hero-mute-btn.active {
+    background: rgba(16, 185, 129, 0.9);
+    padding: 10px;
+    border-radius: 50%;
+  }
+  
+  .hero-mute-btn svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  
+  .hero-mute-btn .mute-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  /* Skeleton */
+  .hero-skeleton {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    display: flex;
+    align-items: flex-end;
+  }
+  
+  .skeleton-content {
+    padding: 24px 20px;
+    width: 100%;
+  }
+  
+  .skeleton-badge {
+    width: 100px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .skeleton-title {
+    width: 80%;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .skeleton-price {
+    width: 120px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .skeleton-cta {
+    width: 160px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  /* Responsive */
+  @media (min-width: 640px) {
+    .hero-video {
+      height: 50vh;
+      max-height: 560px;
+    }
+    
+    .hero-info {
+      padding: 32px;
+      max-width: 500px;
+    }
+    
+    .hero-title {
+      font-size: 1.5rem;
+    }
+    
+    .hero-price {
+      font-size: 1.75rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .hero-video {
+      height: 55vh;
+    }
+    
+    .hero-info {
+      padding: 48px;
+    }
+  }
+</style>

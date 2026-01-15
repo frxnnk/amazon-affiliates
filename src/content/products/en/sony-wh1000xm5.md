@@ -16,7 +16,7 @@ tags: ["headphones", "bluetooth", "noise-cancelling", "sony", "premium"]
 price: 349.00
 originalPrice: 419.00
 currency: "USD"
-affiliateUrl: "https://www.amazon.com/dp/B09XS7JWHH"
+affiliateUrl: "https://www.amazon.com/dp/B09XS7JWHH?tag=bestdeal0ee40-20"
 
 rating: 4.7
 totalReviews: 12453

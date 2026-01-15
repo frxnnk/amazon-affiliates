@@ -1,0 +1,796 @@
+---
+export const prerender = false;
+
+import { type Lang } from '@i18n/utils';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'es' } },
+    { params: { lang: 'en' } }
+  ];
+}
+
+const { lang } = Astro.params as { lang: Lang };
+
+// Validate lang
+const validLangs = ['es', 'en'];
+if (!validLangs.includes(lang)) {
+  return Astro.redirect('/es/onboarding');
+}
+
+const content = {
+  es: {
+    title: 'Personaliza tu experiencia',
+    subtitle: 'Cuéntanos qué te interesa para mostrarte las mejores ofertas',
+    skip: 'Saltar por ahora',
+    next: 'Siguiente',
+    back: 'Atrás',
+    finish: 'Empezar a explorar',
+    steps: {
+      budget: {
+        title: '¿Cuál es tu rango de presupuesto?',
+        subtitle: 'Esto nos ayuda a mostrarte productos en tu rango de precio',
+        options: {
+          low: { label: 'Económico', desc: 'Menos de 50€', icon: '💰' },
+          mid: { label: 'Medio', desc: '50€ - 200€', icon: '💵' },
+          high: { label: 'Alto', desc: '200€ - 500€', icon: '💎' },
+          premium: { label: 'Premium', desc: 'Más de 500€', icon: '👑' },
+        },
+      },
+      categories: {
+        title: '¿Qué categorías te interesan?',
+        subtitle: 'Selecciona todas las que apliquen',
+        options: {
+          electronics: { label: 'Electrónica', icon: '📱' },
+          audio: { label: 'Audio', icon: '🎧' },
+          gaming: { label: 'Gaming', icon: '🎮' },
+          home: { label: 'Hogar', icon: '🏠' },
+          computers: { label: 'Computación', icon: '💻' },
+          wearables: { label: 'Wearables', icon: '⌚' },
+          kitchen: { label: 'Cocina', icon: '🍳' },
+          sports: { label: 'Deportes', icon: '⚽' },
+          beauty: { label: 'Belleza', icon: '💄' },
+          fashion: { label: 'Moda', icon: '👗' },
+        },
+      },
+      brands: {
+        title: '¿Tienes marcas favoritas?',
+        subtitle: 'Escribe o selecciona tus marcas preferidas',
+        placeholder: 'Escribe una marca y presiona Enter',
+        suggestions: ['Apple', 'Samsung', 'Sony', 'Bose', 'Amazon', 'Logitech', 'Nintendo', 'JBL', 'Anker', 'Xiaomi'],
+      },
+      deals: {
+        title: '¿Qué tan importante son las ofertas?',
+        subtitle: 'Esto ajusta cómo priorizamos los productos',
+        options: {
+          low: { label: 'Calidad primero', desc: 'Prefiero los mejores productos, aunque no estén en oferta' },
+          medium: { label: 'Equilibrado', desc: 'Me gustan las ofertas pero también la calidad' },
+          high: { label: 'Cazador de ofertas', desc: 'Solo me interesan productos con buen descuento' },
+        },
+      },
+    },
+  },
+  en: {
+    title: 'Personalize your experience',
+    subtitle: 'Tell us what you like so we can show you the best deals',
+    skip: 'Skip for now',
+    next: 'Next',
+    back: 'Back',
+    finish: 'Start exploring',
+    steps: {
+      budget: {
+        title: 'What is your budget range?',
+        subtitle: 'This helps us show products in your price range',
+        options: {
+          low: { label: 'Budget', desc: 'Under $50', icon: '💰' },
+          mid: { label: 'Mid-range', desc: '$50 - $200', icon: '💵' },
+          high: { label: 'High-end', desc: '$200 - $500', icon: '💎' },
+          premium: { label: 'Premium', desc: 'Over $500', icon: '👑' },
+        },
+      },
+      categories: {
+        title: 'What categories interest you?',
+        subtitle: 'Select all that apply',
+        options: {
+          electronics: { label: 'Electronics', icon: '📱' },
+          audio: { label: 'Audio', icon: '🎧' },
+          gaming: { label: 'Gaming', icon: '🎮' },
+          home: { label: 'Home', icon: '🏠' },
+          computers: { label: 'Computers', icon: '💻' },
+          wearables: { label: 'Wearables', icon: '⌚' },
+          kitchen: { label: 'Kitchen', icon: '🍳' },
+          sports: { label: 'Sports', icon: '⚽' },
+          beauty: { label: 'Beauty', icon: '💄' },
+          fashion: { label: 'Fashion', icon: '👗' },
+        },
+      },
+      brands: {
+        title: 'Do you have favorite brands?',
+        subtitle: 'Type or select your preferred brands',
+        placeholder: 'Type a brand and press Enter',
+        suggestions: ['Apple', 'Samsung', 'Sony', 'Bose', 'Amazon', 'Logitech', 'Nintendo', 'JBL', 'Anker', 'Xiaomi'],
+      },
+      deals: {
+        title: 'How important are deals to you?',
+        subtitle: 'This adjusts how we prioritize products',
+        options: {
+          low: { label: 'Quality first', desc: 'I prefer the best products, even without discounts' },
+          medium: { label: 'Balanced', desc: 'I like deals but also care about quality' },
+          high: { label: 'Deal hunter', desc: 'Only interested in products with good discounts' },
+        },
+      },
+    },
+  },
+};
+
+const t = content[lang];
+---
+
+<!DOCTYPE html>
+<html lang={lang}>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{t.title}</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="quiz-container" id="quiz">
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="quiz-header">
+      <a href={`/${lang}`} class="skip-btn" id="skip-btn">{t.skip}</a>
+    </header>
+
+    <!-- Steps Container -->
+    <div class="steps-wrapper" id="steps-wrapper">
+      
+      <!-- Step 1: Budget -->
+      <section class="step" data-step="1">
+        <div class="step-content">
+          <h1>{t.steps.budget.title}</h1>
+          <p class="subtitle">{t.steps.budget.subtitle}</p>
+          
+          <div class="options-grid budget-options">
+            {Object.entries(t.steps.budget.options).map(([key, opt]) => (
+              <button class="option-card" data-value={key} data-field="budgetRange">
+                <span class="option-icon">{opt.icon}</span>
+                <span class="option-label">{opt.label}</span>
+                <span class="option-desc">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Categories -->
+      <section class="step" data-step="2">
+        <div class="step-content">
+          <h1>{t.steps.categories.title}</h1>
+          <p class="subtitle">{t.steps.categories.subtitle}</p>
+          
+          <div class="options-grid categories-options multi-select">
+            {Object.entries(t.steps.categories.options).map(([key, opt]) => (
+              <button class="option-card" data-value={key} data-field="categories">
+                <span class="option-icon">{opt.icon}</span>
+                <span class="option-label">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Brands -->
+      <section class="step" data-step="3">
+        <div class="step-content">
+          <h1>{t.steps.brands.title}</h1>
+          <p class="subtitle">{t.steps.brands.subtitle}</p>
+          
+          <div class="brands-input">
+            <div class="tags-container" id="brands-tags"></div>
+            <input type="text" 
+                   id="brand-input" 
+                   placeholder={t.steps.brands.placeholder}
+                   autocomplete="off" />
+          </div>
+          
+          <div class="brand-suggestions">
+            {t.steps.brands.suggestions.map(brand => (
+              <button class="suggestion-chip" data-brand={brand}>{brand}</button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: Deal Sensitivity -->
+      <section class="step" data-step="4">
+        <div class="step-content">
+          <h1>{t.steps.deals.title}</h1>
+          <p class="subtitle">{t.steps.deals.subtitle}</p>
+          
+          <div class="options-list">
+            {Object.entries(t.steps.deals.options).map(([key, opt]) => (
+              <button class="option-row" data-value={key} data-field="dealSensitivity">
+                <span class="option-label">{opt.label}</span>
+                <span class="option-desc">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Navigation -->
+    <nav class="quiz-nav">
+      <button class="nav-btn back-btn" id="back-btn" disabled>{t.back}</button>
+      <button class="nav-btn next-btn" id="next-btn">{t.next}</button>
+    </nav>
+  </div>
+
+  <script define:vars={{ lang, finishText: t.finish }}>
+    class OnboardingQuiz {
+      constructor() {
+        this.currentStep = 1;
+        this.totalSteps = 4;
+        this.data = {
+          budgetRange: null,
+          categories: [],
+          brands: [],
+          dealSensitivity: 'medium',
+          quizCompleted: true,
+        };
+        
+        this.progressFill = document.getElementById('progress-fill');
+        this.stepsWrapper = document.getElementById('steps-wrapper');
+        this.backBtn = document.getElementById('back-btn');
+        this.nextBtn = document.getElementById('next-btn');
+        this.skipBtn = document.getElementById('skip-btn');
+        this.brandInput = document.getElementById('brand-input');
+        this.brandsTags = document.getElementById('brands-tags');
+        
+        this.init();
+      }
+      
+      init() {
+        this.updateProgress();
+        this.updateNavigation();
+        this.bindEvents();
+        this.showStep(1);
+      }
+      
+      bindEvents() {
+        // Back button
+        this.backBtn?.addEventListener('click', () => this.prevStep());
+        
+        // Next button
+        this.nextBtn?.addEventListener('click', () => this.nextStep());
+        
+        // Option cards (single select)
+        document.querySelectorAll('.option-card:not(.multi-select .option-card)').forEach(card => {
+          card.addEventListener('click', () => this.selectOption(card));
+        });
+        
+        // Option cards (multi select - categories)
+        document.querySelectorAll('.multi-select .option-card').forEach(card => {
+          card.addEventListener('click', () => this.toggleCategory(card));
+        });
+        
+        // Option rows (deal sensitivity)
+        document.querySelectorAll('.option-row').forEach(row => {
+          row.addEventListener('click', () => this.selectOption(row));
+        });
+        
+        // Brand input
+        this.brandInput?.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.addBrand(this.brandInput.value.trim());
+            this.brandInput.value = '';
+          }
+        });
+        
+        // Brand suggestions
+        document.querySelectorAll('.suggestion-chip').forEach(chip => {
+          chip.addEventListener('click', () => {
+            this.addBrand(chip.dataset.brand);
+            chip.classList.add('used');
+          });
+        });
+        
+        // Skip button
+        this.skipBtn?.addEventListener('click', async (e) => {
+          e.preventDefault();
+          window.location.href = `/${lang}`;
+        });
+      }
+      
+      selectOption(element) {
+        const field = element.dataset.field;
+        const value = element.dataset.value;
+        
+        // Remove selection from siblings
+        element.parentElement.querySelectorAll('.option-card, .option-row').forEach(el => {
+          el.classList.remove('selected');
+        });
+        
+        // Select this one
+        element.classList.add('selected');
+        this.data[field] = value;
+      }
+      
+      toggleCategory(element) {
+        const value = element.dataset.value;
+        element.classList.toggle('selected');
+        
+        if (element.classList.contains('selected')) {
+          if (!this.data.categories.includes(value)) {
+            this.data.categories.push(value);
+          }
+        } else {
+          this.data.categories = this.data.categories.filter(c => c !== value);
+        }
+      }
+      
+      addBrand(brand) {
+        if (!brand || this.data.brands.includes(brand)) return;
+        
+        this.data.brands.push(brand);
+        this.renderBrands();
+      }
+      
+      removeBrand(brand) {
+        this.data.brands = this.data.brands.filter(b => b !== brand);
+        this.renderBrands();
+        
+        // Re-enable suggestion chip
+        document.querySelector(`.suggestion-chip[data-brand="${brand}"]`)?.classList.remove('used');
+      }
+      
+      renderBrands() {
+        if (!this.brandsTags) return;
+        
+        this.brandsTags.innerHTML = this.data.brands.map(brand => `
+          <span class="brand-tag">
+            ${brand}
+            <button class="remove-brand" data-brand="${brand}">&times;</button>
+          </span>
+        `).join('');
+        
+        // Bind remove buttons
+        this.brandsTags.querySelectorAll('.remove-brand').forEach(btn => {
+          btn.addEventListener('click', () => this.removeBrand(btn.dataset.brand));
+        });
+      }
+      
+      showStep(step) {
+        document.querySelectorAll('.step').forEach((s, i) => {
+          s.classList.remove('active', 'prev', 'next');
+          if (i + 1 === step) {
+            s.classList.add('active');
+          } else if (i + 1 < step) {
+            s.classList.add('prev');
+          } else {
+            s.classList.add('next');
+          }
+        });
+      }
+      
+      nextStep() {
+        if (this.currentStep < this.totalSteps) {
+          this.currentStep++;
+          this.showStep(this.currentStep);
+          this.updateProgress();
+          this.updateNavigation();
+        } else {
+          this.finish();
+        }
+      }
+      
+      prevStep() {
+        if (this.currentStep > 1) {
+          this.currentStep--;
+          this.showStep(this.currentStep);
+          this.updateProgress();
+          this.updateNavigation();
+        }
+      }
+      
+      updateProgress() {
+        const progress = (this.currentStep / this.totalSteps) * 100;
+        if (this.progressFill) {
+          this.progressFill.style.width = `${progress}%`;
+        }
+      }
+      
+      updateNavigation() {
+        if (this.backBtn) {
+          this.backBtn.disabled = this.currentStep === 1;
+        }
+        if (this.nextBtn) {
+          this.nextBtn.textContent = this.currentStep === this.totalSteps ? finishText : this.nextBtn.textContent;
+          if (this.currentStep === this.totalSteps) {
+            this.nextBtn.textContent = finishText;
+          }
+        }
+      }
+      
+      async finish() {
+        this.nextBtn.disabled = true;
+        this.nextBtn.textContent = '...';
+        
+        try {
+          const response = await fetch('/api/user/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.data),
+          });
+          
+          if (response.status === 401) {
+            // Not logged in, save to localStorage
+            localStorage.setItem('pendingPreferences', JSON.stringify(this.data));
+          }
+          
+          window.location.href = `/${lang}`;
+        } catch (error) {
+          console.error('Error saving preferences:', error);
+          localStorage.setItem('pendingPreferences', JSON.stringify(this.data));
+          window.location.href = `/${lang}`;
+        }
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => new OnboardingQuiz());
+  </script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: linear-gradient(180deg, #FDFBF7 0%, #F7F4EE 100%);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    
+    .quiz-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* Progress Bar */
+    .progress-bar {
+      height: 4px;
+      background: #E5E2DD;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #C8956C, #E5B896);
+      width: 25%;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Header */
+    .quiz-header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .skip-btn {
+      color: #6B6560;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    
+    .skip-btn:hover {
+      color: #1A1815;
+    }
+    
+    /* Steps */
+    .steps-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .step {
+      position: absolute;
+      inset: 0;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    
+    .step.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    
+    .step.prev {
+      transform: translateX(-100%);
+    }
+    
+    .step-content {
+      width: 100%;
+      max-width: 480px;
+    }
+    
+    .step h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1A1815;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    
+    .subtitle {
+      color: #6B6560;
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 0.9375rem;
+    }
+    
+    /* Option Cards Grid */
+    .options-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    
+    .budget-options {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .categories-options {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @media (min-width: 400px) {
+      .categories-options {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    .option-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.25rem 1rem;
+      background: white;
+      border: 2px solid #E5E2DD;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .option-card:hover {
+      border-color: #C8956C;
+      transform: translateY(-2px);
+    }
+    
+    .option-card.selected {
+      border-color: #C8956C;
+      background: #FEF7ED;
+    }
+    
+    .option-icon {
+      font-size: 1.75rem;
+    }
+    
+    .option-label {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #1A1815;
+    }
+    
+    .option-desc {
+      font-size: 0.75rem;
+      color: #6B6560;
+      text-align: center;
+    }
+    
+    /* Option Rows */
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .option-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      padding: 1.25rem;
+      background: white;
+      border: 2px solid #E5E2DD;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+    }
+    
+    .option-row:hover {
+      border-color: #C8956C;
+    }
+    
+    .option-row.selected {
+      border-color: #C8956C;
+      background: #FEF7ED;
+    }
+    
+    .option-row .option-label {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .option-row .option-desc {
+      font-size: 0.875rem;
+      text-align: left;
+    }
+    
+    /* Brands Input */
+    .brands-input {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: white;
+      border: 2px solid #E5E2DD;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      min-height: 56px;
+    }
+    
+    .brands-input input {
+      flex: 1;
+      min-width: 150px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+      font-family: inherit;
+      background: transparent;
+    }
+    
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .brand-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.375rem 0.75rem;
+      background: #FEF7ED;
+      border: 1px solid #C8956C;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      color: #8B5A2B;
+    }
+    
+    .remove-brand {
+      background: none;
+      border: none;
+      color: #8B5A2B;
+      cursor: pointer;
+      font-size: 1.125rem;
+      line-height: 1;
+      padding: 0;
+      margin-left: 0.25rem;
+    }
+    
+    .brand-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .suggestion-chip {
+      padding: 0.5rem 1rem;
+      background: white;
+      border: 1px solid #E5E2DD;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      color: #6B6560;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .suggestion-chip:hover {
+      border-color: #C8956C;
+      color: #1A1815;
+    }
+    
+    .suggestion-chip.used {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    /* Navigation */
+    .quiz-nav {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: linear-gradient(0deg, #FDFBF7 50%, transparent);
+    }
+    
+    .nav-btn {
+      flex: 1;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .back-btn {
+      background: white;
+      border: 2px solid #E5E2DD;
+      color: #6B6560;
+    }
+    
+    .back-btn:hover:not(:disabled) {
+      border-color: #C8956C;
+      color: #1A1815;
+    }
+    
+    .back-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .next-btn {
+      background: linear-gradient(135deg, #C8956C, #8B5A2B);
+      border: none;
+      color: white;
+    }
+    
+    .next-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(200, 149, 108, 0.4);
+    }
+    
+    .next-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  </style>
+</body>
+</html>

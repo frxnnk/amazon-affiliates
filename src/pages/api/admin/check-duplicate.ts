@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
+import { unauthorizedResponse } from '@lib/auth';
 import { isValidAsin } from '@utils/amazon';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -19,7 +19,8 @@ interface DuplicateCheckResult {
  */
 export const POST: APIRoute = async (context) => {
   const { request, locals } = context;
-  const userId = locals.auth?.userId;
+  const auth = locals.auth?.();
+  const userId = auth?.userId;
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -28,9 +29,9 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-  // Verify admin role
-  const isAdmin = await isUserAdmin(userId, context);
-  if (!isAdmin) {
+  // Verify admin role using Clerk metadata
+  const userRole = (auth?.sessionClaims?.metadata as { role?: string })?.role;
+  if (userRole !== 'admin') {
     return unauthorizedResponse('Admin access required');
   }
 
