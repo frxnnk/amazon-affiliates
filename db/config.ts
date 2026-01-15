@@ -336,6 +336,153 @@ const Products = defineTable({
   ],
 });
 
+// Agent Configuration - per-agent settings and state
+const AgentConfig = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text({ unique: true }), // 'deal_hunter' | 'content_creator' | 'price_monitor' | 'channel_manager'
+    isEnabled: column.boolean({ default: true }),
+    intervalHours: column.number({ default: 6 }), // How often to run
+    lastRunAt: column.date({ optional: true }),
+    nextRunAt: column.date({ optional: true }),
+    config: column.json({ default: {} }), // Agent-specific configuration
+    quotaUsedToday: column.number({ default: 0 }),
+    quotaLimit: column.number({ default: 100 }),
+    quotaResetAt: column.date({ optional: true }),
+    updatedAt: column.date({ default: new Date() }),
+  },
+});
+
+// Agent Run History - tracks all agent executions
+const AgentRunHistory = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text(),
+    status: column.text({ default: 'pending' }), // 'pending' | 'running' | 'completed' | 'failed'
+    startedAt: column.date({ optional: true }),
+    completedAt: column.date({ optional: true }),
+    result: column.json({ optional: true }), // Agent-specific result data
+    error: column.text({ optional: true }),
+    metrics: column.json({ optional: true }), // { apiCalls, tokensUsed, itemsProcessed }
+    triggeredBy: column.text({ default: 'cron' }), // 'cron' | 'manual' | 'api'
+  },
+  indexes: [
+    { on: ['agentType', 'status'] },
+    { on: ['startedAt'] },
+  ],
+});
+
+// Content Queue - pending content generation tasks
+const ContentQueue = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    productId: column.number({ optional: true }), // Reference to Products table
+    asin: column.text(),
+    marketplace: column.text({ default: 'com' }),
+    contentType: column.text({ default: 'full' }), // 'full' | 'description' | 'pros_cons' | 'seo'
+    status: column.text({ default: 'pending' }), // 'pending' | 'processing' | 'completed' | 'failed'
+    priority: column.number({ default: 0 }), // Higher = more important
+    attempts: column.number({ default: 0 }),
+    maxAttempts: column.number({ default: 3 }),
+    generatedContent: column.json({ optional: true }),
+    error: column.text({ optional: true }),
+    createdAt: column.date({ default: new Date() }),
+    processedAt: column.date({ optional: true }),
+  },
+  indexes: [
+    { on: ['status', 'priority'] },
+    { on: ['asin'] },
+  ],
+});
+
+// Publish Queue - pending social media posts
+const PublishQueue = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    productId: column.number({ optional: true }),
+    asin: column.text(),
+    marketplace: column.text({ default: 'com' }),
+    channels: column.json({ default: [] }), // ['telegram', 'twitter', 'discord']
+    status: column.text({ default: 'pending' }), // 'pending' | 'processing' | 'published' | 'partial' | 'failed'
+    priority: column.number({ default: 0 }),
+    scheduledFor: column.date({ optional: true }), // Future scheduling
+    publishResults: column.json({ optional: true }), // Per-channel results { telegram: {success, messageId}, ... }
+    contentSnapshot: column.json({ optional: true }), // Cached product data at time of queue
+    createdAt: column.date({ default: new Date() }),
+    publishedAt: column.date({ optional: true }),
+  },
+  indexes: [
+    { on: ['status', 'scheduledFor'] },
+    { on: ['asin'] },
+  ],
+});
+
+// Price Alerts - price drop notifications
+const PriceAlerts = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    asin: column.text(),
+    marketplace: column.text({ default: 'com' }),
+    productId: column.number({ optional: true }),
+    alertType: column.text(), // 'price_drop' | 'lowest_ever' | 'back_in_stock' | 'threshold'
+    previousPrice: column.number(),
+    currentPrice: column.number(),
+    lowestPrice: column.number({ optional: true }),
+    dropPercent: column.number(),
+    dropAmount: column.number(), // Absolute savings
+    currency: column.text({ default: 'USD' }),
+    isNotified: column.boolean({ default: false }),
+    notifiedChannels: column.json({ default: [] }), // Which channels received notification
+    notifiedAt: column.date({ optional: true }),
+    expiresAt: column.date({ optional: true }), // Alert validity
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['asin', 'marketplace'] },
+    { on: ['isNotified'] },
+    { on: ['alertType'] },
+  ],
+});
+
+// Social Accounts - connected social media accounts
+const SocialAccounts = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    platform: column.text({ unique: true }), // 'telegram' | 'twitter' | 'discord'
+    accountId: column.text({ optional: true }), // Platform-specific ID (channel ID, user ID, etc.)
+    accountName: column.text({ optional: true }), // Display name
+    isEnabled: column.boolean({ default: true }),
+    config: column.json({ default: {} }), // Platform-specific settings (language, format, etc.)
+    credentials: column.json({ optional: true }), // Encrypted tokens/keys (or reference to env vars)
+    lastPostAt: column.date({ optional: true }),
+    postCount: column.number({ default: 0 }),
+    errorCount: column.number({ default: 0 }), // Consecutive errors
+    lastError: column.text({ optional: true }),
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ default: new Date() }),
+  },
+});
+
+// Product Views - track products seen by users for anti-repetition
+// Stores last 200 products per user, older entries auto-expire
+const ProductViews = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id }),
+    asin: column.text(),
+    category: column.text({ optional: true }),
+    viewedAt: column.date({ default: new Date() }),
+    // Engagement metrics
+    timeSpentMs: column.number({ optional: true }), // Time on product slide
+    interactionType: column.text({ optional: true }), // 'view' | 'click' | 'swipe_left' | 'swipe_right'
+  },
+  indexes: [
+    { on: ['userId', 'asin'] }, // Quick lookup for exclusion
+    { on: ['userId', 'viewedAt'] }, // For cleanup of old entries
+    { on: ['asin'] }, // For analytics
+  ],
+});
+
 export default defineDb({
   tables: {
     Users,
@@ -353,5 +500,13 @@ export default defineDb({
     CuratedDeals,
     ProductSearchCache,
     VideoCache,
+    ProductViews,
+    // Multi-Agent System Tables
+    AgentConfig,
+    AgentRunHistory,
+    ContentQueue,
+    PublishQueue,
+    PriceAlerts,
+    SocialAccounts,
   },
 });

@@ -244,8 +244,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
     
     // If hero requested, find a product with video
     if (includeHero && recommendations.length > 0 && isYouTubeConfigured()) {
-      const quotaStatus = getQuotaStatus();
-      
+      const quotaStatus = await getQuotaStatus();
+
       if (quotaStatus.remaining > 0) {
         // Try to find a product with video for hero
         for (const product of recommendations.slice(0, 5)) {

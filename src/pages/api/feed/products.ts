@@ -13,7 +13,7 @@
 import type { APIRoute } from 'astro';
 import { isRainforestConfigured } from '@lib/rainforest-api';
 import { cachedSearchProducts, getApiUsageStats, canMakeApiCall } from '@lib/product-cache';
-import { getPublishedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal } from '@lib/db';
+import { getPublishedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices } from '@lib/db';
 import { db, ProductLikes, Products, eq, desc } from 'astro:db';
 import { trackPrices } from '@lib/keepa-api';
 import { validateDeal, calculateEnhancedScore, toAnalyzableProduct } from '@lib/deal-analyzer';
@@ -33,6 +33,7 @@ interface FeedProduct {
   rating?: number;
   totalReviews?: number;
   featuredImage: { url: string; alt: string };
+  images?: string[]; // All product images for gallery/carousel
   affiliateUrl: string;
   category?: string;
   shortDescription?: string;
@@ -54,6 +55,11 @@ interface FeedProduct {
     embedUrl: string;
     isShort: boolean;
   } | null;
+  // Price context for conversion signals
+  priceContext?: {
+    isLowestIn30Days: boolean;
+    percentBelowAvg: number;
+  };
 }
 
 /**
@@ -119,6 +125,155 @@ function isHotDeal(product: {
     (product.rating && product.rating >= 4.5 && product.totalReviews && product.totalReviews >= 500) ||
     calculateDealScore(product) >= 60
   );
+}
+
+/**
+ * Intelligent product sequencing for retention
+ * Rules:
+ * 1. Never show 3+ products from same category in a row
+ * 2. Alternate between high-discount and high-quality products
+ * 3. Place products with videos strategically (every 4-6 products)
+ * 4. Insert "surprise" products (different category) every 7-10 products
+ * 5. Start strong: first 3 products should be high scorers
+ */
+function sequenceProductsForRetention(products: FeedProduct[]): FeedProduct[] {
+  if (products.length <= 3) return products;
+
+  const sequenced: FeedProduct[] = [];
+  const remaining = [...products];
+
+  // Categorize products
+  const withVideo = remaining.filter(p => p.youtubeVideo);
+  const highDiscount = remaining.filter(p => (p.discountPercent || 0) >= 25);
+  const highRating = remaining.filter(p => (p.dealScore || 0) >= 60);
+
+  // Track recent categories to avoid repetition
+  const recentCategories: string[] = [];
+  const MAX_SAME_CATEGORY = 2;
+
+  // Helper: get next best product avoiding category repetition
+  function pickNext(pool: FeedProduct[], preferVideo = false, preferDiscount = false): FeedProduct | null {
+    // Filter out products that would break category rule
+    const validPool = pool.filter(p => {
+      const cat = p.category || 'other';
+      const recentCount = recentCategories.slice(-MAX_SAME_CATEGORY).filter(c => c === cat).length;
+      return recentCount < MAX_SAME_CATEGORY;
+    });
+
+    if (validPool.length === 0) {
+      // If all filtered out, just pick the best available
+      return pool[0] || null;
+    }
+
+    // Sort by preference
+    const sorted = validPool.sort((a, b) => {
+      let scoreA = a.dealScore || 0;
+      let scoreB = b.dealScore || 0;
+
+      if (preferVideo) {
+        if (a.youtubeVideo && !b.youtubeVideo) return -1;
+        if (!a.youtubeVideo && b.youtubeVideo) return 1;
+      }
+
+      if (preferDiscount) {
+        scoreA += (a.discountPercent || 0) * 0.5;
+        scoreB += (b.discountPercent || 0) * 0.5;
+      }
+
+      return scoreB - scoreA;
+    });
+
+    return sorted[0];
+  }
+
+  // Helper: remove product from remaining pool
+  function removeFromPool(product: FeedProduct) {
+    const idx = remaining.findIndex(p => p.asin === product.asin);
+    if (idx >= 0) remaining.splice(idx, 1);
+  }
+
+  // Helper: add product to sequence
+  function addToSequence(product: FeedProduct) {
+    sequenced.push(product);
+    recentCategories.push(product.category || 'other');
+    removeFromPool(product);
+  }
+
+  // Phase 1: Strong start - first 3 products are top scorers
+  for (let i = 0; i < 3 && remaining.length > 0; i++) {
+    const preferVideo = i === 1; // Second product ideally has video
+    const next = pickNext(remaining, preferVideo, i === 0);
+    if (next) addToSequence(next);
+  }
+
+  // Phase 2: Alternate pattern for remaining products
+  let videoCounter = 0;
+  let discountToggle = true;
+
+  while (remaining.length > 0) {
+    const position = sequenced.length;
+    videoCounter++;
+
+    // Every 4-6 products, try to place one with video
+    const wantVideo = videoCounter >= 4 && withVideo.some(v => remaining.includes(v));
+    if (wantVideo) videoCounter = 0;
+
+    // Every 8 products, force a different category (surprise)
+    const forceSurprise = position > 0 && position % 8 === 0;
+    let pool = remaining;
+
+    if (forceSurprise) {
+      const lastCat = recentCategories[recentCategories.length - 1];
+      const differentCat = remaining.filter(p => (p.category || 'other') !== lastCat);
+      if (differentCat.length > 0) pool = differentCat;
+    }
+
+    const next = pickNext(pool, wantVideo, discountToggle);
+    if (next) {
+      addToSequence(next);
+      discountToggle = !discountToggle; // Alternate preference
+    } else {
+      break;
+    }
+  }
+
+  return sequenced;
+}
+
+/**
+ * Add conversion badges based on product characteristics
+ */
+function addConversionBadges(product: FeedProduct, priceStats?: { isLowest: boolean; daysSinceLowest?: number }): string[] {
+  const badges: string[] = product.badges || [];
+
+  // "Great Discount" badge
+  if ((product.discountPercent || 0) >= 20 && !badges.includes('great_discount')) {
+    badges.push('great_discount');
+  }
+
+  // "Verified Deal" badge - high rating + reviews
+  if (product.rating && product.rating >= 4.3 &&
+      product.totalReviews && product.totalReviews >= 100 &&
+      !badges.includes('verified_deal')) {
+    badges.push('verified_deal');
+  }
+
+  // "Lowest Price" badge (if we have price history data)
+  if (priceStats?.isLowest && !badges.includes('lowest_price')) {
+    badges.push('lowest_price');
+  }
+
+  // "Popular" badge - high number of reviews
+  if (product.totalReviews && product.totalReviews >= 1000 && !badges.includes('popular')) {
+    badges.push('popular');
+  }
+
+  // "Video Review" badge - has YouTube video
+  if (product.youtubeVideo && !badges.includes('has_video')) {
+    badges.push('has_video');
+  }
+
+  return badges;
 }
 
 // Popular search terms for different categories (English)
@@ -311,7 +466,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const lang = url.searchParams.get('lang') || 'es';
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const excludeParam = url.searchParams.get('exclude') || '';
-    const excludeAsins = excludeParam ? excludeParam.split(',').filter(Boolean) : [];
+    const excludeFromUrl = excludeParam ? excludeParam.split(',').filter(Boolean) : [];
 
     // Get authenticated user for personalization
     const auth = locals.auth?.();
@@ -325,11 +480,23 @@ export const GET: APIRoute = async ({ url, locals }) => {
     let source = 'database';
     let isPersonalized = false;
 
-    // Load user preferences for personalization
+    // Load user preferences and excluded ASINs for personalization
     let userPrefs: Awaited<ReturnType<typeof getUserPreferences>> = null;
+    let userExcludedAsins = new Set<string>();
+
     if (userId) {
-      userPrefs = await getUserPreferences(userId);
+      // Load preferences and excluded ASINs in parallel
+      const [prefs, excluded] = await Promise.all([
+        getUserPreferences(userId),
+        getExcludedAsins(userId)
+      ]);
+      userPrefs = prefs;
+      userExcludedAsins = excluded;
+      console.log(`[Feed API] User ${userId.slice(-6)}: ${userExcludedAsins.size} ASINs excluded (likes/dislikes)`);
     }
+
+    // Merge URL exclusions with user's liked/disliked products
+    const excludeAsins = [...new Set([...excludeFromUrl, ...userExcludedAsins])];
 
     // Debug: Check RapidAPI configuration and quota
     const rapidApiConfigured = isRainforestConfigured();
@@ -533,9 +700,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
                   url: product.imageUrl!,
                   alt: product.title,
                 },
+                images: product.images && product.images.length > 0 ? product.images : [product.imageUrl!],
                 affiliateUrl,
                 category: category !== 'all' ? category : 'electronics',
-                shortDescription: product.title.slice(0, 120),
+                shortDescription: product.description || '', // Only use real description, not title
                 isHotDeal: isHotDeal({
                   price: product.price!,
                   originalPrice: product.originalPrice,
@@ -575,7 +743,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     if (isYouTubeConfigured() && feedProducts.length > 0) {
       videoStats.configured = true;
-      const quotaStatus = getQuotaStatus();
+      const quotaStatus = await getQuotaStatus();
       videoStats.quotaRemaining = quotaStatus.remaining;
       console.log(`[Feed API] YouTube quota: ${quotaStatus.used}/${quotaStatus.limit} (remaining: ${quotaStatus.remaining})`);
 
@@ -618,6 +786,36 @@ export const GET: APIRoute = async ({ url, locals }) => {
         console.log(`[Feed API] Skipping video fetch - no quota remaining`);
       }
     }
+
+    // Check for lowest prices in 30 days (adds "lowest_price" badge)
+    const productsWithPrices = enrichedProducts
+      .filter(p => p.price)
+      .map(p => ({ asin: p.asin, currentPrice: p.price }));
+
+    const lowestPriceMap = productsWithPrices.length > 0
+      ? await checkLowestPrices(productsWithPrices, marketplace)
+      : new Map();
+
+    // Add conversion badges to each product (including lowest price info)
+    enrichedProducts = enrichedProducts.map(product => {
+      const priceStats = lowestPriceMap.get(product.asin);
+      return {
+        ...product,
+        badges: addConversionBadges(product, priceStats),
+        // Add price context for UI
+        priceContext: priceStats ? {
+          isLowestIn30Days: priceStats.isLowest,
+          percentBelowAvg: priceStats.percentBelowAvg,
+        } : undefined,
+      };
+    });
+
+    // Apply intelligent sequencing for better retention (skip on first page with curated)
+    if (page > 1 || !feedProducts.some(p => p.isCurated)) {
+      enrichedProducts = sequenceProductsForRetention(enrichedProducts);
+    }
+
+    console.log(`[Feed API] Returning ${enrichedProducts.length} products (page ${page})`);
 
     return new Response(
       JSON.stringify({

@@ -9,62 +9,135 @@
  * - Quota tracking: stops API calls when daily limit approached
  */
 
-import { db, VideoCache, eq } from 'astro:db';
+import { db, VideoCache, DealAgentConfig, eq, lte, sql } from 'astro:db';
 import { searchProductVideo, type YouTubeVideo, isYouTubeConfigured } from './youtube-api';
 
 // Cache duration in days
 const CACHE_DAYS_FOUND = 30;
 const CACHE_DAYS_NOT_FOUND = 7;
 
-// Daily quota management (in-memory, resets on deploy/restart)
+// Daily quota management - persistent in DB
 // YouTube free tier: 10,000 units/day, search = 100 units
-let dailyQuotaUsed = 0;
-let lastQuotaReset = new Date().toDateString();
 const DAILY_QUOTA_LIMIT = 9500; // Leave buffer for safety
+const QUOTA_KEY = 'youtube_quota';
+
+// In-memory cache of DB quota (to reduce DB reads)
+let quotaCache: { used: number; date: string } | null = null;
+
+interface QuotaData {
+  used: number;
+  date: string; // ISO date string YYYY-MM-DD
+}
 
 /**
- * Check and reset quota counter if it's a new day
+ * Get today's date as ISO string (YYYY-MM-DD)
  */
-function checkQuotaReset(): void {
-  const today = new Date().toDateString();
-  if (today !== lastQuotaReset) {
-    console.log(`[VideoCache] Resetting daily quota (was ${dailyQuotaUsed})`);
-    dailyQuotaUsed = 0;
-    lastQuotaReset = today;
+function getTodayISO(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Load quota from database
+ */
+async function loadQuotaFromDB(): Promise<QuotaData> {
+  const today = getTodayISO();
+
+  // Check memory cache first
+  if (quotaCache && quotaCache.date === today) {
+    return quotaCache;
+  }
+
+  try {
+    const config = await db
+      .select()
+      .from(DealAgentConfig)
+      .where(eq(DealAgentConfig.key, QUOTA_KEY))
+      .get();
+
+    if (config) {
+      const data = config.value as QuotaData;
+      // Reset if it's a new day
+      if (data.date !== today) {
+        console.log(`[VideoCache] New day - resetting quota (was ${data.used})`);
+        quotaCache = { used: 0, date: today };
+        await saveQuotaToDB(quotaCache);
+        return quotaCache;
+      }
+      quotaCache = data;
+      return data;
+    }
+
+    // First time - initialize
+    quotaCache = { used: 0, date: today };
+    await db.insert(DealAgentConfig).values({
+      key: QUOTA_KEY,
+      value: quotaCache,
+      updatedAt: new Date(),
+    });
+    return quotaCache;
+  } catch (error) {
+    console.error('[VideoCache] Error loading quota:', error);
+    // Fallback to in-memory
+    return quotaCache || { used: 0, date: today };
+  }
+}
+
+/**
+ * Save quota to database
+ */
+async function saveQuotaToDB(data: QuotaData): Promise<void> {
+  try {
+    await db
+      .update(DealAgentConfig)
+      .set({ value: data, updatedAt: new Date() })
+      .where(eq(DealAgentConfig.key, QUOTA_KEY));
+  } catch (error) {
+    console.error('[VideoCache] Error saving quota:', error);
   }
 }
 
 /**
  * Check if we have enough quota for an operation
  */
-function canUseQuota(units: number): boolean {
-  checkQuotaReset();
-  return dailyQuotaUsed + units <= DAILY_QUOTA_LIMIT;
+async function canUseQuota(units: number): Promise<boolean> {
+  const quota = await loadQuotaFromDB();
+  return quota.used + units <= DAILY_QUOTA_LIMIT;
 }
 
 /**
- * Record quota usage
+ * Record quota usage (updates both memory and DB)
  */
-function useQuota(units: number): void {
-  dailyQuotaUsed += units;
-  console.log(`[VideoCache] Quota used: ${dailyQuotaUsed}/${DAILY_QUOTA_LIMIT}`);
+async function useQuota(units: number): Promise<void> {
+  const today = getTodayISO();
+  const quota = await loadQuotaFromDB();
+
+  quota.used += units;
+  quota.date = today;
+  quotaCache = quota;
+
+  console.log(`[VideoCache] Quota: ${quota.used}/${DAILY_QUOTA_LIMIT} (${Math.round(quota.used / DAILY_QUOTA_LIMIT * 100)}%)`);
+
+  // Save to DB (fire and forget for performance)
+  saveQuotaToDB(quota);
 }
 
 /**
  * Get current quota status
  */
-export function getQuotaStatus(): {
+export async function getQuotaStatus(): Promise<{
   used: number;
   remaining: number;
   limit: number;
   percentUsed: number;
-} {
-  checkQuotaReset();
+  date: string;
+}> {
+  const quota = await loadQuotaFromDB();
   return {
-    used: dailyQuotaUsed,
-    remaining: DAILY_QUOTA_LIMIT - dailyQuotaUsed,
+    used: quota.used,
+    remaining: DAILY_QUOTA_LIMIT - quota.used,
     limit: DAILY_QUOTA_LIMIT,
-    percentUsed: Math.round((dailyQuotaUsed / DAILY_QUOTA_LIMIT) * 100),
+    percentUsed: Math.round((quota.used / DAILY_QUOTA_LIMIT) * 100),
+    date: quota.date,
   };
 }
 
@@ -139,14 +212,14 @@ export async function getProductVideo(
     }
 
     // Cache miss or expired - check quota before API call
-    if (!canUseQuota(100)) {
+    if (!(await canUseQuota(100))) {
       console.warn('[VideoCache] Daily quota exhausted, skipping API call');
       return null;
     }
 
     // Search YouTube API
     const result = await searchProductVideo(title, lang);
-    useQuota(result.quotaUsed);
+    await useQuota(result.quotaUsed);
 
     if (!result.success) {
       console.error('[VideoCache] YouTube API error:', result.error);
@@ -250,25 +323,55 @@ export async function getProductVideos(
 }
 
 /**
- * Get cache statistics
+ * Get comprehensive cache and quota statistics
  */
 export async function getCacheStats(): Promise<{
-  totalEntries: number;
-  withVideo: number;
-  withoutVideo: number;
-  expired: number;
-  totalHits: number;
+  cache: {
+    totalEntries: number;
+    withVideo: number;
+    withoutVideo: number;
+    expired: number;
+    totalHits: number;
+    hitRate: number;
+  };
+  quota: {
+    used: number;
+    remaining: number;
+    limit: number;
+    percentUsed: number;
+    date: string;
+  };
 }> {
   const now = new Date();
   const all = await db.select().from(VideoCache).all();
+  const quotaStatus = await getQuotaStatus();
+
+  const totalEntries = all.length;
+  const withVideo = all.filter((e) => e.videoId).length;
+  const totalHits = all.reduce((sum, e) => sum + (e.hitCount || 0), 0);
 
   return {
-    totalEntries: all.length,
-    withVideo: all.filter((e) => e.videoId).length,
-    withoutVideo: all.filter((e) => !e.videoId).length,
-    expired: all.filter((e) => e.expiresAt <= now).length,
-    totalHits: all.reduce((sum, e) => sum + (e.hitCount || 0), 0),
+    cache: {
+      totalEntries,
+      withVideo,
+      withoutVideo: all.filter((e) => !e.videoId).length,
+      expired: all.filter((e) => e.expiresAt <= now).length,
+      totalHits,
+      hitRate: totalEntries > 0 ? Math.round((withVideo / totalEntries) * 100) : 0,
+    },
+    quota: quotaStatus,
   };
+}
+
+/**
+ * Reset daily quota (admin function)
+ * Use when quota needs manual reset or for testing
+ */
+export async function resetQuota(): Promise<void> {
+  const today = getTodayISO();
+  quotaCache = { used: 0, date: today };
+  await saveQuotaToDB(quotaCache);
+  console.log('[VideoCache] Quota manually reset');
 }
 
 /**
@@ -277,26 +380,23 @@ export async function getCacheStats(): Promise<{
  */
 export async function cleanupExpiredCache(): Promise<number> {
   const now = new Date();
+
+  // Count expired entries first
   const expired = await db
-    .select()
+    .select({ id: VideoCache.id })
     .from(VideoCache)
-    .where(eq(VideoCache.expiresAt, now)) // This won't work as intended
+    .where(lte(VideoCache.expiresAt, now))
     .all();
 
-  // Manual filter for expired entries
-  const expiredIds = expired
-    .filter((e) => e.expiresAt <= now)
-    .map((e) => e.id);
-
-  if (expiredIds.length === 0) {
+  if (expired.length === 0) {
     return 0;
   }
 
-  // Delete in batches
-  for (const id of expiredIds) {
-    await db.delete(VideoCache).where(eq(VideoCache.id, id));
-  }
+  // Delete all expired entries in one query
+  await db
+    .delete(VideoCache)
+    .where(lte(VideoCache.expiresAt, now));
 
-  console.log(`[VideoCache] Cleaned up ${expiredIds.length} expired entries`);
-  return expiredIds.length;
+  console.log(`[VideoCache] Cleaned up ${expired.length} expired entries`);
+  return expired.length;
 }
