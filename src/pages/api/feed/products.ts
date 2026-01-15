@@ -25,6 +25,91 @@ import { getCollaborativeBoosts } from '@lib/collaborative-filtering';
 
 export const prerender = false;
 
+/**
+ * Session seed for controlled randomization
+ * Changes every hour to give users variety while maintaining consistency within a session
+ */
+function getSessionSeed(): number {
+  const now = Date.now();
+  // Change seed every hour (3600000ms)
+  return Math.floor(now / 3600000);
+}
+
+/**
+ * Seeded pseudo-random number generator (Mulberry32)
+ * Produces deterministic "random" numbers based on a seed
+ */
+function seededRandom(seed: number): () => number {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Shuffle array using Fisher-Yates with seeded random
+ */
+function seededShuffle<T>(array: T[], seed: number): T[] {
+  const result = [...array];
+  const random = seededRandom(seed);
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
+/**
+ * Shuffle products within score tiers for variety
+ * Products with similar scores (within tierRange points) are shuffled together
+ * This maintains quality (best products first) while adding variety
+ */
+function shuffleWithinTiers(products: FeedProduct[], seed: number, tierRange = 8): FeedProduct[] {
+  if (products.length <= 1) return products;
+
+  // Sort by dealScore descending first
+  const sorted = [...products].sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0));
+
+  // Group into tiers based on score ranges
+  const tiers: FeedProduct[][] = [];
+  let currentTier: FeedProduct[] = [];
+  let tierFloor = sorted[0]?.dealScore || 0;
+
+  for (const product of sorted) {
+    const score = product.dealScore || 0;
+
+    // If score is within tierRange of the tier floor, add to current tier
+    if (tierFloor - score <= tierRange) {
+      currentTier.push(product);
+    } else {
+      // Start a new tier
+      if (currentTier.length > 0) {
+        tiers.push(currentTier);
+      }
+      currentTier = [product];
+      tierFloor = score;
+    }
+  }
+
+  // Don't forget the last tier
+  if (currentTier.length > 0) {
+    tiers.push(currentTier);
+  }
+
+  // Shuffle within each tier using the session seed
+  // Use different sub-seeds for each tier to ensure variety
+  const shuffledTiers = tiers.map((tier, index) =>
+    seededShuffle(tier, seed + index * 1000)
+  );
+
+  // Flatten back to a single array
+  return shuffledTiers.flat();
+}
+
 interface FeedProduct {
   productId: string;
   asin: string;
@@ -138,12 +223,16 @@ function isHotDeal(product: {
  * 3. Place products with videos strategically (every 4-6 products)
  * 4. Insert "surprise" products (different category) every 7-10 products
  * 5. Start strong: first 3 products should be high scorers
+ * 6. Use session seed for controlled randomization within similar-scoring products
  */
-function sequenceProductsForRetention(products: FeedProduct[]): FeedProduct[] {
+function sequenceProductsForRetention(products: FeedProduct[], seed?: number): FeedProduct[] {
   if (products.length <= 3) return products;
 
   const sequenced: FeedProduct[] = [];
   const remaining = [...products];
+
+  // Create seeded random for this sequencing
+  const random = seed !== undefined ? seededRandom(seed) : Math.random;
 
   // Categorize products
   const withVideo = remaining.filter(p => p.youtubeVideo);
@@ -155,6 +244,7 @@ function sequenceProductsForRetention(products: FeedProduct[]): FeedProduct[] {
   const MAX_SAME_CATEGORY = 2;
 
   // Helper: get next best product avoiding category repetition
+  // Now includes randomization among similar-scoring products
   function pickNext(pool: FeedProduct[], preferVideo = false, preferDiscount = false): FeedProduct | null {
     // Filter out products that would break category rule
     const validPool = pool.filter(p => {
@@ -186,6 +276,16 @@ function sequenceProductsForRetention(products: FeedProduct[]): FeedProduct[] {
       return scoreB - scoreA;
     });
 
+    // Pick randomly from top candidates with similar scores (within 10 points)
+    const topScore = sorted[0]?.dealScore || 0;
+    const topCandidates = sorted.filter(p => (topScore - (p.dealScore || 0)) <= 10);
+
+    if (topCandidates.length > 1) {
+      // Randomly pick from top candidates for variety
+      const randomIndex = Math.floor(random() * topCandidates.length);
+      return topCandidates[randomIndex];
+    }
+
     return sorted[0];
   }
 
@@ -210,19 +310,22 @@ function sequenceProductsForRetention(products: FeedProduct[]): FeedProduct[] {
   }
 
   // Phase 2: Alternate pattern for remaining products
-  let videoCounter = 0;
-  let discountToggle = true;
+  // Use session seed to vary the starting toggle
+  let videoCounter = seed !== undefined ? (seed % 3) : 0;
+  let discountToggle = seed !== undefined ? (seed % 2 === 0) : true;
 
   while (remaining.length > 0) {
     const position = sequenced.length;
     videoCounter++;
 
-    // Every 4-6 products, try to place one with video
-    const wantVideo = videoCounter >= 4 && withVideo.some(v => remaining.includes(v));
+    // Every 4-6 products, try to place one with video (varied by seed)
+    const videoThreshold = 4 + (seed !== undefined ? (seed % 3) : 0);
+    const wantVideo = videoCounter >= videoThreshold && withVideo.some(v => remaining.includes(v));
     if (wantVideo) videoCounter = 0;
 
-    // Every 8 products, force a different category (surprise)
-    const forceSurprise = position > 0 && position % 8 === 0;
+    // Every 6-10 products, force a different category (surprise) - varied by seed
+    const surpriseInterval = 6 + (seed !== undefined ? (seed % 5) : 2);
+    const forceSurprise = position > 0 && position % surpriseInterval === 0;
     let pool = remaining;
 
     if (forceSurprise) {
@@ -612,10 +715,14 @@ export const GET: APIRoute = async ({ url, locals }) => {
         console.log(`[Feed API] Using personalized keyword: "${keywords}"`);
       } else if (category !== 'all' && categoryKeywords[category]) {
         const catKeywords = categoryKeywords[category];
-        keywords = catKeywords[(page - 1) % catKeywords.length];
+        // Add session-based offset for variety across refreshes
+        const sessionOffset = getSessionSeed() % catKeywords.length;
+        keywords = catKeywords[(page - 1 + sessionOffset) % catKeywords.length];
       } else {
         // Rotate through trending keywords based on page
-        keywords = trendingKeywords[(page - 1) % trendingKeywords.length];
+        // Add session-based offset so different keywords appear on refresh
+        const sessionOffset = getSessionSeed() % trendingKeywords.length;
+        keywords = trendingKeywords[(page - 1 + sessionOffset) % trendingKeywords.length];
       }
 
       // Search products using cached RapidAPI (4-hour cache)
@@ -772,10 +879,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
         );
 
         // Combine curated + transformed products
-        feedProducts = [...feedProducts, ...transformedProducts]
-          // Sort by deal score - best deals first
-          .sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0));
-        
+        // Use shuffleWithinTiers for variety while maintaining quality
+        // Products with similar scores are shuffled, giving different order on each session
+        const sessionSeed = getSessionSeed();
+        const combinedProducts = [...feedProducts, ...transformedProducts];
+        feedProducts = shuffleWithinTiers(combinedProducts, sessionSeed + page);
+
         source = 'rapidapi';
       }
     }
@@ -925,12 +1034,18 @@ export const GET: APIRoute = async ({ url, locals }) => {
       const scoredProducts = scoreProducts(candidates, userProfile, similarityProfile, collaborativeBoosts);
 
       // Reorder enrichedProducts based on scored ranking
+      // First assign scores, then use shuffleWithinTiers for variety
       const asinToScore = new Map(scoredProducts.map(p => [p.asin, p.totalScore]));
-      enrichedProducts = enrichedProducts.sort((a, b) => {
-        const scoreA = asinToScore.get(a.asin) || 0;
-        const scoreB = asinToScore.get(b.asin) || 0;
-        return scoreB - scoreA;
-      });
+
+      // Update dealScore with recommendation score for shuffleWithinTiers
+      enrichedProducts = enrichedProducts.map(p => ({
+        ...p,
+        dealScore: (asinToScore.get(p.asin) || 0) * 10, // Scale to match tier logic
+      }));
+
+      // Apply shuffle within tiers for controlled randomization
+      const recSessionSeed = getSessionSeed();
+      enrichedProducts = shuffleWithinTiers(enrichedProducts, recSessionSeed + page * 100);
 
       // Log scoring stats
       const topScored = scoredProducts.slice(0, 3);
@@ -941,8 +1056,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
 
     // Apply intelligent sequencing for better retention (skip on first page with curated)
+    // Pass session seed for controlled randomization
     if (page > 1 || !feedProducts.some(p => p.isCurated)) {
-      enrichedProducts = sequenceProductsForRetention(enrichedProducts);
+      const sequenceSeed = getSessionSeed() + page * 17; // Different seed per page
+      enrichedProducts = sequenceProductsForRetention(enrichedProducts, sequenceSeed);
     }
 
     console.log(`[Feed API] Returning ${enrichedProducts.length} products (page ${page})${searchQuery ? ` for search: "${searchQuery}"` : ''}`);
