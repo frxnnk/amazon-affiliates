@@ -35,107 +35,221 @@ export function isYouTubeConfigured(): boolean {
 }
 
 /**
+ * Search strategies in order of priority
+ * Each strategy uses 100 quota units
+ */
+type SearchStrategy = {
+  name: string;
+  buildQuery: (cleanName: string, brand: string | null, lang: 'es' | 'en') => string;
+  params?: Record<string, string>;
+};
+
+const SEARCH_STRATEGIES: SearchStrategy[] = [
+  {
+    // Strategy 1: Shorts específicos (mejor para feed móvil)
+    name: 'shorts',
+    buildQuery: (name, brand, lang) => {
+      const keyword = lang === 'es' ? 'reseña' : 'review';
+      const base = brand ? `${brand} ${name.split(' ').slice(0, 3).join(' ')}` : name;
+      return `${base} #shorts ${keyword}`;
+    },
+    params: { videoDuration: 'short', order: 'viewCount' },
+  },
+  {
+    // Strategy 2: Reviews populares
+    name: 'popular-review',
+    buildQuery: (name, brand, lang) => {
+      const keyword = lang === 'es' ? 'review' : 'review';
+      return `${name} ${keyword}`;
+    },
+    params: { videoDuration: 'short', order: 'viewCount' },
+  },
+  {
+    // Strategy 3: Unboxing (suelen ser más visuales)
+    name: 'unboxing',
+    buildQuery: (name, _brand, _lang) => `${name} unboxing`,
+    params: { videoDuration: 'short', order: 'relevance' },
+  },
+];
+
+/**
+ * Clean and extract product info for better search results
+ */
+function cleanProductName(productName: string): { cleanName: string; brand: string | null } {
+  // Extract brand (usually first word or before dash)
+  const brandMatch = productName.match(/^([A-Z][a-zA-Z0-9]+)[\s-]/);
+  const brand = brandMatch ? brandMatch[1] : null;
+
+  // Clean the name
+  const cleanName = productName
+    .replace(/\([^)]*\)/g, '')        // Remove parentheses content
+    .replace(/\[[^\]]*\]/g, '')       // Remove brackets content
+    .replace(/,\s*\d+.*$/, '')        // Remove ", 128GB..." style suffixes
+    .replace(/,.*$/, '')              // Remove everything after first comma
+    .replace(/-\s*[A-Z0-9]+\s*$/, '') // Remove model numbers at end
+    .replace(/\s{2,}/g, ' ')          // Collapse multiple spaces
+    .trim()
+    .slice(0, 60);                    // Shorter limit for better results
+
+  return { cleanName, brand };
+}
+
+/**
  * Search for a product review video (preferably Short)
- * Costs 100 quota units per call
- * 
+ * Uses multiple search strategies with fallback
+ * Costs 100 quota units per strategy attempted
+ *
  * @param productName - Product title to search for
  * @param lang - Language for relevance ('es' | 'en')
+ * @param maxStrategies - Max strategies to try (default 1 to save quota)
  * @returns Search result with video info or error
  */
 export async function searchProductVideo(
   productName: string,
-  lang: 'es' | 'en' = 'es'
+  lang: 'es' | 'en' = 'es',
+  maxStrategies: number = 1
 ): Promise<YouTubeSearchResult> {
   const apiKey = import.meta.env.YOUTUBE_API_KEY;
-  
+
   if (!apiKey) {
-    return { 
-      success: false, 
-      error: 'YOUTUBE_API_KEY not configured', 
-      quotaUsed: 0 
-    };
-  }
-
-  // Clean product name for better search results
-  const cleanName = productName
-    .replace(/\([^)]*\)/g, '') // Remove parentheses content
-    .replace(/\[[^\]]*\]/g, '') // Remove brackets content
-    .replace(/,.*$/, '') // Remove everything after first comma
-    .trim()
-    .slice(0, 80); // Limit length
-
-  // Build search query optimized for product reviews
-  const searchTerms = lang === 'es' 
-    ? ['review', 'unboxing', 'análisis']
-    : ['review', 'unboxing', 'hands on'];
-  
-  const searchQuery = `${cleanName} ${searchTerms[0]}`;
-
-  const params = new URLSearchParams({
-    part: 'snippet',
-    q: searchQuery,
-    type: 'video',
-    videoDuration: 'short', // Videos < 4 minutes (includes Shorts)
-    maxResults: '3', // Get a few results to filter
-    relevanceLanguage: lang,
-    safeSearch: 'moderate',
-    key: apiKey,
-  });
-
-  try {
-    const response = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
-    const data = await response.json();
-
-    if (data.error) {
-      console.error('[YouTube API] Error:', data.error.message);
-      return { 
-        success: false, 
-        error: data.error.message, 
-        quotaUsed: 1 // Even errors cost 1 unit minimum
-      };
-    }
-
-    if (!data.items || data.items.length === 0) {
-      console.log(`[YouTube API] No videos found for: ${cleanName}`);
-      return { 
-        success: true, 
-        video: undefined, 
-        quotaUsed: 100 
-      };
-    }
-
-    // Find the best video (prefer channels with many subs, avoid spam)
-    const item = data.items[0];
-    const snippet = item.snippet;
-
-    // Check if it's likely a Short based on title patterns
-    const isShort = isLikelyShort(snippet.title, snippet.description || '');
-
-    const video: YouTubeVideo = {
-      videoId: item.id.videoId,
-      title: snippet.title,
-      channelTitle: snippet.channelTitle,
-      thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url,
-      thumbnailHigh: snippet.thumbnails?.high?.url,
-      publishedAt: snippet.publishedAt,
-      isShort,
-    };
-
-    console.log(`[YouTube API] Found video for "${cleanName}": ${video.videoId} (${isShort ? 'Short' : 'Video'})`);
-
     return {
-      success: true,
-      video,
-      quotaUsed: 100,
-    };
-  } catch (error) {
-    console.error('[YouTube API] Network error:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Network error',
-      quotaUsed: 0 
+      success: false,
+      error: 'YOUTUBE_API_KEY not configured',
+      quotaUsed: 0
     };
   }
+
+  const { cleanName, brand } = cleanProductName(productName);
+  let totalQuotaUsed = 0;
+
+  // Try strategies in order until we find a good video
+  for (let i = 0; i < Math.min(maxStrategies, SEARCH_STRATEGIES.length); i++) {
+    const strategy = SEARCH_STRATEGIES[i];
+    const searchQuery = strategy.buildQuery(cleanName, brand, lang);
+
+    const params = new URLSearchParams({
+      part: 'snippet',
+      q: searchQuery,
+      type: 'video',
+      maxResults: '5',
+      relevanceLanguage: lang,
+      safeSearch: 'moderate',
+      key: apiKey,
+      ...strategy.params,
+    });
+
+    try {
+      const response = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
+      const data = await response.json();
+      totalQuotaUsed += 100;
+
+      if (data.error) {
+        console.error(`[YouTube API] Error (${strategy.name}):`, data.error.message);
+        // Don't return yet, try next strategy
+        continue;
+      }
+
+      if (!data.items || data.items.length === 0) {
+        console.log(`[YouTube API] No results for strategy '${strategy.name}': ${searchQuery}`);
+        continue;
+      }
+
+      // Score and rank results
+      const scoredItems = data.items.map((item: any) => ({
+        item,
+        score: scoreVideo(item, cleanName, brand),
+      }));
+
+      scoredItems.sort((a: any, b: any) => b.score - a.score);
+      const best = scoredItems[0];
+
+      // Only accept if score is reasonable
+      if (best.score < 10) {
+        console.log(`[YouTube API] Low quality results for '${strategy.name}', trying next...`);
+        continue;
+      }
+
+      const snippet = best.item.snippet;
+      const isShort = isLikelyShort(snippet.title, snippet.description || '');
+
+      const video: YouTubeVideo = {
+        videoId: best.item.id.videoId,
+        title: snippet.title,
+        channelTitle: snippet.channelTitle,
+        thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url,
+        thumbnailHigh: snippet.thumbnails?.high?.url,
+        publishedAt: snippet.publishedAt,
+        isShort,
+      };
+
+      console.log(`[YouTube API] Found via '${strategy.name}': ${video.videoId} (score: ${best.score})`);
+
+      return {
+        success: true,
+        video,
+        quotaUsed: totalQuotaUsed,
+      };
+    } catch (error) {
+      console.error(`[YouTube API] Network error (${strategy.name}):`, error);
+      // Continue to next strategy
+    }
+  }
+
+  // No video found after all strategies
+  console.log(`[YouTube API] No suitable video found for: ${cleanName}`);
+  return {
+    success: true,
+    video: undefined,
+    quotaUsed: totalQuotaUsed || 100,
+  };
+}
+
+/**
+ * Score a video result for relevance
+ * Higher score = better match
+ */
+function scoreVideo(item: any, productName: string, brand: string | null): number {
+  let score = 0;
+  const title = item.snippet?.title?.toLowerCase() || '';
+  const channel = item.snippet?.channelTitle?.toLowerCase() || '';
+  const description = item.snippet?.description?.toLowerCase() || '';
+
+  // Product name words in title
+  const nameWords = productName.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  const matchedWords = nameWords.filter(word => title.includes(word));
+  score += matchedWords.length * 15;
+
+  // Brand match (strong signal)
+  if (brand && title.includes(brand.toLowerCase())) {
+    score += 25;
+  }
+
+  // Is a Short (preferred for mobile)
+  if (isLikelyShort(title, description)) {
+    score += 20;
+  }
+
+  // Review/unboxing indicators
+  if (/review|reseña|análisis|unboxing|hands.?on/i.test(title)) {
+    score += 15;
+  }
+
+  // Penalize likely spam
+  if (/cheap|free|win|giveaway|gratis/i.test(title)) {
+    score -= 30;
+  }
+
+  // Penalize very long titles (often spam)
+  if (title.length > 80) {
+    score -= 10;
+  }
+
+  // Trusted channel patterns (tech reviewers)
+  if (/tech|review|unbox|gadget/i.test(channel)) {
+    score += 10;
+  }
+
+  return score;
 }
 
 /**

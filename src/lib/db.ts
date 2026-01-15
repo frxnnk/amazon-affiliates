@@ -1,4 +1,4 @@
-import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, eq, desc, and, like, or, gte, lte, asc } from 'astro:db';
+import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, ProductViews, ProductLikes, eq, desc, and, like, or, gte, lte, asc } from 'astro:db';
 
 // Tier thresholds
 const TIER_THRESHOLDS = {
@@ -1011,6 +1011,180 @@ export async function resetUserPreferences(userId: string) {
   return getUserPreferences(userId);
 }
 
+// Get all ASINs to exclude from feed (liked + disliked + recently viewed)
+// Returns up to 200 most recent to avoid overwhelming the exclusion list
+export async function getExcludedAsins(userId: string): Promise<Set<string>> {
+  const excluded = new Set<string>();
+
+  // Get liked and disliked from preferences
+  const prefs = await getUserPreferences(userId);
+  if (prefs) {
+    const liked = (prefs.likedAsins as string[]) || [];
+    const disliked = (prefs.dislikedAsins as string[]) || [];
+    liked.forEach(asin => excluded.add(asin));
+    disliked.forEach(asin => excluded.add(asin));
+  }
+
+  // Get explicit likes from ProductLikes table
+  const likes = await db.select({ asin: ProductLikes.asin })
+    .from(ProductLikes)
+    .where(eq(ProductLikes.userId, userId))
+    .all();
+  likes.forEach(l => excluded.add(l.asin));
+
+  // Get recently viewed products (last 200)
+  const views = await db.select({ asin: ProductViews.asin })
+    .from(ProductViews)
+    .where(eq(ProductViews.userId, userId))
+    .orderBy(desc(ProductViews.viewedAt))
+    .limit(200)
+    .all();
+  views.forEach(v => excluded.add(v.asin));
+
+  return excluded;
+}
+
+// ==================== PRODUCT VIEWS FUNCTIONS ====================
+
+const MAX_VIEWS_PER_USER = 200;
+
+export type InteractionType = 'view' | 'click' | 'swipe_left' | 'swipe_right' | 'like' | 'share';
+
+/**
+ * Record that a user viewed a product
+ * Automatically manages the 200 product limit per user
+ */
+export async function recordProductView(
+  userId: string,
+  asin: string,
+  options?: {
+    category?: string;
+    timeSpentMs?: number;
+    interactionType?: InteractionType;
+  }
+): Promise<void> {
+  // Check if this product was already viewed recently (dedup)
+  const existing = await db.select({ id: ProductViews.id })
+    .from(ProductViews)
+    .where(and(
+      eq(ProductViews.userId, userId),
+      eq(ProductViews.asin, asin)
+    ))
+    .get();
+
+  if (existing) {
+    // Update existing view with new timestamp and metrics
+    await db.update(ProductViews)
+      .set({
+        viewedAt: new Date(),
+        timeSpentMs: options?.timeSpentMs,
+        interactionType: options?.interactionType,
+      })
+      .where(eq(ProductViews.id, existing.id));
+    return;
+  }
+
+  // Insert new view
+  await db.insert(ProductViews).values({
+    userId,
+    asin,
+    category: options?.category,
+    viewedAt: new Date(),
+    timeSpentMs: options?.timeSpentMs,
+    interactionType: options?.interactionType,
+  });
+
+  // Cleanup: remove oldest views if user exceeds limit
+  const viewCount = await db.select({ id: ProductViews.id })
+    .from(ProductViews)
+    .where(eq(ProductViews.userId, userId))
+    .all();
+
+  if (viewCount.length > MAX_VIEWS_PER_USER) {
+    // Get oldest views to delete
+    const toDelete = await db.select({ id: ProductViews.id })
+      .from(ProductViews)
+      .where(eq(ProductViews.userId, userId))
+      .orderBy(asc(ProductViews.viewedAt))
+      .limit(viewCount.length - MAX_VIEWS_PER_USER)
+      .all();
+
+    for (const v of toDelete) {
+      await db.delete(ProductViews).where(eq(ProductViews.id, v.id));
+    }
+  }
+}
+
+/**
+ * Record multiple product views at once (batch)
+ */
+export async function recordProductViewsBatch(
+  userId: string,
+  asins: string[],
+  category?: string
+): Promise<void> {
+  for (const asin of asins) {
+    await recordProductView(userId, asin, { category, interactionType: 'view' });
+  }
+}
+
+/**
+ * Get user's recently viewed ASINs
+ */
+export async function getRecentlyViewedAsins(
+  userId: string,
+  limit: number = 50
+): Promise<string[]> {
+  const views = await db.select({ asin: ProductViews.asin })
+    .from(ProductViews)
+    .where(eq(ProductViews.userId, userId))
+    .orderBy(desc(ProductViews.viewedAt))
+    .limit(limit)
+    .all();
+
+  return views.map(v => v.asin);
+}
+
+/**
+ * Get engagement stats for analytics
+ */
+export async function getViewEngagementStats(userId: string): Promise<{
+  totalViews: number;
+  clicks: number;
+  avgTimeSpentMs: number;
+  topCategories: string[];
+}> {
+  const views = await db.select()
+    .from(ProductViews)
+    .where(eq(ProductViews.userId, userId))
+    .all();
+
+  const clicks = views.filter(v => v.interactionType === 'click').length;
+  const timesSpent = views.filter(v => v.timeSpentMs).map(v => v.timeSpentMs!);
+  const avgTime = timesSpent.length > 0
+    ? timesSpent.reduce((a, b) => a + b, 0) / timesSpent.length
+    : 0;
+
+  // Count categories
+  const categoryCount: Record<string, number> = {};
+  views.forEach(v => {
+    if (v.category) {
+      categoryCount[v.category] = (categoryCount[v.category] || 0) + 1;
+    }
+  });
+  const topCategories = Object.entries(categoryCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([cat]) => cat);
+
+  return {
+    totalViews: views.length,
+    clicks,
+    avgTimeSpentMs: Math.round(avgTime),
+    topCategories,
+  };
+}
+
 // ==================== PRICE HISTORY FUNCTIONS ====================
 
 export interface PriceHistoryInput {
@@ -1089,6 +1263,61 @@ export async function cleanupPriceHistory(daysToKeep: number = 90) {
 
   await db.delete(PriceHistory)
     .where(lte(PriceHistory.recordedAt, cutoffDate));
+}
+
+/**
+ * Check if current prices are the lowest in 30 days (batch operation)
+ * Returns a map of ASIN to { isLowest, lowestPrice, percentBelowAvg }
+ */
+export async function checkLowestPrices(
+  products: Array<{ asin: string; currentPrice: number }>,
+  marketplace: string = 'com'
+): Promise<Map<string, { isLowest: boolean; lowestPrice: number; percentBelowAvg: number }>> {
+  const results = new Map<string, { isLowest: boolean; lowestPrice: number; percentBelowAvg: number }>();
+
+  // Get all price history for these ASINs in last 30 days
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 30);
+
+  const allHistory = await db.select()
+    .from(PriceHistory)
+    .where(and(
+      eq(PriceHistory.marketplace, marketplace),
+      gte(PriceHistory.recordedAt, startDate)
+    ))
+    .all();
+
+  // Group by ASIN
+  const historyByAsin = new Map<string, number[]>();
+  allHistory.forEach(h => {
+    const prices = historyByAsin.get(h.asin) || [];
+    prices.push(h.price);
+    historyByAsin.set(h.asin, prices);
+  });
+
+  // Check each product
+  for (const product of products) {
+    const history = historyByAsin.get(product.asin);
+
+    if (!history || history.length === 0) {
+      // No history - can't determine if lowest
+      results.set(product.asin, { isLowest: false, lowestPrice: product.currentPrice, percentBelowAvg: 0 });
+      continue;
+    }
+
+    const lowestHistorical = Math.min(...history);
+    const avgPrice = history.reduce((a, b) => a + b, 0) / history.length;
+    const isLowest = product.currentPrice <= lowestHistorical;
+    const percentBelowAvg = avgPrice > 0 ? Math.round(((avgPrice - product.currentPrice) / avgPrice) * 100) : 0;
+
+    results.set(product.asin, {
+      isLowest,
+      lowestPrice: Math.min(lowestHistorical, product.currentPrice),
+      percentBelowAvg: Math.max(0, percentBelowAvg), // Only positive values
+    });
+  }
+
+  return results;
 }
 
 // ==================== CURATED DEALS FUNCTIONS ====================
