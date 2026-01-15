@@ -301,18 +301,57 @@ export async function getProductVideo(
 
     const result = { success: searchSuccess, video };
 
+    // BUG FIX: If we had a cached video but the new search failed,
+    // keep the old video instead of overwriting with null
+    const finalVideo = result.video || (cached?.videoId ? {
+      videoId: cached.videoId,
+      title: cached.videoTitle || '',
+      channelTitle: cached.channelTitle || '',
+      thumbnail: cached.thumbnail || '',
+      thumbnailHigh: cached.thumbnailHigh || undefined,
+      publishedAt: cached.fetchedAt.toISOString(),
+      isShort: cached.isShort,
+    } : null);
+
     // Calculate expiration date
     const expiresAt = new Date();
     expiresAt.setDate(
-      expiresAt.getDate() + (result.video ? CACHE_DAYS_FOUND : CACHE_DAYS_NOT_FOUND)
+      expiresAt.getDate() + (finalVideo ? CACHE_DAYS_FOUND : CACHE_DAYS_NOT_FOUND)
     );
 
-    // Upsert cache entry
+    // Upsert cache entry with race condition handling
     if (cached) {
-      // Update existing entry
+      // Update existing entry - preserve old video if new search failed
+      const videoToStore = result.video || (cached.videoId ? {
+        videoId: cached.videoId,
+        title: cached.videoTitle,
+        channelTitle: cached.channelTitle,
+        thumbnail: cached.thumbnail,
+        thumbnailHigh: cached.thumbnailHigh,
+        isShort: cached.isShort,
+      } : null);
+
       await db
         .update(VideoCache)
         .set({
+          videoId: videoToStore?.videoId || null,
+          videoTitle: videoToStore?.title || null,
+          channelTitle: videoToStore?.channelTitle || null,
+          thumbnail: videoToStore?.thumbnail || null,
+          thumbnailHigh: videoToStore?.thumbnailHigh || null,
+          isShort: videoToStore?.isShort ?? false,
+          fetchedAt: now,
+          expiresAt,
+          hitCount: 0,
+        })
+        .where(eq(VideoCache.id, cached.id));
+    } else {
+      // Insert new entry - handle race condition with try/catch
+      try {
+        await db.insert(VideoCache).values({
+          searchKey: cacheKey,
+          asin,
+          productTitle: title,
           videoId: result.video?.videoId || null,
           videoTitle: result.video?.title || null,
           channelTitle: result.video?.channelTitle || null,
@@ -322,27 +361,20 @@ export async function getProductVideo(
           fetchedAt: now,
           expiresAt,
           hitCount: 0,
-        })
-        .where(eq(VideoCache.id, cached.id));
-    } else {
-      // Insert new entry
-      await db.insert(VideoCache).values({
-        searchKey: cacheKey,
-        asin,
-        productTitle: title,
-        videoId: result.video?.videoId || null,
-        videoTitle: result.video?.title || null,
-        channelTitle: result.video?.channelTitle || null,
-        thumbnail: result.video?.thumbnail || null,
-        thumbnailHigh: result.video?.thumbnailHigh || null,
-        isShort: result.video?.isShort ?? false,
-        fetchedAt: now,
-        expiresAt,
-        hitCount: 0,
-      });
+        });
+      } catch (insertError: any) {
+        // Race condition: another request already inserted this entry
+        // This is expected behavior with concurrent requests - just log and continue
+        if (insertError?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+          console.log('[VideoCache] Race condition handled - entry already exists');
+        } else {
+          // Re-throw unexpected errors
+          throw insertError;
+        }
+      }
     }
 
-    return result.video || null;
+    return finalVideo;
   } catch (error) {
     console.error('[VideoCache] Database error:', error);
     return null;
