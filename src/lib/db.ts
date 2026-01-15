@@ -49,6 +49,41 @@ export async function getUser(clerkUserId: string) {
   return db.select().from(Users).where(eq(Users.id, clerkUserId)).get();
 }
 
+/**
+ * Ensure user exists in database (lazy creation for tracking purposes)
+ * Creates a minimal user record if it doesn't exist
+ */
+export async function ensureUserExists(clerkUserId: string): Promise<boolean> {
+  try {
+    const existing = await db.select({ id: Users.id })
+      .from(Users)
+      .where(eq(Users.id, clerkUserId))
+      .get();
+
+    if (existing) {
+      return true;
+    }
+
+    // Create minimal user record for tracking
+    await db.insert(Users).values({
+      id: clerkUserId,
+      email: `${clerkUserId}@placeholder.local`, // Placeholder until they provide real email
+      balance: 0,
+      totalEarned: 0,
+      approvedClaimsCount: 0,
+      tier: 'bronze',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    console.log(`[DB] Created placeholder user: ${clerkUserId}`);
+    return true;
+  } catch (error) {
+    console.error(`[DB] Failed to ensure user exists: ${clerkUserId}`, error);
+    return false;
+  }
+}
+
 // Update user payout info
 export async function updateUserPayoutInfo(
   clerkUserId: string,
@@ -600,6 +635,25 @@ export async function getPublishedProducts(lang: string, limit?: number) {
   });
 }
 
+// Get all available products (published + imported) for feed fallback
+export async function getFeedProducts(lang: string, limit?: number) {
+  let query = db.select().from(Products)
+    .where(and(
+      eq(Products.lang, lang),
+      or(
+        eq(Products.status, 'published'),
+        eq(Products.status, 'imported')
+      )
+    ))
+    .orderBy(desc(Products.updatedAt));
+
+  if (limit) {
+    query = query.limit(limit) as typeof query;
+  }
+
+  return query.all();
+}
+
 // Get featured products
 export async function getFeaturedProducts(lang: string, limit = 6) {
   return getAllProducts({
@@ -1063,6 +1117,13 @@ export async function recordProductView(
     interactionType?: InteractionType;
   }
 ): Promise<void> {
+  // Ensure user exists in database (lazy creation)
+  const userExists = await ensureUserExists(userId);
+  if (!userExists) {
+    console.warn(`[DB] Skipping view recording - could not ensure user exists: ${userId}`);
+    return;
+  }
+
   // Check if this product was already viewed recently (dedup)
   const existing = await db.select({ id: ProductViews.id })
     .from(ProductViews)
