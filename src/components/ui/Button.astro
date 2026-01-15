@@ -31,105 +31,127 @@ const {
 )}
 
 <style>
+  /* Neo-Brutalist Button System */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    font-family: var(--font-sans, 'DM Sans', sans-serif);
-    font-weight: 500;
-    border-radius: 10px;
-    border: none;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-radius: 0;
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    box-shadow: none;
+    transform: none !important;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Sizes */
   .btn-sm {
     padding: 0.5rem 1rem;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    border-width: 2px;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .btn-md {
     padding: 0.75rem 1.5rem;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
   }
 
   .btn-lg {
     padding: 1rem 2rem;
     font-size: 1rem;
+    border-width: 4px;
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .btn-full {
     width: 100%;
   }
 
-  /* Primary - Dark ink button */
+  /* Primary - Black button */
   .btn-primary {
-    background: var(--color-ink, #1A1815);
-    color: var(--color-cream, #FDFBF7);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-ink-light, #2D2926);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(26, 24, 21, 0.2);
+    background: var(--color-cream, #FFFEF9);
+    color: var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  /* Secondary - Warm honey button */
+  /* Secondary - Yellow button */
   .btn-secondary {
-    background: var(--color-honey, #C8956C);
-    color: white;
+    background: var(--color-brutal-yellow, #FFE14D);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: var(--color-honey-dark, #A67B5B);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(200, 149, 108, 0.3);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Outline */
   .btn-outline {
-    background: transparent;
-    border: 2px solid var(--color-ink, #1A1815);
-    color: var(--color-ink, #1A1815);
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .btn-outline:hover:not(:disabled) {
-    background: var(--color-ink, #1A1815);
-    color: var(--color-cream, #FDFBF7);
-    transform: translateY(-2px);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Ghost */
   .btn-ghost {
     background: transparent;
-    color: var(--color-stone, #6B6560);
+    color: var(--color-brutal-black, #1A1A1A);
+    border: 2px solid transparent;
+    box-shadow: none;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
 
   .btn-ghost:hover:not(:disabled) {
-    color: var(--color-ink, #1A1815);
-    background: var(--color-sand, #E8E4DD);
+    border-color: var(--color-brutal-black, #1A1A1A);
+    background: var(--color-cream, #FFFEF9);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Amazon - Orange CTA */
   .btn-amazon {
-    background: #FF9900;
-    color: #0F1111;
-    font-weight: 600;
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-weight: 700;
   }
 
   .btn-amazon:hover:not(:disabled) {
-    background: #FFB030;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 153, 0, 0.35);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 </style>

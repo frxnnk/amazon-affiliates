@@ -257,7 +257,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
               youtubeVideo: {
                 videoId: video.videoId,
                 title: video.title,
-                embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: true, mute: true, loop: true }),
+                embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: false, mute: false, loop: true }),
                 thumbnail: video.thumbnail,
               },
             };

@@ -13,22 +13,205 @@ const { title, description, lang, updatedAt } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} lang={lang}>
-  <div class="max-w-3xl mx-auto px-4 py-12">
-    <article class="bg-white rounded-xl shadow-sm p-8 md:p-12">
-      <header class="mb-8 pb-8 border-b border-gray-200">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+  <div class="legal-container">
+    <article class="legal-article">
+      <header class="legal-header">
+        <h1 class="legal-title">
           {title}
         </h1>
         {updatedAt && (
-          <p class="text-sm text-gray-500">
-            {lang === 'es' ? 'Ultima actualizacion:' : 'Last updated:'} {formatDate(updatedAt, lang)}
+          <p class="legal-date">
+            <span class="date-label">{lang === 'es' ? 'Ultima actualizacion:' : 'Last updated:'}</span>
+            <span class="date-value">{formatDate(updatedAt, lang)}</span>
           </p>
         )}
       </header>
 
-      <div class="prose prose-gray max-w-none prose-headings:font-semibold prose-a:text-primary-600 hover:prose-a:text-primary-700">
+      <div class="legal-content">
         <slot />
       </div>
     </article>
   </div>
 </BaseLayout>
+
+<style>
+  /* Neo-Brutalist Legal Layout */
+  .legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 1rem;
+  }
+
+  .legal-article {
+    background: var(--color-cream, #FFFEF9);
+    border: 4px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 8px 8px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .legal-header {
+    background: var(--color-brutal-yellow, #FFE14D);
+    padding: 2rem 2rem 1.5rem;
+    border-bottom: 4px solid var(--color-brutal-black, #1A1A1A);
+  }
+
+  .legal-title {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0 0 0.75rem;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+  }
+
+  .legal-date {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .date-label {
+    opacity: 0.7;
+  }
+
+  .date-value {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
+    padding: 0.125rem 0.5rem;
+    font-weight: 600;
+  }
+
+  .legal-content {
+    padding: 2rem;
+  }
+
+  /* Prose styling for content */
+  .legal-content :global(h2) {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+
+  .legal-content :global(h2:first-child) {
+    margin-top: 0;
+  }
+
+  .legal-content :global(h3) {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 2rem 0 0.75rem;
+  }
+
+  .legal-content :global(p) {
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0 0 1.25rem;
+  }
+
+  .legal-content :global(a) {
+    color: var(--color-brutal-orange, #FF6B35);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 2px solid currentColor;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .legal-content :global(a:hover) {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-cream, #FFFEF9);
+    padding: 0 0.25rem;
+  }
+
+  .legal-content :global(ul),
+  .legal-content :global(ol) {
+    margin: 0 0 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .legal-content :global(li) {
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin-bottom: 0.5rem;
+  }
+
+  .legal-content :global(ul li::marker) {
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .legal-content :global(ol li::marker) {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-weight: 700;
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .legal-content :global(strong) {
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .legal-content :global(blockquote) {
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .legal-content :global(blockquote p) {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .legal-content :global(code) {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.875em;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
+    padding: 0.125rem 0.375rem;
+  }
+
+  .legal-content :global(hr) {
+    margin: 2.5rem 0;
+    border: none;
+    height: 3px;
+    background: var(--color-brutal-black, #1A1A1A);
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .legal-container {
+      padding: 1.5rem 0.75rem;
+    }
+
+    .legal-article {
+      border-width: 3px;
+      box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .legal-header {
+      padding: 1.5rem;
+      border-bottom-width: 3px;
+    }
+
+    .legal-content {
+      padding: 1.5rem;
+    }
+  }
+</style>

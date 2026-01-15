@@ -788,7 +788,7 @@ const t = texts[lang];
 </style>
 
 <style is:global>
-  /* Header */
+  /* Header - NEO-BRUTALIST */
   .header {
     position: fixed;
     top: 0;
@@ -798,31 +798,38 @@ const t = texts[lang];
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 52px;
+    height: 56px;
     padding: 0 16px;
     padding-top: env(safe-area-inset-top, 0);
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    transition: transform 0.25s ease, opacity 0.25s ease;
+    background: var(--color-cream, #FFFEF9);
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
+    transition: transform 0.2s ease, opacity 0.2s ease;
   }
 
-  .header.hidden { 
+  .header.hidden {
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
   }
 
   .brand-text {
-    font-size: 1.125rem;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.25rem;
     font-weight: 700;
-    color: var(--text);
+    color: var(--color-brutal-black, #1A1A1A);
     text-decoration: none;
     letter-spacing: -0.02em;
+    text-transform: uppercase;
+    transition: transform 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .header-right { display: flex; align-items: center; gap: 10px; }
+  .brand-text:hover {
+    transform: translate(-2px, -2px);
+  }
 
-  /* Language Dropdown */
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  /* Language Dropdown - NEO-BRUTALIST */
   .lang-dropdown {
     position: relative;
   }
@@ -832,25 +839,27 @@ const t = texts[lang];
     align-items: center;
     gap: 6px;
     padding: 6px 10px 6px 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-family: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .lang-trigger:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--text-muted);
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .lang-dropdown.open .lang-trigger {
-    background: var(--bg-tertiary);
-    border-color: var(--text);
+    background: var(--color-brutal-yellow, #FFE14D);
   }
 
   .lang-flag {
@@ -859,13 +868,13 @@ const t = texts[lang];
   }
 
   .lang-code {
-    letter-spacing: 0.02em;
+    letter-spacing: 0.05em;
   }
 
   .lang-chevron {
     width: 14px;
     height: 14px;
-    color: var(--text-muted);
+    color: var(--color-brutal-black, #1A1A1A);
     transition: transform 0.2s ease;
   }
 
@@ -875,19 +884,17 @@ const t = texts[lang];
 
   .lang-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
     min-width: 140px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-lg);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-8px);
     transition: all 0.2s ease;
     z-index: 1000;
-    overflow: hidden;
   }
 
   .lang-dropdown.open .lang-menu {
@@ -902,18 +909,25 @@ const t = texts[lang];
     gap: 10px;
     padding: 10px 14px;
     text-decoration: none;
-    color: var(--text);
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: background 0.15s ease;
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
+    transition: background 150ms;
+  }
+
+  .lang-option:last-child {
+    border-bottom: none;
   }
 
   .lang-option:hover {
-    background: var(--bg-secondary);
+    background: var(--color-brutal-yellow, #FFE14D);
   }
 
   .lang-option.active {
-    background: var(--bg-secondary);
+    background: var(--color-brutal-yellow, #FFE14D);
   }
 
   .lang-option-flag {
@@ -927,32 +941,35 @@ const t = texts[lang];
 
   .lang-check {
     font-size: 0.75rem;
-    color: var(--accent);
-    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    font-weight: 800;
   }
 
   .user-btn {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    border-radius: 50%;
-    transition: all 0.15s ease;
+    color: var(--color-brutal-black, #1A1A1A);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .user-btn:hover {
-    background: var(--bg-tertiary);
-    color: var(--text);
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .user-btn svg { width: 18px; height: 18px; }
+  .user-btn svg { width: 18px; height: 18px; stroke-width: 2; }
 
   .header-right :global(.cl-userButtonTrigger) {
-    width: 34px !important;
-    height: 34px !important;
+    width: 36px !important;
+    height: 36px !important;
   }
 
   /* Main */
@@ -975,10 +992,10 @@ const t = texts[lang];
     background: #000; 
   }
 
-  /* Search */
+  /* Search - NEO-BRUTALIST */
   .search-wrapper {
     min-height: calc(100dvh - 136px);
-    background: var(--bg);
+    background: var(--color-cream, #FFFEF9);
   }
 
   .search-header-fixed {
@@ -986,74 +1003,87 @@ const t = texts[lang];
     top: 52px;
     z-index: 50;
     padding: 12px 16px 16px;
-    background: var(--bg);
+    background: var(--color-cream, #FFFEF9);
   }
 
+  /* Search Bar - NEO-BRUTALIST */
   .search-bar {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 0 16px;
     height: 52px;
-    background: var(--bg-secondary);
-    border: 1.5px solid var(--border);
-    border-radius: 26px;
-    transition: all 0.2s ease;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .search-bar.focused {
-    background: var(--bg);
-    border-color: var(--text);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    background: var(--color-brutal-yellow, #FFE14D);
+    border-color: var(--color-brutal-black, #1A1A1A);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
   }
 
   .search-bar-icon {
     flex-shrink: 0;
-    color: var(--text-muted);
-    transition: color 0.2s;
+    color: var(--color-brutal-black, #1A1A1A);
+    transition: color 150ms;
   }
 
-  .search-bar-icon svg { width: 20px; height: 20px; }
-  .search-bar.focused .search-bar-icon { color: var(--text); }
+  .search-bar-icon svg { width: 20px; height: 20px; stroke-width: 2.5; }
+  .search-bar.focused .search-bar-icon { color: var(--color-brutal-black, #1A1A1A); }
 
   .search-bar input {
     flex: 1;
     border: none;
     background: none;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
     font-size: 1rem;
-    font-weight: 450;
-    color: var(--text);
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
     outline: none;
     min-width: 0;
   }
 
-  .search-bar input::placeholder { color: var(--text-muted); font-weight: 400; }
+  .search-bar input::placeholder {
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+    font-weight: 500;
+  }
 
   .search-bar-clear {
     display: none;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    background: var(--bg-tertiary);
-    border: none;
-    border-radius: 50%;
-    color: var(--text-secondary);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .search-bar-clear svg { width: 16px; height: 16px; }
-  .search-bar-clear:hover { background: var(--border); color: var(--text); }
+  .search-bar-clear svg { width: 16px; height: 16px; stroke-width: 2.5; }
+  .search-bar-clear:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
   .search-bar.has-value .search-bar-clear { display: flex; }
 
   .search-bar-spinner {
     display: none;
     width: 20px;
     height: 20px;
-    color: var(--text-muted);
-    animation: spin 0.8s linear infinite;
+    color: var(--color-brutal-black, #1A1A1A);
+    animation: spin 0.6s linear infinite;
   }
 
   .search-bar.is-loading .search-bar-spinner { display: block; }
@@ -1073,23 +1103,35 @@ const t = texts[lang];
   }
 
   .search-block-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .search-block-action {
-    background: none;
-    border: none;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--accent);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    padding: 0;
+    padding: 6px 10px;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .search-block-action:hover { text-decoration: underline; }
+  .search-block-action:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
 
+  /* Search Tags - NEO-BRUTALIST */
   .search-tags {
     display: flex;
     flex-wrap: wrap;
@@ -1099,24 +1141,32 @@ const t = texts[lang];
   .search-tag {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text);
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .search-tag:hover { 
-    border-color: var(--text);
-    background: var(--bg-secondary);
+  .search-tag:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .search-tag:active { transform: scale(0.97); }
+  .search-tag:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
 
   .tag-number {
     display: inline-flex;
@@ -1124,11 +1174,11 @@ const t = texts[lang];
     justify-content: center;
     width: 22px;
     height: 22px;
-    background: var(--bg-tertiary);
-    border-radius: 50%;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-secondary);
+    background: var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    font-size: 0.625rem;
+    font-weight: 800;
+    color: var(--color-brutal-yellow, #FFE14D);
   }
 
   .tag-text { white-space: nowrap; }
@@ -1139,19 +1189,25 @@ const t = texts[lang];
     justify-content: center;
     width: 20px;
     height: 20px;
-    background: var(--bg-tertiary);
-    border-radius: 50%;
+    background: var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
     font-size: 12px;
-    color: var(--text-muted);
+    font-weight: 800;
+    color: var(--color-cream, #FFFEF9);
     margin-left: 4px;
+    transition: all 150ms;
   }
 
-  .tag-remove:hover { background: var(--border); color: var(--text); }
+  .tag-remove:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+  }
 
+  /* Search Categories - NEO-BRUTALIST */
   .search-categories {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
   }
 
   .search-cat-btn {
@@ -1160,17 +1216,23 @@ const t = texts[lang];
     align-items: center;
     gap: 8px;
     padding: 16px 8px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .search-cat-btn:hover { 
-    border-color: var(--text); 
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
+  .search-cat-btn:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .search-cat-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .cat-btn-icon {
@@ -1179,12 +1241,15 @@ const t = texts[lang];
   }
 
   .search-cat-btn span {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--text);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
-  /* Loading Skeletons */
+  /* Loading Skeletons - NEO-BRUTALIST */
   .search-results-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1192,8 +1257,9 @@ const t = texts[lang];
   }
 
   .result-skeleton {
-    background: var(--bg-secondary);
-    border-radius: var(--radius);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
     animation: pulse 1.5s ease-in-out infinite;
   }
@@ -1201,15 +1267,15 @@ const t = texts[lang];
   .skel-image {
     width: 100%;
     aspect-ratio: 1;
-    background: var(--bg-tertiary);
+    background: rgba(26, 26, 26, 0.08);
+    border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
   }
 
   .skel-content { padding: 12px; }
 
   .skel-text {
     height: 10px;
-    background: var(--bg-tertiary);
-    border-radius: 5px;
+    background: rgba(26, 26, 26, 0.15);
     margin-bottom: 8px;
   }
 
@@ -1223,41 +1289,47 @@ const t = texts[lang];
     50% { opacity: 0.5; }
   }
 
-  /* Results */
+  /* Results - NEO-BRUTALIST */
   .result-item {
     display: flex;
     flex-direction: column;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
     overflow: hidden;
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .result-item:hover {
-    border-color: var(--text);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .result-item:active {
+    transform: translate(1px, 1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .result-item-img {
     position: relative;
     width: 100%;
     aspect-ratio: 1;
-    background: #fafafa;
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
   }
 
   .result-item-img img {
     max-width: 85%;
     max-height: 85%;
     object-fit: contain;
-    transition: transform 0.3s ease;
+    transition: transform 150ms;
   }
 
   .result-item:hover .result-item-img img { transform: scale(1.05); }
@@ -1266,37 +1338,44 @@ const t = texts[lang];
     position: absolute;
     top: 8px;
     left: 8px;
-    padding: 4px 8px;
-    background: var(--success);
+    padding: 4px 10px;
+    background: var(--color-brutal-green, #2D9D4E);
     color: #fff;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    border-radius: 4px;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
   }
 
   .result-item-body { padding: 12px; }
 
   .result-item-brand {
     display: block;
-    font-size: 0.6875rem;
-    font-weight: 600;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
     margin-bottom: 4px;
   }
 
   .result-item-title {
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.8125rem;
+    font-weight: 600;
     line-height: 1.4;
-    color: var(--text);
+    color: var(--color-brutal-black, #1A1A1A);
     margin: 0 0 8px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 2.8em;
+    min-height: 2.4em;
+    text-transform: uppercase;
   }
 
   .result-item-meta {
@@ -1309,27 +1388,34 @@ const t = texts[lang];
   .result-stars {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 1px;
   }
 
   .result-star {
     width: 12px;
     height: 12px;
-    color: var(--accent);
-    fill: var(--accent);
+    color: var(--color-brutal-yellow, #FFE14D);
+    fill: var(--color-brutal-yellow, #FFE14D);
   }
 
-  .result-star.empty { fill: none; stroke: var(--border); }
+  .result-star.empty {
+    fill: none;
+    stroke: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.3;
+  }
 
   .result-rating-text {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .result-reviews-count {
-    font-size: 0.6875rem;
-    color: var(--text-muted);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
   }
 
   .result-item-pricing {
@@ -1340,29 +1426,37 @@ const t = texts[lang];
   }
 
   .result-item-price {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE14D);
+    padding: 2px 8px;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
   }
 
   .result-item-old {
-    font-size: 0.8125rem;
-    color: var(--text-muted);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
     text-decoration: line-through;
+    text-decoration-thickness: 2px;
   }
 
   .result-prime-badge {
-    padding: 2px 6px;
-    background: #232f3e;
-    color: #fff;
+    padding: 3px 6px;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
     font-size: 0.5rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    border-radius: 3px;
+    letter-spacing: 0.05em;
+    border-radius: 0;
   }
 
-  /* Empty State */
+  /* Empty State - NEO-BRUTALIST */
   .search-empty-state {
     display: flex;
     flex-direction: column;
@@ -1375,36 +1469,41 @@ const t = texts[lang];
   .empty-illustration {
     width: 80px;
     height: 80px;
-    margin-bottom: 16px;
-    color: var(--text-muted);
-    opacity: 0.35;
+    margin-bottom: 20px;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.3;
   }
 
-  .empty-text {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin: 0 0 4px;
+  .search-empty-state .empty-text {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0 0 8px;
   }
 
   .empty-hint {
+    font-family: var(--font-body, 'DM Sans', sans-serif);
     font-size: 0.8125rem;
-    color: var(--text-muted);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
     margin: 0;
   }
 
-  /* Profile Page */
-  .profile-page { 
-    padding: 20px 16px; 
+  /* Profile Page - NEO-BRUTALIST */
+  .profile-page {
+    padding: 20px 16px;
     max-width: 600px;
     margin: 0 auto;
+    background: var(--color-cream, #FFFEF9);
   }
 
-  /* Profile Hero */
+  /* Profile Hero - NEO-BRUTALIST */
   .profile-hero {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
     padding: 20px;
     margin-bottom: 20px;
   }
@@ -1421,84 +1520,92 @@ const t = texts[lang];
   }
 
   .user-avatar-wrap :global(.cl-userButtonTrigger) {
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    border-radius: 0 !important;
+    border: 2px solid var(--color-brutal-black, #1A1A1A) !important;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A) !important;
   }
 
   .user-info { min-width: 0; }
 
   .user-greeting {
     display: block;
-    font-size: 0.6875rem;
-    font-weight: 600;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    margin-bottom: 2px;
+    letter-spacing: 0.1em;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.7;
+    margin-bottom: 4px;
   }
 
   .user-name {
-    font-size: 1.375rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-transform: uppercase;
   }
 
-  /* Saved Section Header */
+  /* Saved Section Header - NEO-BRUTALIST */
   .saved-section-header {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
     margin-bottom: 16px;
   }
 
   .saved-header-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent);
-    border-radius: 8px;
-    color: white;
+    background: var(--color-brutal-orange, #FF6B35);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .saved-header-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
   }
 
   .saved-header-text {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .saved-header-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .saved-header-count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    background: var(--bg-tertiary);
-    border-radius: 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-secondary);
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: var(--color-brutal-yellow, #FFE14D);
   }
 
   /* Profile Content */
@@ -1515,14 +1622,14 @@ const t = texts[lang];
 
   .dot-loader {
     display: flex;
-    gap: 6px;
+    gap: 8px;
   }
 
   .dot-loader span {
-    width: 8px;
-    height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
     animation: dotPulse 1.4s infinite ease-in-out both;
   }
 
@@ -1530,53 +1637,61 @@ const t = texts[lang];
   .dot-loader span:nth-child(2) { animation-delay: -0.16s; }
 
   @keyframes dotPulse {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.6; }
     40% { transform: scale(1); opacity: 1; }
   }
 
-  /* Empty Panel */
+  /* Empty Panel - NEO-BRUTALIST */
   .empty-panel {
     text-align: center;
-    padding: 32px 24px;
+    padding: 40px 24px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .empty-icon-wrap {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 12px;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    color: var(--text-muted);
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
-  .empty-icon-wrap svg { 
-    width: 20px; 
-    height: 20px;
-    opacity: 0.5;
+  .empty-icon-wrap svg {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
   }
 
-  .empty-panel h3 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin: 0 0 4px;
+  .empty-panel h3,
+  .empty-text {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0 0 8px;
   }
 
   .empty-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+    font-size: 0.8125rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
     margin: 0;
   }
 
-  /* Saved Products List */
+  /* Saved Products List - NEO-BRUTALIST */
   .saved-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
   .saved-item {
@@ -1584,29 +1699,33 @@ const t = texts[lang];
     align-items: center;
     gap: 12px;
     padding: 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .saved-item:hover {
-    border-color: var(--accent);
-    box-shadow: var(--shadow-md);
-    background: var(--bg-secondary);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .saved-item:active {
+    transform: translate(1px, 1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .saved-item-img {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-secondary);
-    border-radius: 8px;
+    background: #fff;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
   }
 
@@ -1623,8 +1742,8 @@ const t = texts[lang];
     justify-content: center;
     width: 100%;
     height: 100%;
-    color: var(--text-muted);
-    opacity: 0.4;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.3;
   }
 
   .saved-item-info {
@@ -1636,17 +1755,20 @@ const t = texts[lang];
   }
 
   .saved-item-brand {
-    font-size: 0.625rem;
-    font-weight: 600;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
   }
 
   .saved-item-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
     margin: 0;
     line-height: 1.3;
     display: -webkit-box;
@@ -1656,16 +1778,24 @@ const t = texts[lang];
   }
 
   .saved-item-price {
-    font-size: 0.9375rem;
-    font-weight: 700;
-    color: var(--accent-dark);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.875rem;
+    font-weight: 800;
+    color: var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE14D);
+    padding: 2px 6px;
+    border: 1px solid var(--color-brutal-black, #1A1A1A);
+    display: inline-block;
+    width: fit-content;
+    margin-top: 4px;
   }
 
   .saved-item-code {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    font-family: 'SF Mono', Monaco, monospace;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
   }
 
   .saved-item-remove {
@@ -1675,27 +1805,32 @@ const t = texts[lang];
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-tertiary);
-    border: none;
-    border-radius: 50%;
-    color: var(--text-muted);
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .saved-item-remove:hover {
-    background: #fee2e2;
-    color: #dc2626;
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  /* Login Prompt Card */
+  /* Login Prompt Card - NEO-BRUTALIST */
   .login-prompt-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 60px 24px;
+    padding: 48px 24px;
     gap: 12px;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 8px 8px 0 var(--color-brutal-black, #1A1A1A);
+    margin: 20px 0;
   }
 
   .prompt-icon {
@@ -1704,64 +1839,85 @@ const t = texts[lang];
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-    border-radius: 50%;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
     margin-bottom: 8px;
   }
 
-  .prompt-icon svg { width: 32px; height: 32px; color: var(--accent); }
-
-  .login-prompt-card h2 { 
-    font-size: 1.25rem; 
-    font-weight: 600;
-    color: var(--text);
-    margin: 0;
+  .prompt-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-brutal-black, #1A1A1A);
+    stroke-width: 2;
   }
 
-  .login-prompt-card p { 
-    color: var(--text-secondary); 
+  .login-prompt-card h2 {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .login-prompt-card p {
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.7;
     margin: 0;
     font-size: 0.9375rem;
   }
 
-  .btn-login {
-    margin-top: 12px;
-    padding: 12px 36px;
-    background: var(--text);
-    color: var(--bg);
-    font-size: 0.9375rem;
-    font-weight: 600;
+  .profile-page .btn-login {
+    margin-top: 16px;
+    padding: 14px 32px;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     text-decoration: none;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .btn-login:hover { 
-    background: var(--text-secondary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+  .profile-page .btn-login:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
+  /* Legal Links - NEO-BRUTALIST */
   .legal-links {
-    margin-top: 48px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 3px solid var(--color-brutal-black, #1A1A1A);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
   }
 
-  .legal-link { 
+  .legal-link {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px 0;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+    padding: 14px 12px;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-brutal-black, #1A1A1A);
     text-decoration: none;
     background: none;
     border: none;
+    border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms;
     cursor: pointer;
     text-align: left;
     transition: color 0.15s ease;
@@ -1769,22 +1925,22 @@ const t = texts[lang];
   
   .legal-link::before {
     content: '';
-    width: 4px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 50%;
+    width: 6px;
+    height: 6px;
+    background: var(--color-brutal-black, #1A1A1A);
     flex-shrink: 0;
   }
-  
-  .legal-link:hover { 
-    color: var(--text);
-  }
-  
-  .legal-link:hover::before {
-    background: var(--accent);
+
+  .legal-link:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    padding-left: 16px;
   }
 
-  /* Bottom Nav */
+  .legal-link:hover::before {
+    background: var(--color-brutal-orange, #FF6B35);
+  }
+
+  /* Bottom Nav - NEO-BRUTALIST */
   .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -1792,16 +1948,15 @@ const t = texts[lang];
     right: 0;
     z-index: 200;
     display: flex;
-    height: 64px;
+    height: 68px;
     padding-bottom: env(safe-area-inset-bottom, 0);
-    background: var(--bg);
-    border-top: 1px solid var(--border);
+    background: var(--color-cream, #FFFEF9);
+    border-top: 4px solid var(--color-brutal-black, #1A1A1A);
   }
 
   body.feed-mode .bottom-nav {
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(20px);
-    border-top-color: rgba(255, 255, 255, 0.1);
+    background: var(--color-cream, #FFFEF9);
+    border-top: 4px solid var(--color-brutal-black, #1A1A1A);
   }
 
   .nav-item {
@@ -1811,25 +1966,51 @@ const t = texts[lang];
     align-items: center;
     justify-content: center;
     gap: 4px;
-    background: none;
+    background: transparent;
     border: none;
-    color: var(--text-muted);
+    border-right: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.15s ease;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .nav-item:last-child {
+    border-right: none;
+  }
+
+  .nav-item:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .nav-item:active {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
   }
 
   body.feed-mode .nav-item {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
-  .nav-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; }
-  .nav-item span { font-size: 0.625rem; font-weight: 500; }
+  .nav-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .nav-item span {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 
-  .nav-item.active { color: var(--accent); }
-  .nav-item.active svg { stroke-width: 2; }
+  .nav-item.active {
+    background: var(--color-brutal-yellow, #FFE14D);
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+  .nav-item.active svg { stroke-width: 2.5; }
 
-  body.feed-mode .nav-item.active { color: #fff; }
+  body.feed-mode .nav-item.active {
+    background: var(--color-brutal-yellow, #FFE14D);
+    color: var(--color-brutal-black, #1A1A1A);
+  }
 
   /* Desktop */
   @media (min-width: 640px) {
@@ -1846,5 +2027,10 @@ const t = texts[lang];
   @media (min-width: 1024px) {
     .search-wrapper { max-width: 900px; }
     .search-results-grid { grid-template-columns: repeat(5, 1fr); }
+
+    /* Hide bottom nav on desktop */
+    .bottom-nav {
+      display: none;
+    }
   }
 </style>

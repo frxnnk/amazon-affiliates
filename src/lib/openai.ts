@@ -79,7 +79,7 @@ function getApiKey(): string {
 }
 
 /**
- * Generate product content using GPT-4o-mini
+ * Generate product content using GPT-5-mini
  */
 export async function generateProductContent(
   input: ProductContentInput
@@ -164,7 +164,7 @@ Respond with this exact JSON format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages,
         temperature: 0.7,
         max_tokens: 1500,
@@ -243,7 +243,7 @@ export async function generateShortDescription(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'user', content: prompt },
         ],

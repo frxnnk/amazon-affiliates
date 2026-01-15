@@ -16,6 +16,7 @@ interface Props {
     rating: number;
     ourRating?: number;
     featuredImage: { url: string; alt: string };
+    images?: string[]; // All product images for carousel
     affiliateUrl: string;
     isOnSale?: boolean;
     isFeatured?: boolean;
@@ -36,6 +37,20 @@ const discount = product.originalPrice
 
 // Estimated cashback (2% of price as example)
 const estimatedCashback = (product.price * 0.02).toFixed(2);
+
+// Get all images for carousel (fallback to featured image)
+const productImages = product.images && product.images.length > 0
+  ? product.images
+  : [product.featuredImage?.url].filter(Boolean) as string[];
+const hasMultipleImages = productImages.length > 1;
+
+// Truncate description for "see more" functionality
+const MAX_DESC_LENGTH = 20;
+const fullDescription = product.shortDescription || '';
+const shouldTruncate = fullDescription.length > MAX_DESC_LENGTH;
+const truncatedDescription = shouldTruncate
+  ? fullDescription.slice(0, MAX_DESC_LENGTH) + '...'
+  : fullDescription;
 ---
 
 <article class:list={['product-card', `variant-${variant}`]}>
@@ -54,24 +69,63 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
 
   <!-- Image -->
   <a href={`/${lang}/products/${product.productId}`} class="card-image-link">
-    <div class="card-image">
-      {product.featuredImage?.url ? (
-        <img
-          src={product.featuredImage.url}
-          alt={product.featuredImage.alt || product.title}
-          loading="lazy"
-          decoding="async"
-        />
-      ) : (
-        <div class="image-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
+    {hasMultipleImages ? (
+      <!-- Image carousel -->
+      <div class="card-image card-carousel" data-card-carousel>
+        <div class="card-carousel-track" data-card-carousel-track>
+          {productImages.map((imgUrl, imgIndex) => (
+            <div class="card-carousel-slide">
+              <img
+                src={imgUrl}
+                alt={`${product.title} - ${imgIndex + 1}`}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+        <!-- Carousel dots -->
+        <div class="card-carousel-dots">
+          {productImages.map((_, imgIndex) => (
+            <button
+              class:list={['card-carousel-dot', { active: imgIndex === 0 }]}
+              data-card-dot={imgIndex}
+              aria-label={`${lang === 'es' ? 'Imagen' : 'Image'} ${imgIndex + 1}`}
+            />
+          ))}
+        </div>
+        <!-- Nav arrows -->
+        <button class="card-carousel-nav card-carousel-prev" data-card-prev aria-label={lang === 'es' ? 'Anterior' : 'Previous'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <button class="card-carousel-nav card-carousel-next" data-card-next aria-label={lang === 'es' ? 'Siguiente' : 'Next'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+    ) : (
+      <div class="card-image">
+        {product.featuredImage?.url ? (
+          <img
+            src={product.featuredImage.url}
+            alt={product.featuredImage.alt || product.title}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div class="image-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </div>
+        )}
+      </div>
+    )}
   </a>
 
   <!-- Content -->
@@ -94,9 +148,18 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
       </a>
     </h3>
 
-    <!-- Description (non-compact only) -->
-    {variant !== 'compact' && product.shortDescription && (
-      <p class="card-description">{product.shortDescription}</p>
+    <!-- Description with see more (non-compact only) -->
+    {variant !== 'compact' && fullDescription && (
+      <div class="card-description-wrapper">
+        <p class="card-description" data-card-description data-full={fullDescription} data-truncated={truncatedDescription} data-lang={lang}>
+          <span class="card-description-text">{truncatedDescription}</span>
+          {shouldTruncate && (
+            <button class="card-see-more" data-card-see-more type="button">
+              {lang === 'es' ? 'ver más' : 'see more'}
+            </button>
+          )}
+        </p>
+      </div>
     )}
 
     <!-- Rating -->
@@ -139,31 +202,35 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
 </article>
 
 <style>
+  /* Neo-Brutalist Product Card */
   .product-card {
     position: relative;
-    background: var(--color-white, #FFFFFF);
-    border: 1px solid var(--color-sand, #E8E4DD);
-    border-radius: 16px;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .product-card:hover {
-    border-color: var(--color-honey-muted, #E8D5C4);
-    box-shadow: 0 8px 32px rgba(26, 24, 21, 0.08);
-    transform: translateY(-4px);
+    transform: translate(-4px, -4px);
+    box-shadow: 10px 10px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Featured variant */
   .variant-featured {
-    border: 2px solid var(--color-honey, #C8956C);
-    background: linear-gradient(180deg, var(--color-honey-muted, #E8D5C4) 0%, var(--color-white, #FFFFFF) 40%);
+    border-width: 4px;
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .variant-featured .card-content {
+    background: var(--color-cream, #FFFEF9);
   }
 
   .variant-featured:hover {
-    box-shadow: 0 12px 40px rgba(200, 149, 108, 0.2);
+    box-shadow: 12px 12px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   /* Compact variant */
@@ -179,28 +246,30 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
   /* Badge */
   .card-badge {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
+    top: 0.75rem;
+    left: 0.75rem;
     z-index: 10;
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.75rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    border-radius: 6px;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .badge-featured {
-    background: var(--color-ink, #1A1815);
-    color: var(--color-cream, #FDFBF7);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
   }
 
   .badge-sale {
-    background: var(--color-terra, #C17B5E);
-    color: white;
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   /* Image */
@@ -210,20 +279,13 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
 
   .card-image {
     aspect-ratio: 4/3;
-    background: var(--color-cream-dark, #F7F4EE);
+    background: var(--color-white, #FFFFFF);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
-  }
-
-  .card-image::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, transparent 60%, rgba(26, 24, 21, 0.02) 100%);
-    pointer-events: none;
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
   }
 
   .card-image img {
@@ -231,15 +293,16 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
     height: 100%;
     object-fit: contain;
     padding: 1.5rem;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .product-card:hover .card-image img {
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
 
   .image-placeholder {
-    color: var(--color-mist, #C4BFB8);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.3;
   }
 
   .image-placeholder svg {
@@ -261,30 +324,33 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.6875rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
   .meta-brand {
-    font-weight: 600;
-    color: var(--color-stone, #6B6560);
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   .meta-separator {
-    color: var(--color-sand-dark, #D4CFC6);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.3;
   }
 
   .meta-category {
-    color: var(--color-stone-light, #9C9690);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
   }
 
   /* Title */
   .card-title {
-    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
     font-size: 1rem;
-    font-weight: 500;
-    line-height: 1.4;
+    font-weight: 600;
+    line-height: 1.3;
     margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -293,25 +359,50 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
   }
 
   .card-title a {
-    color: var(--color-ink, #1A1815);
+    color: var(--color-brutal-black, #1A1A1A);
     text-decoration: none;
-    transition: color 0.2s;
   }
 
   .card-title a:hover {
-    color: var(--color-honey-dark, #A67B5B);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
   }
 
   /* Description */
+  .card-description-wrapper {
+    margin-bottom: 0.25rem;
+  }
+
   .card-description {
     font-size: 0.8125rem;
-    color: var(--color-stone, #6B6560);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.7;
     line-height: 1.5;
     margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: inline;
+  }
+
+  .card-description-text {
+    display: inline;
+  }
+
+  .card-see-more {
+    display: inline;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-brutal-orange, #FF6B35);
+    cursor: pointer;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .card-see-more:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
   }
 
   /* Rating */
@@ -325,6 +416,7 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
   .card-footer {
     margin-top: auto;
     padding-top: 0.75rem;
+    border-top: 2px dashed var(--color-brutal-black, #1A1A1A);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -337,21 +429,19 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
   }
 
   .cashback-hint {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-sage, #7D8B6A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-brutal-green, #2D9D4E);
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.375rem;
+    text-transform: uppercase;
   }
 
   .cashback-hint::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    background: var(--color-sage, #7D8B6A);
-    border-radius: 50%;
-    opacity: 0.6;
+    content: '+';
+    font-weight: 800;
   }
 
   /* CTA Button styling override */
@@ -361,29 +451,127 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: #FF9900;
-    color: #0F1111;
-    font-weight: 600;
-    font-size: 0.875rem;
-    border-radius: 8px;
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
     text-decoration: none;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .card-footer :global(a:hover) {
-    background: #FFB030;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(255, 153, 0, 0.3);
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .card-footer :global(a:active) {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .cta-arrow {
     width: 1rem;
     height: 1rem;
-    transition: transform 0.2s;
+    transition: transform 150ms;
   }
 
   .card-footer :global(a:hover) .cta-arrow {
-    transform: translateX(2px);
+    transform: translateX(4px);
+  }
+
+  /* Card Carousel */
+  .card-carousel {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-carousel-track {
+    display: flex;
+    height: 100%;
+    transition: transform 200ms ease-out;
+  }
+
+  .card-carousel-slide {
+    flex: 0 0 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .card-carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card-carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .card-carousel-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    padding: 0;
+    cursor: pointer;
+    transition: all 150ms;
+  }
+
+  .card-carousel-dot.active {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: scale(1.1);
+  }
+
+  .card-carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    opacity: 0;
+    z-index: 2;
+  }
+
+  .card-carousel:hover .card-carousel-nav {
+    opacity: 1;
+  }
+
+  .card-carousel-nav:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translateY(-50%) translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .card-carousel-prev {
+    left: 8px;
+  }
+
+  .card-carousel-next {
+    right: 8px;
   }
 
   /* Responsive */
@@ -395,5 +583,105 @@ const estimatedCashback = (product.price * 0.02).toFixed(2);
     .card-image img {
       padding: 1rem;
     }
+
+    .card-carousel-nav {
+      opacity: 1;
+      width: 24px;
+      height: 24px;
+    }
   }
 </style>
+
+<script>
+  // Initialize card carousels and see more buttons
+  function initProductCard() {
+    // Card carousel functionality
+    document.querySelectorAll('[data-card-carousel]').forEach((carousel) => {
+      const track = carousel.querySelector('[data-card-carousel-track]') as HTMLElement;
+      const slides = carousel.querySelectorAll('.card-carousel-slide');
+      const dots = carousel.querySelectorAll('[data-card-dot]');
+      const prevBtn = carousel.querySelector('[data-card-prev]');
+      const nextBtn = carousel.querySelector('[data-card-next]');
+
+      if (!track || slides.length === 0) return;
+
+      let currentIndex = 0;
+      const totalSlides = slides.length;
+
+      function goToSlide(index: number) {
+        currentIndex = Math.max(0, Math.min(index, totalSlides - 1));
+        track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === currentIndex);
+        });
+      }
+
+      prevBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        goToSlide(currentIndex - 1);
+      });
+
+      nextBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        goToSlide(currentIndex + 1);
+      });
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          goToSlide(index);
+        });
+      });
+    });
+
+  }
+
+  // See more functionality - use event delegation for dynamic content
+  function initCardSeeMore() {
+    document.removeEventListener('click', handleCardSeeMoreClick);
+    document.addEventListener('click', handleCardSeeMoreClick);
+  }
+
+  function handleCardSeeMoreClick(e: Event) {
+    const target = e.target as HTMLElement;
+    if (!target.matches('[data-card-see-more]')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const btn = target;
+    const description = btn.closest('[data-card-description]') as HTMLElement;
+    if (!description) return;
+
+    const fullText = description.dataset.full || '';
+    const truncatedText = description.dataset.truncated || '';
+    const textSpan = description.querySelector('.card-description-text');
+    const isSpanish = description.dataset.lang === 'es';
+
+    if (!textSpan) return;
+
+    const isExpanded = description.dataset.expanded === 'true';
+
+    if (isExpanded) {
+      textSpan.textContent = truncatedText;
+      btn.textContent = isSpanish ? 'ver más' : 'see more';
+      description.dataset.expanded = 'false';
+    } else {
+      textSpan.textContent = fullText;
+      btn.textContent = isSpanish ? 'ver menos' : 'see less';
+      description.dataset.expanded = 'true';
+    }
+  }
+
+  // Run on load and after Astro page transitions
+  initProductCard();
+  initCardSeeMore();
+  document.addEventListener('astro:after-swap', () => {
+    initProductCard();
+    initCardSeeMore();
+  });
+</script>

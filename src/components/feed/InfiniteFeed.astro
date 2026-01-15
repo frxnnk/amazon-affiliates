@@ -9,9 +9,14 @@
  * - Uppercase text, high contrast
  * - Snappy transitions, no smooth fades
  * - Floating category selector with brutal dropdown
+ * - Inline search bar with debounce
+ * - Saveable sections (search + filter combinations)
  */
 import { type Lang } from '@i18n/utils';
 import '@styles/feed-brutal.css';
+import FeedSearchBar from './FeedSearchBar.astro';
+import FeedSections from './FeedSections.astro';
+import FilterPanel from './FilterPanel.astro';
 
 interface Props {
   lang: Lang;
@@ -82,52 +87,20 @@ const categories = [
 
 <div class="feed" id="reel-feed" data-lang={lang} data-category={category}>
   
-  <!-- Floating Top Controls Bar - Premium Glass Design -->
+  <!-- Floating Top Controls Bar - Search, Sections, Filters, Category -->
   <div class="feed-controls" id="feed-controls">
 
-    <!-- Unified Control Pill -->
+    <!-- Full Controls: Search + Sections + Filters + Category -->
     <div class="controls-pill">
 
-      <!-- Volume Toggle (only shown when video is playing) -->
-      <button class="ctrl-btn volume-btn hidden" id="volume-toggle" type="button" data-muted="false" title={lang === 'es' ? 'Silenciar' : 'Mute'}>
-        <span class="ctrl-icon">
-          <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-          </svg>
-          <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
-            <line x1="22" y1="9" x2="16" y2="15"/>
-            <line x1="16" y1="9" x2="22" y2="15"/>
-          </svg>
-        </span>
-      </button>
+      <!-- Search Bar (inline) -->
+      <FeedSearchBar lang={lang} />
 
-      <!-- Divider (shown when volume is visible) -->
-      <span class="ctrl-divider volume-divider hidden"></span>
+      <!-- Saved Sections -->
+      <FeedSections lang={lang} />
 
-      <!-- Media Mode Toggle - Segmented Pill -->
-      <div class="media-toggle" id="mode-toggle" data-mode="video" role="tablist">
-        <button class="media-opt" data-type="image" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
-            <path d="m21 15-5-5L5 21"/>
-          </svg>
-          <span>{lang === 'es' ? 'Foto' : 'Photo'}</span>
-        </button>
-        <button class="media-opt active" data-type="video" role="tab" aria-selected="true">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5.14v14l11-7-11-7z"/>
-          </svg>
-          <span>Video</span>
-        </button>
-        <span class="media-slider"></span>
-      </div>
-
-      <!-- Divider -->
-      <span class="ctrl-divider"></span>
+      <!-- Filter Panel -->
+      <FilterPanel lang={lang} />
 
       <!-- Category Filter - Compact Dropdown -->
       <div class="category-ctrl" id="category-float">
@@ -178,7 +151,7 @@ const categories = [
     </div>
 
   </div>
-  
+
   <div class="feed-scroll" id="reel-slides">
     
     <!-- Skeleton -->
@@ -203,6 +176,9 @@ const categories = [
       ))}
     </div>
     
+    <!-- Scroll sentinel for infinite loading detection -->
+    <div id="scroll-sentinel" style="height: 1px; width: 100%; pointer-events: none;"></div>
+
     <!-- Loader (Skeleton for loading more) -->
     <div class="feed-loader" id="reel-loader">
       <article class="slide skeleton-slide loader-skeleton">
@@ -221,7 +197,7 @@ const categories = [
         </div>
       </article>
     </div>
-    
+
     <!-- End -->
     <div class="feed-end" id="reel-end">{t.noMore}</div>
   </div>
@@ -241,19 +217,19 @@ class Feed {
     this.scroll = document.getElementById('reel-slides');
     this.skeleton = document.getElementById('skeleton-container');
     this.loader = document.getElementById('reel-loader');
+    this.sentinel = document.getElementById('scroll-sentinel');
     this.endEl = document.getElementById('reel-end');
     this.errorEl = document.getElementById('reel-error');
     
-    // Top controls elements
+    // Top controls elements (simplified - category only)
     this.feedControls = document.getElementById('feed-controls');
     this.categoryFloat = document.getElementById('category-float');
     this.categoryPills = document.getElementById('category-pills');
     this.categoryToggle = document.getElementById('category-toggle');
-    this.modeToggle = document.getElementById('mode-toggle');
-    this.volumeToggle = document.getElementById('volume-toggle');
     
     this.lang = this.container?.dataset.lang || 'es';
     this.category = this.container?.dataset.category || 'all';
+    this.searchQuery = ''; // Current search query
     this.page = 1;
     this.products = [];
     this.seen = new Set();
@@ -263,11 +239,8 @@ class Feed {
     
     // Video control state
     this.activeVideoSlide = null;
-    this.globalMuted = false; // Start with sound ON
+    this.globalMuted = false; // Start with sound ON - user preference
     this.videoObserver = null;
-
-    // Media mode: 'video' or 'image'
-    this.mediaMode = localStorage.getItem('feedMediaMode') || 'video';
 
     // Category selector state
     this.categoryExpanded = false;
@@ -278,6 +251,12 @@ class Feed {
     this.pendingViews = []; // Batch pending view tracking
     this.viewDebounceTimer = null;
 
+    // Infinite scroll observer
+    this.infiniteScrollObserver = null;
+
+    // Filter state
+    this.currentFilters = {};
+
     if (this.container) this.init();
   }
   
@@ -285,8 +264,36 @@ class Feed {
     this.setupEvents();
     this.setupVideoObserver();
     this.setupViewTrackingObserver();
+    this.setupInfiniteScrollObserver();
     this.setupTopControls();
     await this.load();
+  }
+
+  // Setup IntersectionObserver for infinite scroll (more reliable than scroll events with snap)
+  setupInfiniteScrollObserver() {
+    console.log('[Feed] Setting up infinite scroll...', { sentinel: !!this.sentinel, scroll: !!this.scroll });
+
+    if (!this.sentinel || !this.scroll) {
+      console.warn('[Feed] Missing sentinel or scroll container!');
+      return;
+    }
+
+    this.infiniteScrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        console.log('[Feed] Observer entry:', { isIntersecting: entry.isIntersecting, loading: this.loading, hasMore: this.hasMore });
+        if (entry.isIntersecting && !this.loading && this.hasMore) {
+          console.log('[Feed] Sentinel visible - triggering load');
+          this.load();
+        }
+      });
+    }, {
+      root: this.scroll,
+      rootMargin: '200% 0px', // Start loading when sentinel is within 2 screens
+      threshold: 0
+    });
+
+    this.infiniteScrollObserver.observe(this.sentinel);
+    console.log('[Feed] Infinite scroll observer initialized');
   }
 
   // Setup observer for tracking product views
@@ -354,20 +361,48 @@ class Feed {
     }
 
     try {
-      // Send batch of ASINs
-      const asins = views.map(v => v.asin);
-      await fetch('/api/user/view', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          asins,
-          category: this.category
-        })
-      });
-      console.log(`[Feed] Tracked ${asins.length} product views`);
+      // Send individual views with engagement data
+      for (const view of views) {
+        await fetch('/api/user/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asin: view.asin,
+            category: view.category || this.category,
+            timeSpentMs: view.timeSpentMs,
+            interactionType: view.interactionType || 'view'
+          })
+        });
+      }
+      console.log(`[Feed] Tracked ${views.length} product views with engagement data`);
     } catch (error) {
       // Silently fail - view tracking is not critical
       console.warn('[Feed] Failed to track views:', error);
+    }
+  }
+
+  // Track a specific engagement signal
+  trackEngagement(asin, type, extraData = {}) {
+    const signal = {
+      asin,
+      category: extraData.category || this.category,
+      timeSpentMs: extraData.timeSpentMs,
+      interactionType: type
+    };
+
+    // For high-value signals, send immediately
+    if (['click', 'affiliate_click', 'save'].includes(type)) {
+      fetch('/api/user/view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signal)
+      }).catch(() => {}); // Silent fail
+      console.log(`[Feed] Tracked ${type} for ${asin.slice(-6)}`);
+    } else {
+      // Queue low-value signals
+      this.pendingViews.push(signal);
+      if (this.viewDebounceTimer) clearTimeout(this.viewDebounceTimer);
+      this.viewDebounceTimer = setTimeout(() => this.sendViewBatch(), 2000);
     }
   }
 
@@ -378,55 +413,11 @@ class Feed {
     }
   }
   
-  // Top Controls Setup
+  // Top Controls Setup (simplified - category only)
   setupTopControls() {
-    // Category selector
     this.setupCategorySelector();
-    
-    // Media mode toggle
-    this.setupModeToggle();
-    
-    // Volume control
-    this.setupVolumeControl();
-  }
-  
-  // Media Mode Toggle
-  setupModeToggle() {
-    if (!this.modeToggle) return;
-
-    // Set initial state from localStorage
-    this.updateModeToggleUI();
-
-    // Handle clicks on individual options
-    const options = this.modeToggle.querySelectorAll('.media-opt');
-    options.forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const newMode = opt.dataset.type;
-        if (newMode && newMode !== this.mediaMode) {
-          this.mediaMode = newMode;
-          localStorage.setItem('feedMediaMode', this.mediaMode);
-          this.updateModeToggleUI();
-          this.reloadFeed();
-        }
-      });
-    });
   }
 
-  updateModeToggleUI() {
-    if (!this.modeToggle) return;
-    const isVideo = this.mediaMode === 'video';
-    this.modeToggle.dataset.mode = this.mediaMode;
-
-    // Update active states on options
-    const options = this.modeToggle.querySelectorAll('.media-opt');
-    options.forEach(opt => {
-      const isActive = opt.dataset.type === this.mediaMode;
-      opt.classList.toggle('active', isActive);
-      opt.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-  }
-  
   reloadFeed() {
     this.page = 1;
     this.products = [];
@@ -437,50 +428,7 @@ class Feed {
     this.endEl?.classList.remove('show');
     this.load();
   }
-  
-  // Volume Control - Simple mute/unmute toggle
-  setupVolumeControl() {
-    if (!this.volumeToggle) return;
-    
-    // Set initial UI state
-    this.updateVolumeUI();
-    
-    // Toggle mute on button click
-    this.volumeToggle.addEventListener('click', () => {
-      this.globalMuted = !this.globalMuted;
-      this.updateVolumeUI();
-      this.applyVolumeToActiveVideo();
-    });
-  }
-  
-  updateVolumeUI() {
-    if (!this.volumeToggle) return;
-    
-    const iconMuted = this.volumeToggle.querySelector('.icon-muted');
-    const iconUnmuted = this.volumeToggle.querySelector('.icon-unmuted');
-    
-    if (iconMuted) iconMuted.style.display = this.globalMuted ? 'block' : 'none';
-    if (iconUnmuted) iconUnmuted.style.display = this.globalMuted ? 'none' : 'block';
-    
-    this.volumeToggle.dataset.muted = this.globalMuted ? 'true' : 'false';
-    this.volumeToggle.classList.toggle('active', !this.globalMuted);
-    this.volumeToggle.title = this.globalMuted 
-      ? (this.lang === 'es' ? 'Activar sonido' : 'Enable sound')
-      : (this.lang === 'es' ? 'Silenciar' : 'Mute');
-  }
-  
-  applyVolumeToActiveVideo() {
-    if (!this.activeVideoSlide) return;
-    const iframe = this.activeVideoSlide.querySelector('.video-iframe');
-    if (!iframe) return;
-    
-    if (this.globalMuted) {
-      this.sendYouTubeCommand(iframe, 'mute');
-    } else {
-      this.sendYouTubeCommand(iframe, 'unMute');
-    }
-  }
-  
+
   // Category Selector Logic
   setupCategorySelector() {
     if (!this.categoryFloat) return;
@@ -531,6 +479,16 @@ class Feed {
   toggleCategoryExpanded() {
     this.categoryExpanded = !this.categoryExpanded;
     this.categoryFloat?.classList.toggle('open', this.categoryExpanded);
+
+    // Position dropdown dynamically when opening
+    if (this.categoryExpanded && this.categoryToggle) {
+      const catMenu = this.categoryFloat?.querySelector('.cat-menu');
+      if (catMenu) {
+        const rect = this.categoryToggle.getBoundingClientRect();
+        catMenu.style.top = `${rect.bottom + 10}px`;
+        catMenu.style.right = '16px';
+      }
+    }
   }
 
   collapseCategorySelector() {
@@ -563,19 +521,19 @@ class Feed {
         const iframe = slide.querySelector('.video-iframe');
         if (!iframe) return;
         
-        if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           // Slide is now active - play video
           this.activateVideo(slide, iframe);
           // Preload adjacent videos
           this.preloadAdjacentVideos(slide);
-        } else if (this.activeVideoSlide === slide) {
+        } else if (!entry.isIntersecting && this.activeVideoSlide === slide) {
           // Slide is leaving - pause video
           this.deactivateVideo(slide, iframe);
         }
       });
     }, {
       root: this.scroll,
-      threshold: [0.3, 0.7, 1.0],
+      threshold: [0.1, 0.5, 0.9],
       rootMargin: '0px'
     });
   }
@@ -620,27 +578,48 @@ class Feed {
     this.activeVideoSlide = slide;
     slide.dataset.playing = 'true';
     const videoId = iframe.dataset.videoId;
-    
-    // Show volume button
-    this.showVolumeButton();
 
     // Show loading state
     slide.classList.add('video-loading-active');
-    
-    // Start playing (with current mute state)
-    const muteParam = this.globalMuted ? '&mute=1' : '';
-    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&enablejsapi=1`;
-    
+
+    // Start playing - always muted initially for autoplay to work (browser policy)
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&enablejsapi=1`;
+
     // Hide loading when iframe loads
     iframe.onload = () => {
       setTimeout(() => {
         slide.classList.remove('video-loading-active');
         slide.classList.add('video-active');
+
+        // Apply user's sound preference after video starts
+        if (!this.globalMuted) {
+          this.sendYouTubeCommand(iframe, 'unMute');
+        }
+
+        // Update sound button UI to match global state
+        this.updateSoundButtonUI(slide, !this.globalMuted);
       }, 300);
     };
-    
+
     // Update control buttons
     this.updateVideoControlUI(slide, true);
+  }
+
+  // Update sound button UI for a slide
+  updateSoundButtonUI(slide, isUnmuted) {
+    const soundBtn = slide.querySelector('.video-sound-btn');
+    if (!soundBtn) return;
+
+    const iconMuted = soundBtn.querySelector('.icon-muted');
+    const iconUnmuted = soundBtn.querySelector('.icon-unmuted');
+
+    soundBtn.dataset.muted = isUnmuted ? 'false' : 'true';
+    soundBtn.title = isUnmuted
+      ? (this.lang === 'es' ? 'Silenciar' : 'Mute')
+      : (this.lang === 'es' ? 'Activar sonido' : 'Unmute');
+
+    if (iconMuted) iconMuted.style.display = isUnmuted ? 'none' : 'block';
+    if (iconUnmuted) iconUnmuted.style.display = isUnmuted ? 'block' : 'none';
   }
   
   // Deactivate video when slide leaves viewport
@@ -660,30 +639,11 @@ class Feed {
     
     if (this.activeVideoSlide === slide) {
       this.activeVideoSlide = null;
-      // Hide volume button when no video is active
-      this.hideVolumeButton();
     }
-    
+
     this.updateVideoControlUI(slide, false);
   }
-  
-  showVolumeButton() {
-    this.volumeToggle?.classList.remove('hidden');
-    // Also show the divider
-    const divider = document.querySelector('.ctrl-divider.volume-divider');
-    divider?.classList.remove('hidden');
-  }
 
-  hideVolumeButton() {
-    // Only hide if no video is currently active
-    if (!this.activeVideoSlide) {
-      this.volumeToggle?.classList.add('hidden');
-      // Also hide the divider
-      const divider = document.querySelector('.ctrl-divider.volume-divider');
-      divider?.classList.add('hidden');
-    }
-  }
-  
   // Toggle play/pause using YouTube IFrame API postMessage
   togglePlayPause(slide, iframe) {
     const isPlaying = slide.dataset.playing === 'true';
@@ -707,12 +667,16 @@ class Feed {
       // If iframe was cleared (deactivated), reload it
       if (!iframe.src || iframe.src === 'about:blank' || iframe.src === '') {
         slide.classList.add('video-loading-active');
-        const muteParam = this.globalMuted ? '&mute=1' : '';
-        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1${muteParam}&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&enablejsapi=1`;
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${videoId}&enablejsapi=1`;
         iframe.onload = () => {
           setTimeout(() => {
             slide.classList.remove('video-loading-active');
             slide.classList.add('video-active');
+            // Apply user's sound preference after reload
+            if (!this.globalMuted) {
+              this.sendYouTubeCommand(iframe, 'unMute');
+            }
+            this.updateSoundButtonUI(slide, !this.globalMuted);
           }, 300);
         };
       } else {
@@ -805,6 +769,35 @@ class Feed {
       }
     });
 
+    // Listen for search changes
+    window.addEventListener('search:change', (e) => {
+      const query = e.detail?.query || '';
+      if (query !== this.searchQuery) {
+        this.changeSearch(query);
+      }
+    });
+
+    // Listen for search:apply from sections (sets input value too)
+    window.addEventListener('search:apply', (e) => {
+      const query = e.detail?.query || '';
+      const searchInput = document.getElementById('feed-search-input');
+      if (searchInput) {
+        searchInput.value = query;
+        // Trigger the clear button visibility update
+        const clearBtn = document.getElementById('search-clear');
+        clearBtn?.classList.toggle('visible', query.length > 0);
+      }
+      if (query !== this.searchQuery) {
+        this.changeSearch(query);
+      }
+    });
+
+    // Listen for filter changes
+    window.addEventListener('filters:change', (e) => {
+      this.currentFilters = e.detail || {};
+      this.reloadFeed();
+    });
+
     // Send pending views when user leaves
     window.addEventListener('beforeunload', () => {
       this.sendViewBatch();
@@ -829,6 +822,19 @@ class Feed {
     this.endEl?.classList.remove('show');
     this.load();
   }
+
+  // Handle search query changes
+  changeSearch(query) {
+    this.searchQuery = query;
+    this.page = 1;
+    this.products = [];
+    this.seen.clear();
+    this.hasMore = true;
+    this.scroll?.querySelectorAll('.slide:not(.skeleton-slide)').forEach(s => s.remove());
+    this.skeleton?.classList.remove('hide');
+    this.endEl?.classList.remove('show');
+    this.load();
+  }
   
   async load() {
     if (this.loading || !this.hasMore) return;
@@ -839,7 +845,8 @@ class Feed {
     
     try {
       const exclude = this.seen.size > 0 ? `&exclude=${[...this.seen].slice(-50).join(',')}` : '';
-      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&limit=5${exclude}`);
+      const searchParam = this.searchQuery ? `&search=${encodeURIComponent(this.searchQuery)}` : '';
+      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&limit=5${exclude}${searchParam}`);
       const data = await res.json();
       
       if (!data.success) throw new Error(data.error);
@@ -857,26 +864,44 @@ class Feed {
       console.log('[Feed] ========================');
 
       const newProducts = data.products.filter(p => !this.seen.has(p.asin));
-      
+
+      // Debug logging
+      console.log(`[Feed] Loaded page ${this.page}: ${data.products.length} total, ${newProducts.length} new, hasMore=${data.hasMore}`);
+
       if (newProducts.length > 0) {
         newProducts.forEach(p => this.seen.add(p.asin));
         this.products.push(...newProducts);
         this.render(newProducts);
         this.page++;
-        this.hasMore = data.hasMore;
         this.skeleton?.classList.add('hide');
-      } else if (data.products.length === 0) {
-        this.hasMore = false;
       }
-      
+
+      // Always update hasMore from API response
+      this.hasMore = data.hasMore && (newProducts.length > 0 || data.products.length > 0);
+
+      // If no new products but API returned products (all duplicates), try next page
+      if (newProducts.length === 0 && data.products.length > 0 && data.hasMore) {
+        console.log('[Feed] All products were duplicates, loading next page...');
+        this.page++;
+        this.loading = false;
+        this.loader?.classList.remove('show');
+        return this.load();
+      }
+
       if (!this.hasMore) {
+        console.log('[Feed] No more products to load');
         this.endEl?.classList.add('show');
         this.skeleton?.classList.add('hide');
       }
+
+      // Dispatch search results event to clear loading state
+      window.dispatchEvent(new CustomEvent('search:results', { detail: { count: newProducts.length } }));
     } catch (e) {
       console.error(e);
       this.errorEl?.classList.add('show');
       this.skeleton?.classList.add('hide');
+      // Still clear search loading on error
+      window.dispatchEvent(new CustomEvent('search:results', { detail: { count: 0, error: true } }));
     } finally {
       this.loading = false;
       this.loader?.classList.remove('show');
@@ -886,7 +911,8 @@ class Feed {
   render(products) {
     products.forEach((p) => {
       const slide = this.createSlide(p);
-      this.scroll?.insertBefore(slide, this.loader);
+      // Insert before sentinel to keep sentinel at the end for infinite scroll detection
+      this.scroll?.insertBefore(slide, this.sentinel);
       // Start observing video slides for autoplay
       this.observeSlide(slide);
       // Start observing all slides for view tracking
@@ -912,16 +938,15 @@ class Feed {
       style: 'currency', currency: p.currency || 'EUR'
     }).format(p.originalPrice) : '';
     
-    // Check if product has YouTube video
+    // Check if product has YouTube video - always show video if available
     const hasVideo = p.youtubeVideo && p.youtubeVideo.videoId;
-    
-    // Media content: video or image (respects mediaMode preference)
-    const showVideo = hasVideo && this.mediaMode === 'video';
+    const showVideo = hasVideo; // Always prefer video when available
     const thumbUrl = p.youtubeVideo?.thumbnail || `https://i.ytimg.com/vi/${p.youtubeVideo?.videoId}/maxresdefault.jpg`;
     
     // Update slide class if showing video
     if (showVideo) {
-      el.className = 'slide slide-video';
+      const isShort = p.youtubeVideo.isShort !== false; // Default to short-style if not specified
+      el.className = isShort ? 'slide slide-video' : 'slide slide-video slide-video-landscape';
       el.dataset.videoId = p.youtubeVideo.videoId;
     }
     
@@ -955,6 +980,18 @@ class Feed {
             </svg>
             <span>${p.youtubeVideo.channelTitle || 'YouTube'}</span>
           </div>
+          <button class="video-sound-btn" data-muted="false" title="${this.lang === 'es' ? 'Silenciar' : 'Mute'}">
+            <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
+              <line x1="22" y1="9" x2="16" y2="15"/>
+              <line x1="16" y1="9" x2="22" y2="15"/>
+            </svg>
+            <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          </button>
         </div>`
       : `<img src="${p.featuredImage?.url || ''}" alt="${p.title}" loading="lazy" class="product-img" />`;
     
@@ -980,7 +1017,6 @@ class Feed {
     el.innerHTML = `
       <div class="slide-main">
         ${mediaContent}
-        ${badgesHtml}
       </div>
 
       <div class="slide-sidebar">
@@ -991,20 +1027,54 @@ class Feed {
           <svg viewBox="0 0 24 24"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/></svg>
         </button>
       </div>
-      
-      <div class="slide-footer">
-        <span class="brand">${p.brand || ''}</span>
-        <h2 class="title">${this.truncateTitle(p.title)}</h2>
-        ${this.getDescriptionHtml(p)}
-        <div class="pricing">
-          <span class="price">${price}</span>
-          ${oldPrice ? `<span class="old-price">${oldPrice}</span>` : ''}
-          ${discount >= 15 ? `<span class="badge-discount">-${discount}%</span>` : ''}
+
+      <div class="slide-footer" data-panel>
+        <!-- Collapsed View -->
+        <div class="panel-collapsed" data-collapsed>
+          <button class="expand-handle" data-expand-btn aria-label="${this.lang === 'es' ? 'Ver detalles' : 'See details'}">
+            <span class="handle-bar"></span>
+          </button>
+          <div class="footer-top-row">
+            <span class="brand">${p.brand || ''}</span>
+            ${badgesHtml}
+          </div>
+          <h2 class="title">${this.truncateTitle(p.title)}</h2>
+          ${this.getRatingHtml(p)}
+          <div class="pricing">
+            <span class="price">${price}</span>
+            ${oldPrice ? `<span class="old-price">${oldPrice}</span>` : ''}
+            ${discount >= 15 ? `<span class="badge-discount">-${discount}%</span>` : ''}
+          </div>
+          ${this.getPriceContextHtml(p)}
+          <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
+            ${this.texts.buy}
+            <svg viewBox="0 0 20 20" fill="currentColor" class="arrow"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+          </a>
         </div>
-        <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta">
-          ${this.texts.buy}
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
-        </a>
+
+        <!-- Expanded View -->
+        <div class="panel-expanded" data-expanded>
+          <button class="collapse-handle" data-collapse-btn aria-label="${this.lang === 'es' ? 'Menos' : 'Less'}">
+            <span class="handle-bar"></span>
+          </button>
+          ${this.getBadgesHtml(p)}
+          <span class="brand">${p.brand || ''}</span>
+          <h2 class="title-full">${p.title}</h2>
+          ${this.getRatingExpandedHtml(p)}
+          ${this.getDescriptionHtml(p)}
+          <div class="pricing-big">
+            <span class="price-big">${price}</span>
+            ${oldPrice ? `<span class="old-price-big">${oldPrice}</span>` : ''}
+            ${discount >= 15 ? `<span class="discount-big">-${discount}%</span>` : ''}
+          </div>
+          ${this.getPriceContextExpandedHtml(p)}
+          <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta cta-big">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
+            ${this.texts.buy}
+            <svg viewBox="0 0 20 20" fill="currentColor" class="arrow"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+          </a>
+        </div>
       </div>
     `;
     
@@ -1022,15 +1092,53 @@ class Feed {
     if (showVideo) {
       const tapArea = el.querySelector('.video-tap-area');
       const iframe = el.querySelector('.video-iframe');
-      
+      const soundBtn = el.querySelector('.video-sound-btn');
+      let controlsHideTimeout = null;
+
+      // Show controls temporarily
+      const showControls = () => {
+        el.classList.add('controls-visible');
+        clearTimeout(controlsHideTimeout);
+        controlsHideTimeout = setTimeout(() => {
+          el.classList.remove('controls-visible');
+        }, 3000); // Hide after 3 seconds
+      };
+
       // Tap area for play/pause (tap anywhere on video)
       if (tapArea && iframe) {
         tapArea.addEventListener('click', (e) => {
           e.stopPropagation();
+          showControls(); // Show controls on tap
           this.togglePlayPause(el, iframe);
         });
       }
-      
+
+      // Desktop: show controls on mouse movement
+      el.addEventListener('mousemove', () => {
+        showControls();
+      });
+
+      // Sound button to toggle mute
+      if (soundBtn && iframe) {
+        soundBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showControls(); // Keep controls visible when interacting
+          const isMuted = soundBtn.dataset.muted === 'true';
+
+          if (isMuted) {
+            // Unmute
+            this.sendYouTubeCommand(iframe, 'unMute');
+            this.globalMuted = false; // Save preference globally
+            this.updateSoundButtonUI(el, true);
+          } else {
+            // Mute
+            this.sendYouTubeCommand(iframe, 'mute');
+            this.globalMuted = true; // Save preference globally
+            this.updateSoundButtonUI(el, false);
+          }
+        });
+      }
+
       // Don't load iframe yet - will be loaded when slide becomes visible
       el.dataset.playing = 'false';
     }
@@ -1043,6 +1151,9 @@ class Feed {
     const shareBtn = el.querySelector('.share-btn');
     shareBtn?.addEventListener('click', async () => {
       const url = shareBtn.dataset.url;
+      // Track share engagement
+      this.trackEngagement(p.asin, 'share', { category: p.category });
+
       if (navigator.share) {
         try { await navigator.share({ url }); } catch (e) {}
       } else {
@@ -1056,7 +1167,7 @@ class Feed {
         }
       }
     });
-    
+
     const saveBtn = el.querySelector('.save-btn');
     if (saveBtn) {
       const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
@@ -1070,6 +1181,9 @@ class Feed {
           localStorage.setItem('savedProducts', JSON.stringify(items));
           saveBtn.classList.remove('active');
         } else {
+          // Track save engagement (high-value signal)
+          this.trackEngagement(p.asin, 'save', { category: p.category });
+
           // Save full product object
           items.push({
             asin: p.asin,
@@ -1084,22 +1198,64 @@ class Feed {
         }
       });
     }
-    
-    // See more button for description
-    const seeMoreBtn = el.querySelector('.see-more');
-    const descEl = el.querySelector('.description');
-    if (seeMoreBtn && descEl) {
-      const fullDesc = p.shortDescription || p.description || '';
-      seeMoreBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const descText = el.querySelector('.desc-text');
-        if (descText) {
-          descText.textContent = fullDesc;
-          descEl.dataset.expanded = 'true';
-          seeMoreBtn.style.display = 'none';
-        }
+
+    // Track affiliate link clicks (highest value signal)
+    const ctaLinks = el.querySelectorAll('.cta');
+    ctaLinks.forEach(cta => {
+      cta.addEventListener('click', () => {
+        this.trackEngagement(p.asin, 'affiliate_click', { category: p.category });
       });
+    });
+    
+    // Expandable panel logic
+    const panel = el.querySelector('[data-panel]');
+    if (panel) {
+      const expandBtn = panel.querySelector('[data-expand-btn]');
+      const collapseBtn = panel.querySelector('[data-collapse-btn]');
+      const collapsedView = panel.querySelector('[data-collapsed]');
+      const expandedView = panel.querySelector('[data-expanded]');
+
+      let startY = 0;
+      let isDragging = false;
+
+      const expand = () => {
+        collapsedView.style.display = 'none';
+        expandedView.style.display = 'flex';
+        panel.classList.add('expanded');
+        // Track expand engagement
+        this.trackEngagement(p.asin, 'expand', { category: p.category });
+      };
+
+      const collapse = () => {
+        expandedView.style.display = 'none';
+        collapsedView.style.display = 'flex';
+        panel.classList.remove('expanded');
+      };
+
+      // Button clicks
+      expandBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        expand();
+      });
+      collapseBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        collapse();
+      });
+
+      // Swipe gestures
+      panel.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+        isDragging = true;
+      }, { passive: true });
+
+      panel.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const diff = startY - e.changedTouches[0].clientY;
+        const threshold = 50;
+        if (diff > threshold) expand();
+        else if (diff < -threshold) collapse();
+      }, { passive: true });
     }
   }
   
@@ -1130,23 +1286,130 @@ class Feed {
     const seeMoreText = this.lang === 'es' ? 'ver más' : 'see more';
 
     return `
-      <p class="description" data-expanded="false" data-full="${desc.replace(/"/g, '&quot;')}">
-        <span class="desc-text">${truncated}</span>
-        ${isLong ? `<button class="see-more">${seeMoreText}</button>` : ''}
-      </p>
+      <div class="description-section">
+        <p class="description-text">${desc}</p>
+      </div>
     `;
   }
-  
+
+  // Rating HTML (compact)
+  getRatingHtml(p) {
+    if (!p.rating) return '';
+    const stars = Math.round(p.rating);
+    const reviewsText = this.lang === 'es' ? 'opiniones' : 'reviews';
+    return `
+      <div class="rating-row">
+        <div class="stars">
+          ${[1,2,3,4,5].map(s => `<svg class="star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`).join('')}
+        </div>
+        <span class="rating-text">${p.rating.toFixed(1)}</span>
+        ${p.totalReviews ? `<span class="reviews-count">(${p.totalReviews.toLocaleString()} ${reviewsText})</span>` : ''}
+      </div>
+    `;
+  }
+
+  // Rating HTML (expanded)
+  getRatingExpandedHtml(p) {
+    if (!p.rating) return '';
+    const stars = Math.round(p.rating);
+    const reviewsText = this.lang === 'es' ? 'opiniones' : 'reviews';
+    return `
+      <div class="rating-section">
+        <div class="rating-big">
+          <span class="rating-number">${p.rating.toFixed(1)}</span>
+          <div class="stars-big">
+            ${[1,2,3,4,5].map(s => `<svg class="star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`).join('')}
+          </div>
+        </div>
+        ${p.totalReviews ? `<span class="reviews-total">${p.totalReviews.toLocaleString()} ${reviewsText}</span>` : ''}
+      </div>
+    `;
+  }
+
+  // Price context badges (compact)
+  getPriceContextHtml(p) {
+    if (!p.priceContext) return '';
+    const lowestText = this.lang === 'es' ? 'Precio más bajo en 30 días' : 'Lowest price in 30 days';
+    const belowText = this.lang === 'es' ? 'por debajo del promedio' : 'below average';
+    return `
+      <div class="price-context">
+        ${p.priceContext.isLowestIn30Days ? `
+          <span class="context-badge lowest">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l-1 9h-9l7 5-3 9 6-5 6 5-3-9 7-5h-9z"/></svg>
+            ${lowestText}
+          </span>
+        ` : ''}
+        ${p.priceContext.percentBelowAvg > 0 ? `
+          <span class="context-badge below-avg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            ${p.priceContext.percentBelowAvg}% ${belowText}
+          </span>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Price context (expanded)
+  getPriceContextExpandedHtml(p) {
+    if (!p.priceContext) return '';
+    const lowestText = this.lang === 'es' ? 'Precio más bajo en 30 días' : 'Lowest price in 30 days';
+    const belowText = this.lang === 'es' ? 'por debajo del promedio' : 'below average';
+    return `
+      <div class="price-context-expanded">
+        ${p.priceContext.isLowestIn30Days ? `
+          <div class="context-item lowest">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>${lowestText}</span>
+          </div>
+        ` : ''}
+        ${p.priceContext.percentBelowAvg > 0 ? `
+          <div class="context-item below">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+            <span>${p.priceContext.percentBelowAvg}% ${belowText}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Badges HTML
+  getBadgesHtml(p) {
+    if (!p.badges || p.badges.length === 0) return '';
+    const labels = {
+      verified_deal: this.lang === 'es' ? 'Verificado' : 'Verified',
+      for_you: this.lang === 'es' ? 'Para ti' : 'For you',
+      curated: this.lang === 'es' ? 'Destacado' : 'Featured',
+      great_discount: this.lang === 'es' ? 'Descuento' : 'Discount',
+      popular: 'Popular',
+      lowest_price: this.lang === 'es' ? 'Precio más bajo' : 'Lowest price',
+      has_video: 'Video'
+    };
+    return `
+      <div class="badges-row">
+        ${p.badges.map(badge => `<span class="badge badge-${badge.replace('_', '-')}">${labels[badge] || badge}</span>`).join('')}
+      </div>
+    `;
+  }
+
   checkPreload() {
     if (this.loading || !this.hasMore) return;
     const slides = this.scroll?.querySelectorAll('.slide:not(.skeleton-slide)');
     if (!slides?.length) return;
-    
+
     const scrollTop = this.scroll.scrollTop;
-    const slideHeight = this.scroll.clientHeight;
-    const currentIndex = Math.round(scrollTop / slideHeight);
-    
-    if (currentIndex >= slides.length - 2) {
+    const scrollHeight = this.scroll.scrollHeight;
+    const clientHeight = this.scroll.clientHeight;
+
+    // Calculate how close we are to the bottom
+    // Load more when we're within 2 viewport heights of the end
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const threshold = clientHeight * 2;
+
+    // Debug logging
+    console.log(`[Feed] checkPreload: distanceFromBottom=${Math.round(distanceFromBottom)}, threshold=${Math.round(threshold)}, slides=${slides.length}, hasMore=${this.hasMore}, loading=${this.loading}`);
+
+    if (distanceFromBottom <= threshold) {
+      console.log('[Feed] Loading more products...');
       this.load();
     }
   }

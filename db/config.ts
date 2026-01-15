@@ -483,6 +483,113 @@ const ProductViews = defineTable({
   ],
 });
 
+// Product Similarity Cache - precomputed similarity scores between products
+// Stores top 20 similar products for each product
+const ProductSimilarity = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    sourceAsin: column.text(), // The product we're finding similar items for
+    targetAsin: column.text(), // A similar product
+    similarityScore: column.number(), // 0-100 score
+    // Score breakdown for explainability
+    categoryScore: column.number({ default: 0 }),
+    brandScore: column.number({ default: 0 }),
+    priceScore: column.number({ default: 0 }),
+    ratingScore: column.number({ default: 0 }),
+    // Cache metadata
+    computedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // Recompute after this date
+  },
+  indexes: [
+    { on: ['sourceAsin', 'similarityScore'] }, // Get top similar products
+    { on: ['sourceAsin', 'targetAsin'], unique: true }, // Dedupe
+    { on: ['expiresAt'] }, // Cleanup expired entries
+  ],
+});
+
+// User Similarity Profile Cache - precomputed user preferences for content-based matching
+const UserSimilarityProfile = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id, unique: true }),
+    // Aggregated preferences
+    preferredCategories: column.json({ default: {} }), // Record<string, weight>
+    preferredBrands: column.json({ default: {} }), // Record<string, weight>
+    preferredPriceRange: column.text({ optional: true }), // 'budget' | 'mid' | 'premium' | 'luxury'
+    preferredRatingTier: column.text({ optional: true }), // 'low' | 'medium' | 'high' | 'excellent'
+    // Source data summary
+    likesCount: column.number({ default: 0 }),
+    viewsCount: column.number({ default: 0 }),
+    // Cache metadata
+    computedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // Recompute after this date (e.g., 1 hour)
+  },
+  indexes: [
+    { on: ['userId'], unique: true },
+    { on: ['expiresAt'] },
+  ],
+});
+
+// User-to-User Similarity Cache - for collaborative filtering
+// Stores similarity between users based on shared likes
+const UserUserSimilarity = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id }),
+    similarUserId: column.text({ references: () => Users.columns.id }),
+    similarity: column.number(), // 0-1 Jaccard index
+    sharedLikes: column.number({ default: 0 }), // Number of products both liked
+    // Cache metadata
+    computedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // Recompute after this date (e.g., 24 hours)
+  },
+  indexes: [
+    { on: ['userId', 'similarity'] }, // Get similar users sorted by similarity
+    { on: ['userId', 'similarUserId'], unique: true }, // Dedupe
+    { on: ['expiresAt'] }, // Cleanup
+  ],
+});
+
+// Product Co-occurrence Cache - products frequently liked together
+// "Users who liked X also liked Y"
+const ProductCoOccurrence = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    asin1: column.text(), // Source product
+    asin2: column.text(), // Co-occurring product
+    coOccurrenceCount: column.number({ default: 0 }), // How many users liked both
+    confidence: column.number({ default: 0 }), // P(asin2 | asin1)
+    // Cache metadata
+    computedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // Recompute after this date
+  },
+  indexes: [
+    { on: ['asin1', 'coOccurrenceCount'] }, // Get top co-occurring products
+    { on: ['asin1', 'asin2'], unique: true }, // Dedupe
+    { on: ['expiresAt'] }, // Cleanup
+  ],
+});
+
+// Collaborative Recommendations Cache - precomputed recommendations per user
+const CollaborativeRecommendations = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    userId: column.text({ references: () => Users.columns.id }),
+    asin: column.text(), // Recommended product
+    score: column.number({ default: 0 }), // 0-100 recommendation score
+    reason: column.text({ optional: true }), // 'similar_users' | 'frequently_together' | 'trending'
+    sourceInfo: column.json({ optional: true }), // Additional context
+    // Cache metadata
+    computedAt: column.date({ default: new Date() }),
+    expiresAt: column.date(), // Recompute after this date (e.g., 6 hours)
+  },
+  indexes: [
+    { on: ['userId', 'score'] }, // Get top recommendations for user
+    { on: ['userId', 'asin'], unique: true }, // Dedupe
+    { on: ['expiresAt'] }, // Cleanup
+  ],
+});
+
 export default defineDb({
   tables: {
     Users,
@@ -501,6 +608,13 @@ export default defineDb({
     ProductSearchCache,
     VideoCache,
     ProductViews,
+    // Content-Based Similarity Tables
+    ProductSimilarity,
+    UserSimilarityProfile,
+    // Collaborative Filtering Tables
+    UserUserSimilarity,
+    ProductCoOccurrence,
+    CollaborativeRecommendations,
     // Multi-Agent System Tables
     AgentConfig,
     AgentRunHistory,

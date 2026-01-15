@@ -1,0 +1,315 @@
+---
+/**
+ * FeedSearchBar - Inline search for the infinite feed
+ * Neo-brutalist style, compact, integrates with InfiniteFeed
+ */
+
+interface Props {
+  lang: string;
+}
+
+const { lang } = Astro.props;
+
+const translations = {
+  es: {
+    placeholder: 'Buscar...',
+    clear: 'Limpiar',
+    searching: 'Buscando',
+  },
+  en: {
+    placeholder: 'Search...',
+    clear: 'Clear',
+    searching: 'Searching',
+  }
+};
+
+const t = translations[lang as 'es' | 'en'] || translations.en;
+---
+
+<div class="feed-search" id="feed-search">
+  <div class="search-input-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input
+      type="text"
+      id="feed-search-input"
+      class="search-input"
+      placeholder={t.placeholder}
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    />
+    <button type="button" class="search-clear" id="search-clear" title={t.clear}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+    <div class="search-loading" id="search-loading">
+      <div class="search-spinner"></div>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ t: translations[lang as 'es' | 'en'] || translations.en }}>
+function initFeedSearch() {
+  const searchWrap = document.getElementById('feed-search');
+  const input = document.getElementById('feed-search-input');
+  const clearBtn = document.getElementById('search-clear');
+  const loadingEl = document.getElementById('search-loading');
+
+  if (!input || !clearBtn) return;
+
+  let debounceTimer = null;
+  let currentQuery = '';
+
+  // Show/hide clear button based on input
+  function updateClearButton() {
+    clearBtn.classList.toggle('visible', input.value.length > 0);
+  }
+
+  // Show/hide loading state
+  function setLoading(loading) {
+    loadingEl?.classList.toggle('show', loading);
+    searchWrap?.classList.toggle('searching', loading);
+  }
+
+  // Dispatch search event
+  function dispatchSearch(query) {
+    if (query === currentQuery) return;
+    currentQuery = query;
+
+    setLoading(true);
+
+    window.dispatchEvent(new CustomEvent('search:change', {
+      detail: { query: query.trim() }
+    }));
+
+    // Loading will be cleared by feed when results arrive
+    // But set a fallback timeout
+    setTimeout(() => setLoading(false), 3000);
+  }
+
+  // Input event with debounce
+  input.addEventListener('input', () => {
+    updateClearButton();
+
+    if (debounceTimer) clearTimeout(debounceTimer);
+
+    const query = input.value.trim();
+
+    // If empty, dispatch immediately
+    if (!query) {
+      dispatchSearch('');
+      setLoading(false);
+      return;
+    }
+
+    // Debounce non-empty queries
+    debounceTimer = setTimeout(() => {
+      dispatchSearch(query);
+    }, 400);
+  });
+
+  // Clear button
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    updateClearButton();
+    dispatchSearch('');
+    input.focus();
+  });
+
+  // Enter key submits immediately
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      dispatchSearch(input.value.trim());
+    }
+    if (e.key === 'Escape') {
+      input.value = '';
+      updateClearButton();
+      dispatchSearch('');
+      input.blur();
+    }
+  });
+
+  // Listen for search results to clear loading
+  window.addEventListener('search:results', () => {
+    setLoading(false);
+  });
+
+  // Focus styling
+  input.addEventListener('focus', () => {
+    searchWrap?.classList.add('focused');
+  });
+
+  input.addEventListener('blur', () => {
+    searchWrap?.classList.remove('focused');
+  });
+
+  updateClearButton();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFeedSearch);
+} else {
+  initFeedSearch();
+}
+document.addEventListener('astro:page-load', initFeedSearch);
+</script>
+
+<style>
+  .feed-search {
+    position: relative;
+    flex: 1;
+    max-width: 200px;
+    min-width: 120px;
+  }
+
+  .search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    overflow: hidden;
+  }
+
+  .feed-search.focused .search-input-wrap {
+    background: var(--color-white, #FFFFFF);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+    border-color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .feed-search.searching .search-input-wrap {
+    border-color: var(--color-brutal-blue, #3B82F6);
+  }
+
+  .search-icon {
+    width: 16px;
+    height: 16px;
+    margin-left: 0.6rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity 150ms;
+  }
+
+  .feed-search.focused .search-icon {
+    opacity: 0.8;
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 0.5rem 0.5rem 0.5rem 0.4rem;
+    background: transparent;
+    border: none;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
+    min-width: 0;
+  }
+
+  .search-input:focus {
+    outline: none;
+  }
+
+  .search-input::placeholder {
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.4;
+    font-weight: 500;
+  }
+
+  .search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 0.25rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .search-clear.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+  }
+
+  .search-clear svg {
+    width: 14px;
+    height: 14px;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+  }
+
+  .search-clear:hover svg {
+    opacity: 1;
+    color: var(--color-brutal-red, #EF4444);
+  }
+
+  .search-loading {
+    position: absolute;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 150ms;
+  }
+
+  .search-loading.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .search-loading.show ~ .search-clear {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .search-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 480px) {
+    .feed-search {
+      max-width: 140px;
+    }
+
+    .search-input {
+      font-size: 0.7rem;
+      padding: 0.45rem 0.4rem;
+    }
+
+    .search-icon {
+      width: 14px;
+      height: 14px;
+      margin-left: 0.5rem;
+    }
+  }
+</style>

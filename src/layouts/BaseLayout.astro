@@ -64,19 +64,27 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <link rel="alternate" hreflang="en" href={new URL(`/en${Astro.url.pathname.replace(/^\/(es|en)/, '')}`, Astro.site)} />
     <link rel="alternate" hreflang="x-default" href={new URL('/es' + Astro.url.pathname.replace(/^\/(es|en)/, ''), Astro.site)} />
 
-    <!-- Fonts: Fraunces (display) + DM Sans (body) -->
+    <!-- Fonts: Space Grotesk (display) + DM Sans (body) + JetBrains Mono (code/prices) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <!-- Structured Data -->
     <OrganizationSchema lang={lang} />
     <WebSiteSchema lang={lang} />
   </head>
   <body class="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+    <!-- Skip Links for Accessibility -->
+    <a href="#main-content" class="skip-link">
+      {lang === 'es' ? 'Saltar al contenido principal' : 'Skip to main content'}
+    </a>
+    <a href="#search-input" class="skip-link">
+      {lang === 'es' ? 'Saltar a búsqueda' : 'Skip to search'}
+    </a>
+
     <Header lang={lang} currentPath={Astro.url.pathname} />
 
-    <main class="flex-grow">
+    <main id="main-content" class="flex-grow" role="main">
       <slot />
     </main>
 

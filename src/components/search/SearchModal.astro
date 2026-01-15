@@ -13,48 +13,77 @@ const noResultsText = lang === 'es' ? 'No se encontraron resultados' : 'No resul
 const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
 ---
 
-<div id="search-modal" class="search-modal" role="dialog" aria-modal="true" aria-hidden="true">
+<div
+  id="search-modal"
+  class="search-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-labelledby="search-modal-title"
+>
   <div class="search-backdrop"></div>
   <div class="search-container">
     <div class="search-header">
+      <h2 id="search-modal-title" class="sr-only">
+        {lang === 'es' ? 'Buscar productos' : 'Search products'}
+      </h2>
       <div class="search-input-wrapper">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
           <circle cx="11" cy="11" r="8" />
           <path d="M21 21l-4.35-4.35" />
         </svg>
+        <label for="search-input" class="sr-only">
+          {lang === 'es' ? 'Buscar productos' : 'Search products'}
+        </label>
         <input
-          type="text"
+          type="search"
           id="search-input"
           class="search-input"
           placeholder={placeholderText}
           autocomplete="off"
           autofocus
+          aria-describedby="search-status"
         />
-        <button type="button" id="search-close" class="search-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button
+          type="button"
+          id="search-close"
+          class="search-close"
+          aria-label={lang === 'es' ? 'Cerrar búsqueda' : 'Close search'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
       </div>
     </div>
 
-    <div id="search-results" class="search-results">
+    <!-- Live region for screen reader announcements -->
+    <div
+      id="search-status"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <div id="search-results" class="search-results" role="region" aria-label={lang === 'es' ? 'Resultados de búsqueda' : 'Search results'}>
       <div class="search-empty" id="search-empty">
         <p>{lang === 'es' ? 'Escribe para buscar productos' : 'Type to search products'}</p>
       </div>
-      <div class="search-loading hidden" id="search-loading">
-        <div class="spinner"></div>
+      <div class="search-loading hidden" id="search-loading" aria-hidden="true">
+        <div class="spinner" aria-hidden="true"></div>
         <p>{searchingText}</p>
       </div>
       <div class="search-no-results hidden" id="search-no-results">
         <p>{noResultsText}</p>
       </div>
-      <div id="search-results-list" class="search-results-list"></div>
+      <div id="search-results-list" class="search-results-list" role="list"></div>
     </div>
   </div>
 </div>
 
 <style>
+  /* Neo-Brutalist Search Modal */
   .search-modal {
     position: fixed;
     inset: 0;
@@ -65,7 +94,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     padding-top: 10vh;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
+    transition: opacity 150ms, visibility 150ms;
   }
 
   .search-modal[aria-hidden="false"] {
@@ -76,8 +105,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   .search-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(26, 24, 21, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(26, 26, 26, 0.8);
   }
 
   .search-container {
@@ -85,21 +113,22 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     width: 100%;
     max-width: 600px;
     margin: 0 1rem;
-    background: var(--color-white, #FFFFFF);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(26, 24, 21, 0.2);
+    background: var(--color-cream, #FFFEF9);
+    border: 4px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 12px 12px 0 var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
-    transform: translateY(-20px);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(-20px) rotate(-1deg);
+    transition: transform 200ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   .search-modal[aria-hidden="false"] .search-container {
-    transform: translateY(0);
+    transform: translateY(0) rotate(0deg);
   }
 
   .search-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-sand, #E8E4DD);
+    padding: 1rem 1.25rem;
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE14D);
   }
 
   .search-input-wrapper {
@@ -109,9 +138,9 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   }
 
   .search-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--color-stone, #6B6560);
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--color-brutal-black, #1A1A1A);
     flex-shrink: 0;
   }
 
@@ -119,43 +148,58 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     flex: 1;
     border: none;
     outline: none;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
     font-size: 1.125rem;
-    font-family: inherit;
-    color: var(--color-ink, #1A1815);
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
     background: transparent;
   }
 
   .search-input::placeholder {
-    color: var(--color-mist, #C4BFB8);
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
   }
 
   .search-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    background: var(--color-cream, #FDFBF7);
-    border: none;
-    border-radius: 8px;
-    color: var(--color-stone, #6B6560);
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
     cursor: pointer;
-    transition: all 0.2s;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    flex-shrink: 0;
   }
 
   .search-close:hover {
-    background: var(--color-sand, #E8E4DD);
-    color: var(--color-ink, #1A1815);
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .search-close:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .search-close:focus-visible {
+    outline: 3px solid var(--color-brutal-orange, #FF6B35);
+    outline-offset: 2px;
   }
 
   .search-close svg {
-    width: 1rem;
-    height: 1rem;
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   .search-results {
     max-height: 60vh;
     overflow-y: auto;
+    background: var(--color-cream, #FFFEF9);
   }
 
   .search-empty,
@@ -163,7 +207,11 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   .search-no-results {
     padding: 3rem 2rem;
     text-align: center;
-    color: var(--color-stone, #6B6560);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .search-loading {
@@ -176,10 +224,9 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   .spinner {
     width: 2rem;
     height: 2rem;
-    border: 2px solid var(--color-sand, #E8E4DD);
-    border-top-color: var(--color-honey, #C8956C);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    border-top-color: var(--color-brutal-yellow, #FFE14D);
+    animation: spin 0.6s linear infinite;
   }
 
   @keyframes spin {
@@ -191,7 +238,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   }
 
   .search-results-list {
-    padding: 0.5rem;
+    padding: 0.75rem;
   }
 
   .search-results-list:empty {
@@ -205,19 +252,23 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     gap: 1rem;
     padding: 0.75rem;
     text-decoration: none;
-    border-radius: 12px;
-    transition: background 0.2s;
+    border: 2px solid transparent;
+    margin-bottom: 0.5rem;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
   :global(.search-result-item:hover) {
-    background: var(--color-cream, #FDFBF7);
+    background: var(--color-brutal-yellow, #FFE14D);
+    border-color: var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
   }
 
   :global(.search-result-image) {
     width: 3.5rem;
     height: 3.5rem;
-    background: var(--color-cream-dark, #F7F4EE);
-    border-radius: 8px;
+    background: var(--color-white, #FFFFFF);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
     object-fit: contain;
     padding: 0.25rem;
   }
@@ -228,26 +279,32 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   }
 
   :global(.search-result-brand) {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--color-stone, #6B6560);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   :global(.search-result-title) {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
     font-size: 0.9375rem;
-    font-weight: 500;
-    color: var(--color-ink, #1A1815);
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   :global(.search-result-price) {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
     font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-honey-dark, #A67B5B);
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE14D);
+    padding: 0.25rem 0.5rem;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
   }
 </style>
 
@@ -267,6 +324,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   let fuse: Fuse<Product> | null = null;
   let products: Product[] = [];
   let currentLang = document.documentElement.lang || 'es';
+  let previousActiveElement: HTMLElement | null = null;
 
   const modal = document.getElementById('search-modal');
   const trigger = document.getElementById('search-trigger');
@@ -276,10 +334,49 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   const emptyState = document.getElementById('search-empty');
   const loadingState = document.getElementById('search-loading');
   const noResultsState = document.getElementById('search-no-results');
+  const statusRegion = document.getElementById('search-status');
+  const searchContainer = modal?.querySelector('.search-container');
+
+  // Announce to screen readers
+  function announce(message: string) {
+    if (statusRegion) {
+      statusRegion.textContent = message;
+    }
+  }
+
+  // Get focusable elements within container
+  function getFocusableElements(container: Element): HTMLElement[] {
+    const selector = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.from(container.querySelectorAll(selector)) as HTMLElement[];
+  }
+
+  // Focus trap handler
+  function handleFocusTrap(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !searchContainer) return;
+
+    const focusable = getFocusableElements(searchContainer);
+    if (focusable.length === 0) return;
+
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === firstFocusable) {
+        e.preventDefault();
+        lastFocusable.focus();
+      }
+    } else {
+      if (document.activeElement === lastFocusable) {
+        e.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+  }
 
   // Fetch products and initialize Fuse
   async function initSearch() {
     try {
+      announce(currentLang === 'es' ? 'Cargando búsqueda...' : 'Loading search...');
       const response = await fetch(`/api/search/products?lang=${currentLang}`);
       products = await response.json();
 
@@ -288,15 +385,25 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
         threshold: 0.4,
         includeScore: true,
       });
+      announce(currentLang === 'es' ? 'Búsqueda lista' : 'Search ready');
     } catch (error) {
       console.error('Failed to load search index:', error);
+      announce(currentLang === 'es' ? 'Error al cargar búsqueda' : 'Failed to load search');
     }
   }
 
   function openModal() {
+    // Store reference to element that triggered the modal
+    previousActiveElement = document.activeElement as HTMLElement;
+
     modal?.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    input?.focus();
+
+    // Add focus trap listener
+    document.addEventListener('keydown', handleFocusTrap);
+
+    // Focus the input after a brief delay for animation
+    setTimeout(() => input?.focus(), 100);
 
     if (!fuse) {
       initSearch();
@@ -309,11 +416,20 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     if (input) input.value = '';
     showState('empty');
     if (resultsContainer) resultsContainer.innerHTML = '';
+
+    // Remove focus trap listener
+    document.removeEventListener('keydown', handleFocusTrap);
+
+    // Restore focus to the element that opened the modal
+    if (previousActiveElement && previousActiveElement.focus) {
+      previousActiveElement.focus();
+    }
   }
 
   function showState(state: 'empty' | 'loading' | 'no-results' | 'results') {
     emptyState?.classList.toggle('hidden', state !== 'empty');
     loadingState?.classList.toggle('hidden', state !== 'loading');
+    loadingState?.setAttribute('aria-hidden', state === 'loading' ? 'false' : 'true');
     noResultsState?.classList.toggle('hidden', state !== 'no-results');
   }
 
@@ -328,11 +444,13 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     if (!query.trim()) {
       showState('empty');
       if (resultsContainer) resultsContainer.innerHTML = '';
+      announce('');
       return;
     }
 
     if (!fuse) {
       showState('loading');
+      announce(currentLang === 'es' ? 'Cargando...' : 'Loading...');
       return;
     }
 
@@ -341,26 +459,39 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     if (results.length === 0) {
       showState('no-results');
       if (resultsContainer) resultsContainer.innerHTML = '';
+      announce(currentLang === 'es' ? 'No se encontraron resultados' : 'No results found');
       return;
     }
 
     showState('results');
 
+    // Announce results count
+    const resultsMessage = currentLang === 'es'
+      ? `${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`
+      : `${results.length} result${results.length !== 1 ? 's' : ''} found`;
+    announce(resultsMessage);
+
     if (resultsContainer) {
       resultsContainer.innerHTML = results
-        .map(({ item }) => `
-          <a href="/${item.lang}/products/${item.productId}" class="search-result-item">
+        .map(({ item }, index) => `
+          <a
+            href="/${item.lang}/products/${item.productId}"
+            class="search-result-item"
+            role="listitem"
+            aria-label="${item.brand} ${item.title}, ${formatPrice(item.price, item.currency)}"
+          >
             <img
               src="${item.featuredImage?.url || '/placeholder.jpg'}"
-              alt="${item.featuredImage?.alt || item.title}"
+              alt=""
               class="search-result-image"
               loading="lazy"
+              aria-hidden="true"
             />
             <div class="search-result-content">
               <span class="search-result-brand">${item.brand}</span>
               <h4 class="search-result-title">${item.title}</h4>
             </div>
-            <span class="search-result-price">${formatPrice(item.price, item.currency)}</span>
+            <span class="search-result-price" aria-hidden="true">${formatPrice(item.price, item.currency)}</span>
           </a>
         `)
         .join('');
