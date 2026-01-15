@@ -965,13 +965,13 @@
   cursor: pointer;
 }
 
-/* Pause/Play Indicator - Clean centered style */
+/* Pause/Play Indicator - Clean centered style, below channel badge */
 .video-pause-indicator {
   position: absolute;
-  /* Center in visible video area (35% accounts for controls at top and footer at bottom) */
-  top: 35%;
+  /* Position below channel badge (which is at bottom: ~200px) */
+  bottom: calc(env(safe-area-inset-bottom, 16px) + 110px);
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
+  transform: translateX(-50%) scale(0.8);
   z-index: 510; /* Above feed-controls (500) */
   width: 72px;
   height: 72px;
@@ -997,7 +997,7 @@
 
 .video-pause-indicator.show {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateX(-50%) scale(1);
 }
 
 /* Pulse animation when paused */
@@ -1007,11 +1007,11 @@
 
 @keyframes pulse-play {
   0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateX(-50%) scale(1);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: translateX(-50%) scale(1.08);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
 }
@@ -1034,7 +1034,7 @@
 
 .slide-video.video-paused .video-pause-indicator {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateX(-50%) scale(1);
 }
 
 /* Paused overlay - subtle dark gradient */
@@ -1189,7 +1189,9 @@
 }
 
 .slide-video-landscape .video-pause-indicator {
-  top: 20%;
+  /* Position below channel badge (channel starts at 45%-40px, ~28px tall, so ends at ~45%-12px) */
+  top: calc(45% - 5px);
+  bottom: auto;
 }
 
 .slide-video-landscape .video-sound-btn {
@@ -2777,6 +2779,7 @@
   .slide-video.slide-video-landscape .video-pause-indicator {
     left: 50%;
     top: 50%;
+    bottom: auto; /* Reset mobile bottom positioning */
     transform: translate(-50%, -50%);
     z-index: 520;
   }
