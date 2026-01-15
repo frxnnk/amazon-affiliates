@@ -1,7 +1,7 @@
 ---
 /**
  * LegalModal - Professional modal for legal content (Terms, Privacy, About)
- * 
+ *
  * Features:
  * - Smooth slide-up animation
  * - Scrollable content with proper header
@@ -21,18 +21,18 @@ const { lang } = Astro.props;
 const content = {
   es: {
     close: 'Cerrar',
-    lastUpdated: 'Última actualización',
+    lastUpdated: 'Ultima actualizacion',
     terms: {
-      title: 'Términos de Servicio',
-      updated: '5 de enero, 2025'
+      title: 'Terminos de Servicio',
+      updated: '15 de enero, 2025'
     },
     privacy: {
-      title: 'Política de Privacidad',
-      updated: '5 de enero, 2025'
+      title: 'Politica de Privacidad',
+      updated: '15 de enero, 2025'
     },
     about: {
       title: 'Sobre Nosotros',
-      updated: '5 de enero, 2025'
+      updated: '15 de enero, 2025'
     }
   },
   en: {
@@ -40,15 +40,15 @@ const content = {
     lastUpdated: 'Last updated',
     terms: {
       title: 'Terms of Service',
-      updated: 'January 5, 2025'
+      updated: 'January 15, 2025'
     },
     privacy: {
       title: 'Privacy Policy',
-      updated: 'January 5, 2025'
+      updated: 'January 15, 2025'
     },
     about: {
       title: 'About Us',
-      updated: 'January 5, 2025'
+      updated: 'January 15, 2025'
     }
   }
 };
@@ -60,7 +60,7 @@ const siteName = siteConfig.site.name;
 <!-- Modal Overlay -->
 <div class="legal-modal-overlay" id="legal-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="legal-modal" id="legal-modal">
-    
+
     <!-- Modal Header -->
     <header class="modal-header">
       <div class="modal-header-content">
@@ -73,370 +73,284 @@ const siteName = siteConfig.site.name;
         </svg>
       </button>
     </header>
-    
+
     <!-- Modal Body -->
     <div class="modal-body" id="modal-body">
       <!-- Content loaded dynamically -->
     </div>
-    
+
   </div>
 </div>
 
 <!-- Modal Content Templates (hidden, used for JS injection) -->
 <template id="terms-content-es">
   <p>
-    Bienvenido a {siteName}. Estos Términos de Servicio rigen tu acceso
-    y uso de nuestra plataforma, incluyendo nuestro sitio web, servicios de cashback, y todas
-    las funcionalidades relacionadas.
+    Bienvenido a {siteName}. Estos Terminos de Servicio rigen tu acceso
+    y uso de nuestra plataforma de descubrimiento de productos.
   </p>
   <p>
-    <strong>Al crear una cuenta o usar nuestros servicios, aceptas estos Términos en su totalidad.</strong>
-    Si no estás de acuerdo con alguna parte, no utilices nuestros servicios.
+    <strong>Al usar nuestros servicios, aceptas estos Terminos.</strong>
   </p>
 
-  <h3>1. Definiciones</h3>
+  <h3>1. Que Somos</h3>
+  <p>
+    {siteName} es una plataforma de descubrimiento de productos que te ayuda a encontrar
+    productos de Amazon de forma curada y organizada.
+  </p>
+
+  <h3>2. Modelo de Negocio</h3>
+  <p><strong>Somos afiliados de Amazon.</strong> Esto significa:</p>
   <ul>
-    <li><strong>"Plataforma":</strong> El sitio web {siteName} y todos sus servicios asociados</li>
-    <li><strong>"Usuario":</strong> Cualquier persona que accede o usa la Plataforma</li>
-    <li><strong>"Cashback":</strong> El porcentaje de comisión que compartimos contigo por compras calificadas</li>
+    <li>Cuando compras en Amazon a traves de nuestros enlaces, recibimos una comision</li>
+    <li><strong>Tu no pagas nada extra</strong> - el precio es el mismo</li>
+    <li>Amazon nos paga, no tu</li>
   </ul>
 
-  <h3>2. Elegibilidad</h3>
-  <p>Para usar nuestros servicios debes:</p>
+  <h3>3. Uso de la Plataforma</h3>
+  <p>Esta prohibido:</p>
   <ul>
-    <li>Tener al menos 18 años de edad</li>
-    <li>Tener capacidad legal para celebrar contratos vinculantes</li>
-    <li>Proporcionar información veraz y actualizada</li>
-  </ul>
-
-  <h3>3. Programa de Cashback</h3>
-  <p>El cashback se calcula como un porcentaje de la comisión que recibimos de Amazon:</p>
-  <ul>
-    <li><strong>Tasa base:</strong> 2% del precio del producto</li>
-    <li>Las tasas pueden variar según la categoría del producto</li>
-    <li>Bonificaciones de nivel se aplican según tu historial de compras</li>
-  </ul>
-
-  <h3>4. Retiros</h3>
-  <ul>
-    <li><strong>Saldo mínimo:</strong> $15 USD</li>
-    <li><strong>Métodos:</strong> PayPal o Criptomonedas (USDT TRC-20)</li>
-    <li>Procesamiento: 1-3 días hábiles</li>
-  </ul>
-
-  <h3>5. Conducta Prohibida</h3>
-  <p>Está prohibido:</p>
-  <ul>
-    <li>Crear múltiples cuentas</li>
-    <li>Enviar pedidos falsos o manipulados</li>
     <li>Usar bots o herramientas automatizadas</li>
-    <li>Cualquier actividad fraudulenta</li>
+    <li>Intentar hackear la plataforma</li>
+    <li>Usar el sitio para actividades ilegales</li>
   </ul>
 
-  <h3>6. Contacto</h3>
-  <p>Para preguntas sobre estos Términos: <strong>legal@rewardhive.store</strong></p>
+  <h3>4. Informacion de Productos</h3>
+  <ul>
+    <li>Los precios pueden cambiar en Amazon</li>
+    <li>No vendemos productos - todas las compras son en Amazon</li>
+    <li>Amazon es responsable de envios, devoluciones y servicio al cliente</li>
+  </ul>
+
+  <h3>5. Contacto</h3>
+  <p>Preguntas: <strong>legal@bestdeals.com</strong></p>
 </template>
 
 <template id="terms-content-en">
   <p>
     Welcome to {siteName}. These Terms of Service govern your access
-    to and use of our platform, including our website, cashback services, and all
-    related features.
+    to and use of our product discovery platform.
   </p>
   <p>
-    <strong>By creating an account or using our services, you accept these Terms in their entirety.</strong>
-    If you disagree with any part, do not use our services.
+    <strong>By using our services, you accept these Terms.</strong>
   </p>
 
-  <h3>1. Definitions</h3>
+  <h3>1. What We Are</h3>
+  <p>
+    {siteName} is a product discovery platform that helps you find Amazon products
+    in a curated and organized way.
+  </p>
+
+  <h3>2. Business Model</h3>
+  <p><strong>We are Amazon affiliates.</strong> This means:</p>
   <ul>
-    <li><strong>"Platform":</strong> The {siteName} website and all associated services</li>
-    <li><strong>"User":</strong> Any person who accesses or uses the Platform</li>
-    <li><strong>"Cashback":</strong> The percentage of commission we share with you for qualifying purchases</li>
+    <li>When you buy on Amazon through our links, we receive a commission</li>
+    <li><strong>You pay nothing extra</strong> - the price is the same</li>
+    <li>Amazon pays us, not you</li>
   </ul>
 
-  <h3>2. Eligibility</h3>
-  <p>To use our services you must:</p>
-  <ul>
-    <li>Be at least 18 years of age</li>
-    <li>Have the legal capacity to enter binding contracts</li>
-    <li>Provide accurate and current information</li>
-  </ul>
-
-  <h3>3. Cashback Program</h3>
-  <p>Cashback is calculated as a percentage of the commission we receive from Amazon:</p>
-  <ul>
-    <li><strong>Base rate:</strong> 2% of the product price</li>
-    <li>Rates may vary depending on product category</li>
-    <li>Tier bonuses apply based on your purchase history</li>
-  </ul>
-
-  <h3>4. Withdrawals</h3>
-  <ul>
-    <li><strong>Minimum balance:</strong> $15 USD</li>
-    <li><strong>Methods:</strong> PayPal or Cryptocurrency (USDT TRC-20)</li>
-    <li>Processing: 1-3 business days</li>
-  </ul>
-
-  <h3>5. Prohibited Conduct</h3>
+  <h3>3. Platform Usage</h3>
   <p>It is prohibited to:</p>
   <ul>
-    <li>Create multiple accounts</li>
-    <li>Submit false or manipulated orders</li>
     <li>Use bots or automated tools</li>
-    <li>Any fraudulent activity</li>
+    <li>Attempt to hack the platform</li>
+    <li>Use the site for illegal activities</li>
   </ul>
 
-  <h3>6. Contact</h3>
-  <p>For questions about these Terms: <strong>legal@rewardhive.store</strong></p>
+  <h3>4. Product Information</h3>
+  <ul>
+    <li>Prices may change on Amazon</li>
+    <li>We don't sell products - all purchases are on Amazon</li>
+    <li>Amazon is responsible for shipping, returns, and customer service</li>
+  </ul>
+
+  <h3>5. Contact</h3>
+  <p>Questions: <strong>legal@bestdeals.com</strong></p>
 </template>
 
 <template id="privacy-content-es">
   <p>
-    En {siteName} nos comprometemos a proteger tu privacidad. Esta Política de Privacidad 
-    explica cómo recopilamos, usamos, compartimos y protegemos tu información personal.
+    En {siteName} valoramos tu privacidad. Esta politica explica que datos
+    recopilamos y como los usamos.
   </p>
 
-  <h3>1. Información que Recopilamos</h3>
-  <h4>Datos que nos proporcionas:</h4>
+  <h3>1. Que Recopilamos</h3>
+
+  <h4>Si creas cuenta (opcional):</h4>
   <ul>
-    <li><strong>Datos de cuenta:</strong> Nombre, email, foto de perfil</li>
-    <li><strong>Datos de pago:</strong> PayPal o dirección de billetera crypto</li>
-    <li><strong>Datos de compras:</strong> Números de pedido para verificación</li>
+    <li>Nombre, email, foto de perfil (via Clerk)</li>
+    <li>Productos que te gustan</li>
+    <li>Categorias preferidas</li>
   </ul>
 
-  <h4>Datos automáticos:</h4>
+  <h4>Cookies:</h4>
   <ul>
-    <li>Tipo de navegador y dispositivo</li>
-    <li>Páginas visitadas y patrones de uso</li>
-    <li>Dirección IP (para seguridad)</li>
+    <li>Sesion (si tienes cuenta)</li>
+    <li>Preferencia de idioma</li>
+    <li>Amazon: cookie de afiliado (24 horas)</li>
   </ul>
 
-  <h3>2. Cómo Usamos Tu Información</h3>
+  <h3>2. Que NO Recopilamos</h3>
   <ul>
-    <li>Gestionar tu cuenta y procesar cashback</li>
-    <li>Personalizar recomendaciones de productos</li>
-    <li>Detectar y prevenir fraudes</li>
-    <li>Enviarte actualizaciones importantes</li>
+    <li><strong>No recopilamos datos de pago</strong> - compras en Amazon</li>
+    <li><strong>No vemos tus compras</strong> - no accedemos a tu cuenta Amazon</li>
+    <li><strong>No vendemos tus datos</strong></li>
   </ul>
 
-  <h3>3. Cookies</h3>
-  <p>Utilizamos cookies esenciales para:</p>
+  <h3>3. Servicios de Terceros</h3>
   <ul>
-    <li>Autenticación de sesión</li>
-    <li>Preferencias de idioma</li>
-    <li>Atribución de enlaces de afiliado (Amazon)</li>
+    <li><strong>Clerk:</strong> Autenticacion</li>
+    <li><strong>Vercel:</strong> Hosting</li>
+    <li><strong>Amazon:</strong> Programa de afiliados</li>
   </ul>
 
-  <h3>4. Compartir Datos</h3>
-  <p><strong>No vendemos tu información personal.</strong> Solo compartimos datos con:</p>
+  <h3>4. Tus Derechos</h3>
   <ul>
-    <li>Clerk (autenticación)</li>
-    <li>Turso (base de datos)</li>
-    <li>PayPal (pagos)</li>
-    <li>Amazon Associates (verificación de compras)</li>
+    <li>Navegar sin cuenta</li>
+    <li>Solicitar eliminacion de datos</li>
+    <li>Rechazar cookies en tu navegador</li>
   </ul>
 
-  <h3>5. Tus Derechos</h3>
-  <ul>
-    <li>Acceder a tus datos personales</li>
-    <li>Corregir datos inexactos</li>
-    <li>Solicitar eliminación de tu cuenta</li>
-    <li>Oponerte al procesamiento</li>
-  </ul>
-
-  <h3>6. Contacto</h3>
-  <p>Para consultas de privacidad: <strong>privacy@rewardhive.store</strong></p>
+  <h3>5. Contacto</h3>
+  <p>Preguntas: <strong>privacy@bestdeals.com</strong></p>
 </template>
 
 <template id="privacy-content-en">
   <p>
-    At {siteName} we are committed to protecting your privacy. This Privacy Policy 
-    explains how we collect, use, share, and protect your personal information.
+    At {siteName} we value your privacy. This policy explains what data
+    we collect and how we use it.
   </p>
 
-  <h3>1. Information We Collect</h3>
-  <h4>Information you provide:</h4>
+  <h3>1. What We Collect</h3>
+
+  <h4>If you create an account (optional):</h4>
   <ul>
-    <li><strong>Account data:</strong> Name, email, profile photo</li>
-    <li><strong>Payment data:</strong> PayPal or crypto wallet address</li>
-    <li><strong>Purchase data:</strong> Order numbers for verification</li>
+    <li>Name, email, profile photo (via Clerk)</li>
+    <li>Products you like</li>
+    <li>Preferred categories</li>
   </ul>
 
-  <h4>Automatic data:</h4>
+  <h4>Cookies:</h4>
   <ul>
-    <li>Browser type and device</li>
-    <li>Pages visited and usage patterns</li>
-    <li>IP address (for security)</li>
+    <li>Session (if you have an account)</li>
+    <li>Language preference</li>
+    <li>Amazon: affiliate cookie (24 hours)</li>
   </ul>
 
-  <h3>2. How We Use Your Information</h3>
+  <h3>2. What We DON'T Collect</h3>
   <ul>
-    <li>Manage your account and process cashback</li>
-    <li>Personalize product recommendations</li>
-    <li>Detect and prevent fraud</li>
-    <li>Send you important updates</li>
+    <li><strong>We don't collect payment data</strong> - you buy on Amazon</li>
+    <li><strong>We don't see your purchases</strong> - no access to your Amazon account</li>
+    <li><strong>We don't sell your data</strong></li>
   </ul>
 
-  <h3>3. Cookies</h3>
-  <p>We use essential cookies for:</p>
+  <h3>3. Third-Party Services</h3>
   <ul>
-    <li>Session authentication</li>
-    <li>Language preferences</li>
-    <li>Affiliate link attribution (Amazon)</li>
+    <li><strong>Clerk:</strong> Authentication</li>
+    <li><strong>Vercel:</strong> Hosting</li>
+    <li><strong>Amazon:</strong> Affiliate program</li>
   </ul>
 
-  <h3>4. Data Sharing</h3>
-  <p><strong>We do not sell your personal information.</strong> We only share data with:</p>
+  <h3>4. Your Rights</h3>
   <ul>
-    <li>Clerk (authentication)</li>
-    <li>Turso (database)</li>
-    <li>PayPal (payments)</li>
-    <li>Amazon Associates (purchase verification)</li>
+    <li>Browse without an account</li>
+    <li>Request data deletion</li>
+    <li>Reject cookies in your browser</li>
   </ul>
 
-  <h3>5. Your Rights</h3>
-  <ul>
-    <li>Access your personal data</li>
-    <li>Correct inaccurate data</li>
-    <li>Request account deletion</li>
-    <li>Object to processing</li>
-  </ul>
-
-  <h3>6. Contact</h3>
-  <p>For privacy inquiries: <strong>privacy@rewardhive.store</strong></p>
+  <h3>5. Contact</h3>
+  <p>Questions: <strong>privacy@bestdeals.com</strong></p>
 </template>
 
 <template id="about-content-es">
   <p>
-    {siteName} nació de una idea simple: hacer que las compras online sean más gratificantes.
-    Somos un equipo apasionado por la tecnología y el ahorro inteligente.
+    {siteName} nacio de una necesidad: encontrar buenos productos en Amazon sin perderse
+    en un mar de opciones.
   </p>
 
-  <h3>Nuestra Misión</h3>
+  <h3>Que Hacemos</h3>
   <p>
-    Democratizar el acceso a las comisiones de afiliados. Tradicionalmente, estas comisiones 
-    beneficiaban solo a los creadores de contenido. Nosotros cambiamos eso: compartimos 
-    nuestras ganancias contigo, el comprador.
+    Somos una plataforma de descubrimiento de productos. Analizamos productos de Amazon
+    para traerte una seleccion curada basada en:
   </p>
+  <ul>
+    <li><strong>Valoraciones reales</strong> de compradores verificados</li>
+    <li><strong>Relacion calidad-precio</strong></li>
+    <li><strong>Tendencias</strong> y novedades</li>
+  </ul>
+
+  <h3>Como Funcionamos</h3>
+  <p><strong>Somos afiliados de Amazon.</strong> Esto significa:</p>
+  <ul>
+    <li>Cuando compras via nuestros enlaces, recibimos una comision</li>
+    <li><strong>Tu no pagas nada extra</strong></li>
+    <li>Amazon nos paga por referirte</li>
+  </ul>
 
   <blockquote>
-    "Creemos que cada compra debe ser una oportunidad de ahorro."
+    <p>No promocionamos productos solo porque paguen mas. Nuestra seleccion se basa en calidad.</p>
   </blockquote>
-
-  <h3>Cómo Funciona</h3>
-  <ol>
-    <li><strong>Explora productos curados</strong> - Seleccionamos los mejores productos de Amazon</li>
-    <li><strong>Compra a través de nuestros enlaces</strong> - Amazon nos paga una comisión</li>
-    <li><strong>Recibe tu cashback</strong> - Compartimos un porcentaje contigo</li>
-    <li><strong>Retira cuando quieras</strong> - PayPal o crypto desde $15</li>
-  </ol>
-
-  <h3>Sistema de Niveles</h3>
-  <div class="tier-table">
-    <div class="tier-row tier-header">
-      <span>Nivel</span>
-      <span>Compras</span>
-      <span>Bonus</span>
-    </div>
-    <div class="tier-row">
-      <span>Bronce</span>
-      <span>0-9</span>
-      <span>2% base</span>
-    </div>
-    <div class="tier-row">
-      <span>Plata</span>
-      <span>10-49</span>
-      <span>+5%</span>
-    </div>
-    <div class="tier-row">
-      <span>Oro</span>
-      <span>50+</span>
-      <span>+10%</span>
-    </div>
-  </div>
 
   <h3>Nuestros Valores</h3>
   <ul>
-    <li><strong>Transparencia total</strong> - Sin costos ocultos ni sorpresas</li>
+    <li><strong>Transparencia</strong> - No ocultamos que somos afiliados</li>
     <li><strong>Honestidad</strong> - Recomendaciones genuinas</li>
-    <li><strong>Usuario primero</strong> - Tu beneficio es nuestra prioridad</li>
+    <li><strong>Utilidad</strong> - Ahorrarte tiempo con productos de calidad</li>
   </ul>
 
-  <h3>Divulgación de Afiliados</h3>
+  <h3>Divulgacion de Afiliados</h3>
   <p>
-    {siteName} es participante del Programa de Afiliados de Amazon. Como asociados de Amazon, 
-    ganamos comisiones de compras que califican.
+    {siteName} participa en el Programa de Afiliados de Amazon. Como asociados,
+    ganamos comisiones de compras que califican. Sin costo adicional para ti.
   </p>
 
   <h3>Contacto</h3>
-  <p>Email: <strong>soporte@rewardhive.store</strong></p>
+  <p>Email: <strong>soporte@bestdeals.com</strong></p>
 </template>
 
 <template id="about-content-en">
   <p>
-    {siteName} was born from a simple idea: make online shopping more rewarding.
-    We are a team passionate about technology and smart savings.
+    {siteName} was born from a need: finding good products on Amazon without getting lost
+    in a sea of options.
   </p>
 
-  <h3>Our Mission</h3>
+  <h3>What We Do</h3>
   <p>
-    Democratize access to affiliate commissions. Traditionally, these commissions 
-    only benefited content creators. We changed that: we share our earnings 
-    with you, the buyer.
+    We are a product discovery platform. We analyze Amazon products to bring you
+    a curated selection based on:
   </p>
+  <ul>
+    <li><strong>Real ratings</strong> from verified buyers</li>
+    <li><strong>Value for money</strong></li>
+    <li><strong>Trends</strong> and new releases</li>
+  </ul>
+
+  <h3>How We Work</h3>
+  <p><strong>We are Amazon affiliates.</strong> This means:</p>
+  <ul>
+    <li>When you buy via our links, we receive a commission</li>
+    <li><strong>You pay nothing extra</strong></li>
+    <li>Amazon pays us for referring you</li>
+  </ul>
 
   <blockquote>
-    "We believe every purchase should be an opportunity to save."
+    <p>We don't promote products just because they pay more. Our selection is based on quality.</p>
   </blockquote>
-
-  <h3>How It Works</h3>
-  <ol>
-    <li><strong>Explore curated products</strong> - We select the best Amazon products</li>
-    <li><strong>Purchase through our links</strong> - Amazon pays us a commission</li>
-    <li><strong>Receive your cashback</strong> - We share a percentage with you</li>
-    <li><strong>Withdraw anytime</strong> - PayPal or crypto from $15</li>
-  </ol>
-
-  <h3>Tier System</h3>
-  <div class="tier-table">
-    <div class="tier-row tier-header">
-      <span>Tier</span>
-      <span>Purchases</span>
-      <span>Bonus</span>
-    </div>
-    <div class="tier-row">
-      <span>Bronze</span>
-      <span>0-9</span>
-      <span>2% base</span>
-    </div>
-    <div class="tier-row">
-      <span>Silver</span>
-      <span>10-49</span>
-      <span>+5%</span>
-    </div>
-    <div class="tier-row">
-      <span>Gold</span>
-      <span>50+</span>
-      <span>+10%</span>
-    </div>
-  </div>
 
   <h3>Our Values</h3>
   <ul>
-    <li><strong>Total transparency</strong> - No hidden costs or surprises</li>
+    <li><strong>Transparency</strong> - We don't hide that we're affiliates</li>
     <li><strong>Honesty</strong> - Genuine recommendations</li>
-    <li><strong>User first</strong> - Your benefit is our priority</li>
+    <li><strong>Usefulness</strong> - Save you time with quality products</li>
   </ul>
 
   <h3>Affiliate Disclosure</h3>
   <p>
-    {siteName} is a participant in the Amazon Associates Program. As Amazon Associates, 
-    we earn commissions from qualifying purchases.
+    {siteName} participates in the Amazon Associates Program. As associates,
+    we earn commissions from qualifying purchases. At no additional cost to you.
   </p>
 
   <h3>Contact</h3>
-  <p>Email: <strong>support@rewardhive.store</strong></p>
+  <p>Email: <strong>support@bestdeals.com</strong></p>
 </template>
 
 <script define:vars={{ lang, t: content[lang] }}>
@@ -448,72 +362,72 @@ class LegalModal {
     this.meta = document.getElementById('modal-meta');
     this.body = document.getElementById('modal-body');
     this.closeBtn = document.getElementById('modal-close');
-    
+
     this.lang = lang;
     this.texts = t;
     this.isOpen = false;
-    
+
     this.init();
   }
-  
+
   init() {
     // Close button
     this.closeBtn?.addEventListener('click', () => this.close());
-    
+
     // Click outside to close
     this.overlay?.addEventListener('click', (e) => {
       if (e.target === this.overlay) this.close();
     });
-    
+
     // Escape key to close
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isOpen) this.close();
     });
-    
+
     // Listen for open events
     document.addEventListener('legal-modal:open', (e) => {
       this.open(e.detail.type);
     });
   }
-  
+
   open(type) {
     if (!this.overlay || !this.modal) return;
-    
+
     const typeInfo = this.texts[type];
     if (!typeInfo) return;
-    
+
     // Set title and meta
     this.title.textContent = typeInfo.title;
     this.meta.textContent = `${this.texts.lastUpdated}: ${typeInfo.updated}`;
-    
+
     // Load content from template
     const template = document.getElementById(`${type}-content-${this.lang}`);
     if (template) {
       this.body.innerHTML = template.innerHTML;
     }
-    
+
     // Show modal
     this.overlay.classList.add('open');
     this.overlay.setAttribute('aria-hidden', 'false');
     this.isOpen = true;
-    
+
     // Prevent body scroll
     document.body.style.overflow = 'hidden';
-    
+
     // Focus close button for accessibility
     setTimeout(() => this.closeBtn?.focus(), 100);
   }
-  
+
   close() {
     if (!this.overlay) return;
-    
+
     this.overlay.classList.remove('open');
     this.overlay.setAttribute('aria-hidden', 'true');
     this.isOpen = false;
-    
+
     // Restore body scroll
     document.body.style.overflow = '';
-    
+
     // Clear content after animation
     setTimeout(() => {
       if (!this.isOpen) {
@@ -726,36 +640,6 @@ document.addEventListener('astro:page-load', () => {
 
   .modal-body blockquote p {
     margin: 0;
-  }
-
-  /* Tier Table */
-  .tier-table {
-    margin: 16px 0 20px;
-    border: 3px solid var(--color-brutal-black, #1A1A1A);
-    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
-    overflow: hidden;
-  }
-
-  .tier-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    padding: 12px 16px;
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 0.8125rem;
-    border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
-  }
-
-  .tier-row:last-child {
-    border-bottom: none;
-  }
-
-  .tier-row.tier-header {
-    background: var(--color-brutal-black, #1A1A1A);
-    font-weight: 700;
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-brutal-yellow, #FFE14D);
   }
 
   /* Desktop */

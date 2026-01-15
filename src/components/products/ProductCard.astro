@@ -25,18 +25,14 @@ interface Props {
   };
   lang: Lang;
   variant?: 'default' | 'featured' | 'compact';
-  showCashback?: boolean;
 }
 
-const { product, lang, variant = 'default', showCashback = true } = Astro.props;
+const { product, lang, variant = 'default' } = Astro.props;
 const t = getTranslation(lang);
 
 const discount = product.originalPrice
   ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
   : 0;
-
-// Estimated cashback (2% of price as example)
-const estimatedCashback = (product.price * 0.02).toFixed(2);
 
 // Get all images for carousel (fallback to featured image)
 const productImages = product.images && product.images.length > 0
@@ -167,7 +163,7 @@ const truncatedDescription = shouldTruncate
       <ProductRating rating={product.rating} size="sm" />
     </div>
 
-    <!-- Price & Cashback -->
+    <!-- Price -->
     <div class="card-footer">
       <div class="price-section">
         <PriceDisplay
@@ -177,11 +173,6 @@ const truncatedDescription = shouldTruncate
           lang={lang}
           size="md"
         />
-        {showCashback && (
-          <span class="cashback-hint">
-            +${estimatedCashback} cashback
-          </span>
-        )}
       </div>
 
       <AffiliateLink
@@ -426,22 +417,6 @@ const truncatedDescription = shouldTruncate
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-  }
-
-  .cashback-hint {
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--color-brutal-green, #2D9D4E);
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    text-transform: uppercase;
-  }
-
-  .cashback-hint::before {
-    content: '+';
-    font-weight: 800;
   }
 
   /* CTA Button styling override */
