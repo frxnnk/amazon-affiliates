@@ -2715,7 +2715,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* Align content to top */
     align-items: stretch;
     background: var(--color-cream, #FFFEF9);
     z-index: 10;
@@ -2748,37 +2748,44 @@
   /* Video channel badge - bottom left of video */
   .slide-video.slide-video-landscape .video-channel {
     position: absolute;
-    bottom: 52px;
-    left: 52px;
+    top: auto; /* Reset mobile landscape rule */
+    bottom: 20px;
+    left: 20px;
     right: auto;
     transform: none;
     z-index: 20;
+    max-height: none;
+    height: auto;
   }
 
   /* Sound button - top right of video area */
   .slide-video.slide-video-landscape .video-sound-btn {
     position: absolute;
-    top: 52px;
-    right: 470px;
+    top: 20px;
+    right: 20px;
     left: auto;
+    bottom: auto;
     z-index: 20;
   }
 
   /* Pause indicator - center of video area */
   .slide-video.slide-video-landscape .video-pause-indicator {
-    left: calc(50% - 210px);
+    left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 520;
   }
 
-  /* Tap area covers video */
+  /* Tap area covers entire video */
   .slide-video.slide-video-landscape .video-tap-area {
     position: absolute;
     top: 0;
     left: 0;
-    right: 420px;
+    right: 0;
     bottom: 0;
+    height: auto; /* Reset mobile landscape fixed height */
+    max-height: none;
+    min-height: 0;
     z-index: 15;
   }
 }
@@ -2814,20 +2821,13 @@
   }
 
   .slide-video.slide-video-landscape .video-sound-btn {
-    right: 510px;
+    top: 24px;
+    right: 24px;
   }
 
   .slide-video.slide-video-landscape .video-channel {
-    bottom: 60px;
-    left: 60px;
-  }
-
-  .slide-video.slide-video-landscape .video-pause-indicator {
-    left: calc(50% - 230px);
-  }
-
-  .slide-video.slide-video-landscape .video-tap-area {
-    right: 460px;
+    bottom: 24px;
+    left: 24px;
   }
 }
 
@@ -2864,20 +2864,13 @@
   }
 
   .slide-video.slide-video-landscape .video-sound-btn {
-    right: 560px;
+    top: 28px;
+    right: 28px;
   }
 
   .slide-video.slide-video-landscape .video-channel {
-    bottom: 72px;
-    left: 72px;
-  }
-
-  .slide-video.slide-video-landscape .video-pause-indicator {
-    left: calc(50% - 250px);
-  }
-
-  .slide-video.slide-video-landscape .video-tap-area {
-    right: 500px;
+    bottom: 28px;
+    left: 28px;
   }
 }
 
