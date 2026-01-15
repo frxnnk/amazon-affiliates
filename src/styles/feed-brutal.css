@@ -968,8 +968,8 @@
 /* Pause/Play Indicator - Clean centered style */
 .video-pause-indicator {
   position: absolute;
-  /* Center visually accounting for footer overlay (~150px) */
-  top: calc(50% - 75px);
+  /* Center in visible video area (35% accounts for controls at top and footer at bottom) */
+  top: 35%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.8);
   z-index: 510; /* Above feed-controls (500) */
