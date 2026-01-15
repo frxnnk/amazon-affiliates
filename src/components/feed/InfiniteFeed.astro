@@ -945,7 +945,8 @@ class Feed {
     
     // Update slide class if showing video
     if (showVideo) {
-      const isShort = p.youtubeVideo.isShort !== false; // Default to short-style if not specified
+      // Only use portrait (short) style if explicitly marked as short, otherwise landscape
+      const isShort = p.youtubeVideo.isShort === true;
       el.className = isShort ? 'slide slide-video' : 'slide slide-video slide-video-landscape';
       el.dataset.videoId = p.youtubeVideo.videoId;
     }
