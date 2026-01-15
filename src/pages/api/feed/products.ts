@@ -13,12 +13,15 @@
 import type { APIRoute } from 'astro';
 import { isRainforestConfigured } from '@lib/rainforest-api';
 import { cachedSearchProducts, getApiUsageStats, canMakeApiCall } from '@lib/product-cache';
-import { getPublishedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices } from '@lib/db';
+import { getFeedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices } from '@lib/db';
 import { db, ProductLikes, Products, eq, desc } from 'astro:db';
 import { trackPrices } from '@lib/keepa-api';
 import { validateDeal, calculateEnhancedScore, toAnalyzableProduct } from '@lib/deal-analyzer';
-import { getProductVideos, getQuotaStatus } from '@lib/video-cache';
-import { getVideoEmbedUrl, isYouTubeConfigured } from '@lib/youtube-api';
+import { getProductVideos, getQuotaStatus, isAnyVideoSourceConfigured } from '@lib/video-cache';
+import { getVideoEmbedUrl } from '@lib/youtube-api';
+import { buildUserProfile, scoreProducts, getPersonalizedKeywords, type ProductCandidate, type UserProfile } from '@lib/recommendation-engine';
+import { getUserSimilarityProfile } from '@lib/content-similarity';
+import { getCollaborativeBoosts } from '@lib/collaborative-filtering';
 
 export const prerender = false;
 
@@ -425,15 +428,38 @@ async function getRecommendedKeywords(userId: string | null, lang: string): Prom
 
 /**
  * Get products from database as fallback
+ * Supports search query filtering using simple text matching
  */
-async function getDbProducts(lang: string, page: number, limit: number): Promise<FeedProduct[]> {
+async function getDbProducts(lang: string, page: number, limit: number, searchQuery?: string): Promise<FeedProduct[]> {
   try {
-    const dbProducts = await getPublishedProducts(lang);
-    
+    // Get both published and imported products for feed fallback
+    let dbProducts = await getFeedProducts(lang);
+
+    // Filter by search query if provided
+    if (searchQuery && searchQuery.length > 0) {
+      const query = searchQuery.toLowerCase();
+      const queryWords = query.split(/\s+/).filter(w => w.length > 1);
+
+      dbProducts = dbProducts.filter(product => {
+        const searchableText = [
+          product.title,
+          product.brand,
+          product.category,
+          product.shortDescription,
+          product.description,
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        // Match if all query words are found in the searchable text
+        return queryWords.every(word => searchableText.includes(word));
+      });
+
+      console.log(`[Feed API] DB search for "${searchQuery}": ${dbProducts.length} results`);
+    }
+
     // Paginate
     const start = (page - 1) * limit;
     const paginatedProducts = dbProducts.slice(start, start + limit);
-    
+
     return paginatedProducts.map((product, index) => ({
       productId: product.productId,
       asin: product.asin,
@@ -468,6 +494,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const excludeParam = url.searchParams.get('exclude') || '';
     const excludeFromUrl = excludeParam ? excludeParam.split(',').filter(Boolean) : [];
 
+    // NEW: Search query parameter
+    const searchQuery = url.searchParams.get('search')?.trim() || '';
+
     // Get authenticated user for personalization
     const auth = locals.auth?.();
     const userId = auth?.userId || null;
@@ -480,19 +509,25 @@ export const GET: APIRoute = async ({ url, locals }) => {
     let source = 'database';
     let isPersonalized = false;
 
-    // Load user preferences and excluded ASINs for personalization
-    let userPrefs: Awaited<ReturnType<typeof getUserPreferences>> = null;
+    // Load user preferences, profile, and excluded ASINs for personalization
+    let userPrefs: Awaited<ReturnType<typeof getUserPreferences>> | undefined = undefined;
+    let userProfile: UserProfile | null = null;
     let userExcludedAsins = new Set<string>();
 
     if (userId) {
-      // Load preferences and excluded ASINs in parallel
-      const [prefs, excluded] = await Promise.all([
+      // Load preferences, profile, and excluded ASINs in parallel
+      const [prefs, excluded, profile] = await Promise.all([
         getUserPreferences(userId),
-        getExcludedAsins(userId)
+        getExcludedAsins(userId),
+        buildUserProfile(userId)
       ]);
       userPrefs = prefs;
       userExcludedAsins = excluded;
-      console.log(`[Feed API] User ${userId.slice(-6)}: ${userExcludedAsins.size} ASINs excluded (likes/dislikes)`);
+      userProfile = profile;
+      console.log(`[Feed API] User ${userId.slice(-6)}: ${userExcludedAsins.size} ASINs excluded, profile: ${profile ? 'built' : 'none'}`);
+      if (profile) {
+        console.log(`[Feed API] Top categories: ${profile.categories.slice(0, 3).join(', ')}, Top brands: ${profile.brands.slice(0, 3).join(', ')}`);
+      }
     }
 
     // Merge URL exclusions with user's liked/disliked products
@@ -551,15 +586,26 @@ export const GET: APIRoute = async ({ url, locals }) => {
       // Select keywords based on language
       const categoryKeywords = lang === 'es' ? CATEGORY_KEYWORDS_ES : CATEGORY_KEYWORDS_EN;
       const trendingKeywords = lang === 'es' ? TRENDING_KEYWORDS_ES : TRENDING_KEYWORDS_EN;
-      
+
       // Get personalized recommendations if user is logged in
       const recommendedKeywords = await getRecommendedKeywords(userId, lang);
-      
+
       // Select search keywords based on category, page, and personalization
       let keywords: string;
-      
-      // Mix personalized keywords into the rotation (every 3rd page if logged in)
-      if (userId && recommendedKeywords.length > 0 && page % 3 === 0) {
+
+      // Priority 1: User's search query (if provided)
+      if (searchQuery) {
+        keywords = searchQuery;
+        console.log(`[Feed API] Using user search query: "${keywords}"`);
+      }
+      // Priority 2: Use new recommendation engine for personalized keywords
+      else if (userProfile && category === 'all') {
+        const personalizedKw = getPersonalizedKeywords(userProfile, page, lang as 'es' | 'en');
+        keywords = personalizedKw.keyword;
+        isPersonalized = !personalizedKw.isExploration;
+        console.log(`[Feed API] Recommendation engine keyword: "${keywords}" (exploration: ${personalizedKw.isExploration})`);
+      } else if (userId && recommendedKeywords.length > 0 && page % 3 === 0) {
+        // Fallback to old method for specific categories
         const recIndex = Math.floor(page / 3) % recommendedKeywords.length;
         keywords = recommendedKeywords[recIndex];
         isPersonalized = true;
@@ -586,6 +632,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
       if (result.success && result.data && result.data.length > 0) {
         const apiProducts = result.data;
+        console.log(`[Feed API] RapidAPI returned ${apiProducts.length} products`);
 
         // Track prices for history
         await trackPrices(
@@ -604,17 +651,21 @@ export const GET: APIRoute = async ({ url, locals }) => {
         // Filter out: products without images/prices, already seen products
         // Also exclude already added curated products
         const curatedAsins = new Set(feedProducts.map(p => p.asin));
-        
+
+        // Debug: count filtered products
+        const validProducts = apiProducts.filter(product =>
+          product.imageUrl &&
+          product.price &&
+          product.price > 0 &&
+          !excludeAsins.includes(product.asin) &&
+          !curatedAsins.has(product.asin)
+        );
+        const sliceAmount = limit - feedProducts.length;
+        console.log(`[Feed API] After filtering: ${validProducts.length} valid products, taking ${sliceAmount} (limit=${limit}, curated=${feedProducts.length})`);
+
         const transformedProducts = await Promise.all(
-          apiProducts
-            .filter(product => 
-              product.imageUrl && 
-              product.price && 
-              product.price > 0 &&
-              !excludeAsins.includes(product.asin) &&
-              !curatedAsins.has(product.asin)
-            )
-            .slice(0, limit - feedProducts.length)
+          validProducts
+            .slice(0, sliceAmount)
             .map(async (product, index) => {
               // Build affiliate URL
               const amazonDomain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
@@ -729,36 +780,62 @@ export const GET: APIRoute = async ({ url, locals }) => {
       }
     }
 
-    // Fallback to database products if RapidAPI failed or returned no results
-    if (feedProducts.length === 0) {
-      feedProducts = await getDbProducts(lang, page, limit);
-      source = 'database';
+    // Fallback/supplement with database products if RapidAPI returned insufficient results
+    if (feedProducts.length < limit) {
+      const needed = limit - feedProducts.length;
+      const existingAsins = new Set(feedProducts.map(p => p.asin));
+      const dbProducts = await getDbProducts(lang, page, needed + 10, searchQuery);
+
+      // Filter out duplicates and add to feed
+      const uniqueDbProducts = dbProducts
+        .filter(p => !existingAsins.has(p.asin) && !excludeAsins.includes(p.asin))
+        .slice(0, needed);
+
+      if (uniqueDbProducts.length > 0) {
+        feedProducts.push(...uniqueDbProducts);
+        console.log(`[Feed API] Supplemented with ${uniqueDbProducts.length} DB products (had ${feedProducts.length - uniqueDbProducts.length}, needed ${limit})`);
+      }
+
+      if (feedProducts.length === 0) {
+        source = 'database';
+      } else if (source !== 'rapidapi') {
+        source = 'database';
+      }
     }
 
     // Enrich products with YouTube videos (if configured)
+    // QUOTA OPTIMIZATION: Only fetch videos for top 2 products per page
+    // With 100 units per search and 10,000 daily limit, this allows ~50 page loads/day
     let enrichedProducts = feedProducts;
-    let videoStats = { configured: false, quotaRemaining: 0, videosFound: 0 };
+    let videoStats = { configured: false, quotaRemaining: 0, videosFound: 0, productsChecked: 0 };
 
-    console.log(`[Feed API] YouTube configured: ${isYouTubeConfigured()}`);
+    console.log(`[Feed API] Video sources configured: ${isAnyVideoSourceConfigured()}`);
 
-    if (isYouTubeConfigured() && feedProducts.length > 0) {
+    if (isAnyVideoSourceConfigured() && feedProducts.length > 0) {
       videoStats.configured = true;
       const quotaStatus = await getQuotaStatus();
       videoStats.quotaRemaining = quotaStatus.remaining;
       console.log(`[Feed API] YouTube quota: ${quotaStatus.used}/${quotaStatus.limit} (remaining: ${quotaStatus.remaining})`);
 
-      // Only fetch videos if we have quota remaining
-      if (quotaStatus.remaining > 0) {
-        const productsForVideo = feedProducts.map(p => ({ 
-          asin: p.asin, 
-          title: p.title 
-        }));
-        
-        console.log(`[Feed API] Fetching videos for ${productsForVideo.length} products...`);
+      // Conservative quota management:
+      // - Only check top 2 products per page to conserve quota
+      // - Need at least 200 units remaining to try
+      const MAX_VIDEO_FETCHES = 2;
+      const MIN_QUOTA_REQUIRED = 200;
+
+      if (quotaStatus.remaining >= MIN_QUOTA_REQUIRED) {
+        // Only fetch videos for first N products (cached results don't use quota)
+        const productsForVideo = feedProducts
+          .slice(0, MAX_VIDEO_FETCHES)
+          .map(p => ({ asin: p.asin, title: p.title }));
+
+        videoStats.productsChecked = productsForVideo.length;
+        console.log(`[Feed API] Fetching videos for ${productsForVideo.length} products (quota-optimized)...`);
+
         const videoMap = await getProductVideos(
-          productsForVideo, 
-          lang as 'es' | 'en', 
-          3 // Concurrency limit
+          productsForVideo,
+          lang as 'es' | 'en',
+          1 // Sequential to minimize burst requests
         );
 
         // Count videos found
@@ -767,7 +844,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         videoStats.videosFound = videosFound;
         console.log(`[Feed API] Videos found: ${videosFound}/${productsForVideo.length}`);
 
-        // Add video info to each product
+        // Add video info to products that have it
         enrichedProducts = feedProducts.map(product => {
           const video = videoMap.get(product.asin);
           return {
@@ -777,13 +854,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
               title: video.title,
               channelTitle: video.channelTitle,
               thumbnail: video.thumbnail,
-              embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: true, mute: true }),
+              embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: false, mute: false }),
               isShort: video.isShort,
             } : null,
           };
         });
       } else {
-        console.log(`[Feed API] Skipping video fetch - no quota remaining`);
+        console.log(`[Feed API] Skipping video fetch - quota too low (${quotaStatus.remaining} < ${MIN_QUOTA_REQUIRED})`);
       }
     }
 
@@ -810,12 +887,72 @@ export const GET: APIRoute = async ({ url, locals }) => {
       };
     });
 
+    // Apply recommendation engine scoring for personalized ranking
+    if (userProfile && enrichedProducts.length > 0) {
+      // Get content-based similarity profile for enhanced scoring
+      const similarityProfile = userId ? await getUserSimilarityProfile(userId) : null;
+
+      // Get collaborative filtering boosts
+      let collaborativeBoosts: Map<string, { boost: number; reason: string }> | undefined;
+      if (userId && userProfile) {
+        const likedAsins = await db.select({ asin: ProductLikes.asin })
+          .from(ProductLikes)
+          .where(eq(ProductLikes.userId, userId))
+          .orderBy(desc(ProductLikes.createdAt))
+          .limit(20)
+          .all()
+          .then(likes => likes.map(l => l.asin));
+
+        collaborativeBoosts = await getCollaborativeBoosts(
+          userId,
+          likedAsins,
+          userProfile.categories,
+          userProfile.brands,
+          userExcludedAsins
+        );
+        console.log(`[Feed API] Collaborative boosts: ${collaborativeBoosts.size} products boosted`);
+      }
+
+      // Convert to ProductCandidate format for scoring
+      const candidates: ProductCandidate[] = enrichedProducts.map(p => ({
+        asin: p.asin,
+        title: p.title,
+        brand: p.brand,
+        category: p.category || 'electronics',
+        price: p.price,
+        originalPrice: p.originalPrice,
+        rating: p.rating,
+        totalReviews: p.totalReviews,
+        discountPercent: p.discountPercent,
+        isCurated: p.isCurated,
+        hasVideo: !!p.youtubeVideo,
+      }));
+
+      // Score and rank products (with content-based similarity + collaborative filtering)
+      const scoredProducts = scoreProducts(candidates, userProfile, similarityProfile, collaborativeBoosts);
+
+      // Reorder enrichedProducts based on scored ranking
+      const asinToScore = new Map(scoredProducts.map(p => [p.asin, p.totalScore]));
+      enrichedProducts = enrichedProducts.sort((a, b) => {
+        const scoreA = asinToScore.get(a.asin) || 0;
+        const scoreB = asinToScore.get(b.asin) || 0;
+        return scoreB - scoreA;
+      });
+
+      // Log scoring stats
+      const topScored = scoredProducts.slice(0, 3);
+      const hasCollab = collaborativeBoosts && collaborativeBoosts.size > 0 ? '+ collab' : '';
+      const hasSimilarity = similarityProfile ? '+ similarity' : '';
+      console.log(`[Feed API] Recommendation scoring ${hasSimilarity} ${hasCollab}. Top 3: ${topScored.map(p => `${p.asin.slice(-4)}:${p.totalScore.toFixed(1)}`).join(', ')}`);
+      isPersonalized = true;
+    }
+
     // Apply intelligent sequencing for better retention (skip on first page with curated)
     if (page > 1 || !feedProducts.some(p => p.isCurated)) {
       enrichedProducts = sequenceProductsForRetention(enrichedProducts);
     }
 
-    console.log(`[Feed API] Returning ${enrichedProducts.length} products (page ${page})`);
+    console.log(`[Feed API] Returning ${enrichedProducts.length} products (page ${page})${searchQuery ? ` for search: "${searchQuery}"` : ''}`);
 
     return new Response(
       JSON.stringify({
@@ -826,6 +963,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         source,
         isPersonalized,
         videoStats,
+        searchQuery: searchQuery || undefined, // Include search query in response
       }),
       { 
         status: 200, 
@@ -843,8 +981,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const lang = url.searchParams.get('lang') || 'es';
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
-    
-    const fallbackProducts = await getDbProducts(lang, page, limit);
+    const fallbackSearchQuery = url.searchParams.get('search')?.trim() || '';
+
+    const fallbackProducts = await getDbProducts(lang, page, limit, fallbackSearchQuery);
     
     if (fallbackProducts.length > 0) {
       return new Response(
