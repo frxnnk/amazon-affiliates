@@ -7,7 +7,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { commitProductToGitHub } from '@utils/github';
+import { createOrUpdateFile } from '@utils/github';
 import type { AnalyzableProduct } from '@lib/deal-analyzer';
 
 export const prerender = false;
@@ -133,11 +133,11 @@ ${product.shortDescription || ''}
 
         // Commit to GitHub
         const filePath = `src/content/products/${lang}/${productId}.md`;
-        const commitResult = await commitProductToGitHub(
-          filePath,
-          markdownContent,
-          `Add product: ${product.title}`
-        );
+        const commitResult = await createOrUpdateFile({
+          path: filePath,
+          content: markdownContent,
+          message: `Add product: ${product.title}`,
+        });
 
         if (commitResult.success) {
           results.push({
@@ -149,7 +149,7 @@ ${product.shortDescription || ''}
           results.push({
             asin: product.asin,
             success: false,
-            error: commitResult.error || 'Failed to commit to GitHub',
+            error: 'Failed to commit to GitHub',
           });
         }
       } catch (productError) {
