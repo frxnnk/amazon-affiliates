@@ -12,16 +12,19 @@
  * are searched multiple times by different users.
  */
 
-import { db, ProductSearchCache, eq } from 'astro:db';
-import { 
-  searchProductsRainforest, 
+import { db, ProductSearchCache, Products, eq, and, inArray, desc } from 'astro:db';
+import {
+  searchProductsRainforest,
   getProductRainforest,
   searchDealsRainforest,
   type RainforestProductData,
   type RainforestSearchResult,
   type RainforestResult,
-  isRainforestConfigured 
+  isRainforestConfigured
 } from './rainforest-api';
+
+// Affiliate tag for building URLs
+const AFFILIATE_TAG = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
 
 // Cache duration in hours
 const CACHE_HOURS_SEARCH = 4;
@@ -36,6 +39,222 @@ const MONTHLY_LIMIT = 450; // Leave buffer from 500
 // Track quota exceeded state to avoid repeated failed calls
 let quotaExceededUntil: Date | null = null;
 const QUOTA_PAUSE_HOURS = 1; // Pause API calls for 1 hour after 429
+
+/**
+ * Persist products from API to Products table for permanent storage.
+ * This builds a catalog that can serve content when API quota is exhausted.
+ *
+ * - Products are saved with status 'imported'
+ * - Only updates if product data is newer (based on price changes)
+ * - Skips products that already exist with same price
+ */
+export async function persistProductsToDb(
+  products: RainforestProductData[],
+  marketplace: string = 'com'
+): Promise<{ saved: number; skipped: number; updated: number }> {
+  let saved = 0;
+  let skipped = 0;
+  let updated = 0;
+
+  const lang = marketplace === 'es' ? 'es' : 'en';
+  const amazonDomain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
+
+  for (const product of products) {
+    // Skip products without essential data
+    if (!product.asin || !product.title || !product.price || !product.imageUrl) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      // Check if product already exists
+      const existing = await db
+        .select()
+        .from(Products)
+        .where(and(
+          eq(Products.asin, product.asin),
+          eq(Products.lang, lang)
+        ))
+        .get();
+
+      const productId = `api-${product.asin}-${marketplace}`;
+      const affiliateUrl = `https://www.${amazonDomain}/dp/${product.asin}?tag=${AFFILIATE_TAG}`;
+
+      const productData = {
+        productId,
+        asin: product.asin,
+        lang,
+        title: product.title,
+        brand: product.brand || 'Amazon',
+        description: product.description || product.title,
+        shortDescription: product.features?.[0] || undefined,
+        category: product.categories?.[0] || 'electronics',
+        price: product.price,
+        originalPrice: product.originalPrice || undefined,
+        currency: product.currency || (marketplace === 'es' ? 'EUR' : 'USD'),
+        affiliateUrl,
+        rating: product.rating || undefined,
+        totalReviews: product.totalReviews || undefined,
+        featuredImageUrl: product.imageUrl,
+        featuredImageAlt: product.title,
+        gallery: product.images?.length > 0
+          ? product.images.map(url => ({ url, alt: product.title }))
+          : undefined,
+        pros: product.features?.slice(0, 5) || [],
+        cons: [],
+        status: 'imported',
+        updatedAt: new Date(),
+      };
+
+      if (existing) {
+        // Only update if price changed (fresher data)
+        if (existing.price !== product.price) {
+          await db
+            .update(Products)
+            .set(productData)
+            .where(eq(Products.id, existing.id));
+          updated++;
+        } else {
+          skipped++;
+        }
+      } else {
+        // Insert new product
+        await db.insert(Products).values({
+          ...productData,
+          createdAt: new Date(),
+        });
+        saved++;
+      }
+    } catch (error) {
+      console.error(`[ProductCache] Error persisting ${product.asin}:`, error);
+      skipped++;
+    }
+  }
+
+  if (saved > 0 || updated > 0) {
+    console.log(`[ProductCache] Persisted products: ${saved} new, ${updated} updated, ${skipped} skipped`);
+  }
+
+  return { saved, skipped, updated };
+}
+
+/**
+ * Get products from permanent storage by ASINs
+ * Used as fallback when API quota is exhausted
+ */
+export async function getStoredProductsByAsins(
+  asins: string[],
+  lang: string = 'en'
+): Promise<RainforestProductData[]> {
+  if (asins.length === 0) return [];
+
+  try {
+    const products = await db
+      .select()
+      .from(Products)
+      .where(and(
+        inArray(Products.asin, asins),
+        eq(Products.lang, lang)
+      ))
+      .all();
+
+    // Convert to RainforestProductData format
+    return products.map(p => ({
+      asin: p.asin,
+      title: p.title,
+      brand: p.brand,
+      price: p.price,
+      originalPrice: p.originalPrice || null,
+      currency: p.currency,
+      rating: p.rating || null,
+      totalReviews: p.totalReviews || null,
+      imageUrl: p.featuredImageUrl,
+      images: (p.gallery as { url: string }[] | null)?.map(g => g.url) || [],
+      features: (p.pros as string[]) || [],
+      description: p.description,
+      url: p.affiliateUrl,
+      availability: 'In Stock',
+      categories: p.category ? [p.category] : [],
+      isPrime: false,
+      dealType: null,
+    }));
+  } catch (error) {
+    console.error('[ProductCache] Error getting stored products:', error);
+    return [];
+  }
+}
+
+/**
+ * Get random products from permanent storage
+ * Used as fallback when API quota is exhausted and cache is empty
+ */
+export async function getRandomStoredProducts(
+  lang: string = 'en',
+  limit: number = 10,
+  excludeAsins: string[] = []
+): Promise<RainforestProductData[]> {
+  try {
+    // Get all products for language (we'll randomize in JS since SQLite random() varies)
+    let allProducts = await db
+      .select()
+      .from(Products)
+      .where(eq(Products.lang, lang))
+      .orderBy(desc(Products.updatedAt))
+      .limit(200) // Get more than needed for filtering
+      .all();
+
+    // Filter out excluded ASINs
+    if (excludeAsins.length > 0) {
+      const excludeSet = new Set(excludeAsins);
+      allProducts = allProducts.filter(p => !excludeSet.has(p.asin));
+    }
+
+    // Shuffle and take limit
+    const shuffled = allProducts.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, limit);
+
+    // Convert to RainforestProductData format
+    return selected.map(p => ({
+      asin: p.asin,
+      title: p.title,
+      brand: p.brand,
+      price: p.price,
+      originalPrice: p.originalPrice || null,
+      currency: p.currency,
+      rating: p.rating || null,
+      totalReviews: p.totalReviews || null,
+      imageUrl: p.featuredImageUrl,
+      images: (p.gallery as { url: string }[] | null)?.map(g => g.url) || [],
+      features: (p.pros as string[]) || [],
+      description: p.description,
+      url: p.affiliateUrl,
+      availability: 'In Stock',
+      categories: p.category ? [p.category] : [],
+      isPrime: false,
+      dealType: null,
+    }));
+  } catch (error) {
+    console.error('[ProductCache] Error getting random products:', error);
+    return [];
+  }
+}
+
+/**
+ * Get count of stored products
+ */
+export async function getStoredProductCount(lang?: string): Promise<number> {
+  try {
+    const query = lang
+      ? db.select().from(Products).where(eq(Products.lang, lang))
+      : db.select().from(Products);
+
+    const products = await query.all();
+    return products.length;
+  } catch (error) {
+    console.error('[ProductCache] Error counting products:', error);
+    return 0;
+  }
+}
 
 /**
  * Check and reset monthly counter
@@ -182,10 +401,25 @@ export async function cachedSearchProducts(
 
     // Cache miss - check if we can make API call
     if (!canMakeApiCall()) {
-      console.warn('[ProductCache] Monthly API limit reached, returning empty');
+      console.warn('[ProductCache] Monthly API limit reached, trying stored products fallback...');
+
+      // Fallback: Try to get products from permanent storage
+      const lang = marketplace === 'es' ? 'es' : 'en';
+      const storedProducts = await getRandomStoredProducts(lang, 10);
+
+      if (storedProducts.length > 0) {
+        console.log(`[ProductCache] Fallback: returning ${storedProducts.length} stored products`);
+        return {
+          success: true,
+          data: storedProducts,
+          totalResults: storedProducts.length,
+          currentPage: page,
+        };
+      }
+
       return {
         success: false,
-        error: { code: 'QUOTA_EXCEEDED', message: 'Monthly API quota exhausted' },
+        error: { code: 'QUOTA_EXCEEDED', message: 'Monthly API quota exhausted and no stored products' },
       };
     }
 
@@ -239,6 +473,11 @@ export async function cachedSearchProducts(
     }
 
     console.log(`[ProductCache] Cached ${result.data.length} products for "${keywords}"`);
+
+    // Persist products to permanent storage (non-blocking)
+    persistProductsToDb(result.data, marketplace).catch(err => {
+      console.error('[ProductCache] Error persisting products:', err);
+    });
 
     return result;
   } catch (error) {
@@ -301,6 +540,15 @@ export async function cachedGetProduct(
 
     // Cache miss - check quota
     if (!canMakeApiCall()) {
+      // Fallback: Try to get product from permanent storage
+      const lang = marketplace === 'es' ? 'es' : 'en';
+      const storedProducts = await getStoredProductsByAsins([asin], lang);
+
+      if (storedProducts.length > 0) {
+        console.log(`[ProductCache] Fallback: returning stored product ${asin}`);
+        return { success: true, data: storedProducts[0] };
+      }
+
       return {
         success: false,
         error: { code: 'QUOTA_EXCEEDED', message: 'Monthly API quota exhausted' },
@@ -343,6 +591,11 @@ export async function cachedGetProduct(
         hitCount: 0,
       });
     }
+
+    // Persist product to permanent storage (non-blocking)
+    persistProductsToDb([result.data], marketplace).catch(err => {
+      console.error('[ProductCache] Error persisting product:', err);
+    });
 
     return result;
   } catch (error) {
