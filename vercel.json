@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "astro build --remote",
   "crons": [
     {
-      "path": "/api/cron/deal-agent",
+      "path": "/api/cron/agent-orchestrator",
       "schedule": "0 9 * * *"
     }
   ]
