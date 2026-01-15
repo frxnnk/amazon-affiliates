@@ -1,11 +1,19 @@
 import type { APIRoute } from 'astro';
-import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
+import { unauthorizedResponse } from '@lib/auth';
 import { getProductById, getProductBySlug, updateProduct, deleteProduct } from '@lib/db';
+
+// Helper to check admin auth
+function checkAdminAuth(locals: any) {
+  const auth = locals.auth?.();
+  const userId = auth?.userId;
+  const userRole = (auth?.sessionClaims?.metadata as { role?: string })?.role;
+  return { userId, isAdmin: userRole === 'admin' };
+}
 
 // GET - Get a single product by ID
 export const GET: APIRoute = async (context) => {
   const { locals, params } = context;
-  const userId = locals.auth?.userId;
+  const { userId, isAdmin } = checkAdminAuth(locals);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -14,7 +22,6 @@ export const GET: APIRoute = async (context) => {
     });
   }
 
-  const isAdmin = await isUserAdmin(userId, context);
   if (!isAdmin) {
     return unauthorizedResponse('Admin access required');
   }
@@ -61,7 +68,7 @@ export const GET: APIRoute = async (context) => {
 // PUT - Update a product
 export const PUT: APIRoute = async (context) => {
   const { request, locals, params } = context;
-  const userId = locals.auth?.userId;
+  const { userId, isAdmin } = checkAdminAuth(locals);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -70,7 +77,6 @@ export const PUT: APIRoute = async (context) => {
     });
   }
 
-  const isAdmin = await isUserAdmin(userId, context);
   if (!isAdmin) {
     return unauthorizedResponse('Admin access required');
   }
@@ -157,7 +163,7 @@ export const PUT: APIRoute = async (context) => {
 // DELETE - Delete a product
 export const DELETE: APIRoute = async (context) => {
   const { locals, params } = context;
-  const userId = locals.auth?.userId;
+  const { userId, isAdmin } = checkAdminAuth(locals);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -166,7 +172,6 @@ export const DELETE: APIRoute = async (context) => {
     });
   }
 
-  const isAdmin = await isUserAdmin(userId, context);
   if (!isAdmin) {
     return unauthorizedResponse('Admin access required');
   }

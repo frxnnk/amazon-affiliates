@@ -1,0 +1,585 @@
+---
+import { type Lang, getTranslation } from '@i18n/utils';
+import SlideActions from './SlideActions.astro';
+import ProductModel3D from './ProductModel3D.astro';
+
+interface Props {
+  product: {
+    productId: string;
+    asin: string;
+    title: string;
+    brand: string;
+    price: number;
+    originalPrice?: number;
+    currency: string;
+    rating?: number;
+    featuredImage: { url: string; alt: string };
+    affiliateUrl: string;
+    category?: string;
+    shortDescription?: string;
+    model3dUrl?: string;
+    // YouTube video embed (if available)
+    youtubeVideo?: {
+      videoId: string;
+      title: string;
+      channelTitle: string;
+      thumbnail: string;
+      embedUrl: string;
+      isShort: boolean;
+    } | null;
+  };
+  lang: Lang;
+  index: number;
+}
+
+const { product, lang, index } = Astro.props;
+const t = getTranslation(lang);
+
+// Category-based gradient colors
+const categoryGradients: Record<string, { from: string; to: string; accent: string }> = {
+  electronics: { from: '#1a1a2e', to: '#16213e', accent: '#0f3460' },
+  audio: { from: '#2d132c', to: '#1a0a1a', accent: '#801336' },
+  phones: { from: '#0d1b2a', to: '#1b263b', accent: '#415a77' },
+  books: { from: '#2c1810', to: '#1a0f09', accent: '#8b4513' },
+  default: { from: '#1A1815', to: '#2D2926', accent: '#3d3a36' },
+};
+
+const category = product.category?.toLowerCase() || 'default';
+const gradient = categoryGradients[category] || categoryGradients.default;
+
+// Format price
+const formattedPrice = new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+  style: 'currency',
+  currency: product.currency || 'USD',
+}).format(product.price);
+
+const formattedOriginalPrice = product.originalPrice
+  ? new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+      style: 'currency',
+      currency: product.currency || 'USD',
+    }).format(product.originalPrice)
+  : null;
+
+const discount = product.originalPrice
+  ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  : 0;
+---
+
+<article 
+  class="product-slide" 
+  data-slide-index={index}
+  style={`--gradient-from: ${gradient.from}; --gradient-to: ${gradient.to}; --gradient-accent: ${gradient.accent};`}
+>
+  <!-- Background -->
+  <div class="slide-bg">
+    <div class="bg-gradient"></div>
+    <div class="bg-pattern"></div>
+    <div class="bg-glow"></div>
+  </div>
+
+  <!-- Product Video/Image/3D Model -->
+  <div class="product-container">
+    {product.youtubeVideo ? (
+      <!-- YouTube Video available - embed as Reel/Short -->
+      <div class="product-video-container">
+        <iframe
+          src={product.youtubeVideo.embedUrl}
+          title={product.youtubeVideo.title}
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          loading={index < 2 ? 'eager' : 'lazy'}
+          class="product-video-iframe"
+        ></iframe>
+        <div class="video-channel-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+            <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
+          </svg>
+          <span>{product.youtubeVideo.channelTitle}</span>
+        </div>
+      </div>
+    ) : product.model3dUrl ? (
+      <!-- 3D Model available - use model-viewer -->
+      <div class="product-3d-model">
+        <ProductModel3D
+          modelUrl={product.model3dUrl}
+          imageUrl={product.featuredImage?.url}
+          alt={product.featuredImage?.alt || product.title}
+        />
+      </div>
+    ) : (
+      <!-- Fallback to image with 3D CSS effect -->
+      <div class="product-3d" data-3d-element>
+        <div class="product-shadow"></div>
+        <div class="product-image-wrapper">
+          {product.featuredImage?.url ? (
+            <img
+              src={product.featuredImage.url}
+              alt={product.featuredImage.alt || product.title}
+              loading={index < 2 ? 'eager' : 'lazy'}
+              decoding="async"
+              class="product-image"
+            />
+          ) : (
+            <div class="image-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Actions sidebar -->
+  <SlideActions 
+    productId={product.productId}
+    affiliateUrl={product.affiliateUrl}
+    lang={lang}
+  />
+
+  <!-- Product Info -->
+  <div class="product-info">
+    <div class="info-content">
+      <!-- Brand badge -->
+      <span class="brand-badge">{product.brand}</span>
+      
+      <!-- Title -->
+      <h2 class="product-title">{product.title}</h2>
+      
+      <!-- Description -->
+      {product.shortDescription && (
+        <p class="product-description">{product.shortDescription}</p>
+      )}
+      
+      <!-- Price section -->
+      <div class="price-row">
+        <div class="price-info">
+          <span class="current-price">{formattedPrice}</span>
+          {formattedOriginalPrice && (
+            <span class="original-price">{formattedOriginalPrice}</span>
+          )}
+          {discount > 0 && (
+            <span class="discount-badge">-{discount}%</span>
+          )}
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <a 
+        href={product.affiliateUrl} 
+        target="_blank" 
+        rel="noopener noreferrer nofollow"
+        class="buy-button"
+        data-product-id={product.productId}
+        data-tracking="feed-cta"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+        </svg>
+        <span>{lang === 'es' ? 'Comprar en Amazon' : 'Buy on Amazon'}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" class="arrow-icon">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- Scroll indicator (only on first slide) -->
+  {index === 0 && (
+    <div class="scroll-indicator">
+      <span>{lang === 'es' ? 'Desliza para ver más' : 'Swipe for more'}</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+    </div>
+  )}
+</article>
+
+<style>
+  .product-slide {
+    position: relative;
+    height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  /* Background layers */
+  .slide-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .bg-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      var(--gradient-from) 0%,
+      var(--gradient-to) 50%,
+      var(--gradient-accent) 100%
+    );
+  }
+
+  .bg-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .bg-glow {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 40%;
+    background: radial-gradient(ellipse, var(--gradient-accent) 0%, transparent 70%);
+    opacity: 0.3;
+    filter: blur(60px);
+  }
+
+  /* Product container */
+  .product-container {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 500px;
+    padding: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  /* 3D Model container (when using model-viewer) */
+  .product-3d-model {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 350px;
+  }
+
+  /* YouTube Video container (Shorts/Reels style) */
+  .product-video-container {
+    position: relative;
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 9/16;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+    background: #000;
+  }
+
+  .product-video-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .video-channel-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 2;
+  }
+
+  .video-channel-badge svg {
+    flex-shrink: 0;
+    color: #ff0000;
+  }
+
+  .video-channel-badge span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (min-width: 768px) {
+    .product-video-container {
+      max-width: 320px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .product-video-container {
+      max-width: 360px;
+    }
+  }
+
+  /* 3D Product wrapper (CSS fallback) */
+  .product-3d {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1;
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+
+  .product-shadow {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 40px;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.4) 0%, transparent 70%);
+    filter: blur(15px);
+    transition: all 0.15s ease-out;
+  }
+
+  .product-image-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease-out;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotateX(0) rotateY(0); }
+    50% { transform: translateY(-12px) rotateX(2deg) rotateY(-2deg); }
+  }
+
+  .product-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
+    transition: transform 0.3s ease-out;
+  }
+
+  .image-placeholder {
+    width: 150px;
+    height: 150px;
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  .image-placeholder svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Actions sidebar */
+  /* Positioned by SlideActions component */
+
+  /* Product info */
+  .product-info {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 0 1.5rem 2rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  }
+
+  .info-content {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .brand-badge {
+    display: inline-block;
+    padding: 0.375rem 0.875rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.75rem;
+  }
+
+  .product-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: white;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .product-description {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.5;
+    margin: 0 0 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .price-info {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .current-price {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: white;
+  }
+
+  .original-price {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: line-through;
+  }
+
+  .discount-badge {
+    padding: 0.25rem 0.625rem;
+    background: #22c55e;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+  }
+
+  /* Buy button */
+  .buy-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: #FF9900;
+    color: #0F1111;
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .buy-button:hover {
+    background: #FFB030;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 153, 0, 0.4);
+  }
+
+  .buy-button:active {
+    transform: translateY(0);
+  }
+
+  .arrow-icon {
+    transition: transform 0.2s ease-out;
+  }
+
+  .buy-button:hover .arrow-icon {
+    transform: translateX(4px);
+  }
+
+  /* Scroll indicator */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* Responsive adjustments */
+  @media (min-width: 768px) {
+    .product-container {
+      max-width: 600px;
+    }
+
+    .product-3d {
+      max-width: 400px;
+    }
+
+    .product-info {
+      padding: 0 2rem 3rem;
+    }
+
+    .info-content {
+      max-width: 600px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .product-slide {
+      flex-direction: row;
+      justify-content: center;
+      gap: 4rem;
+    }
+
+    .product-container {
+      flex: 0 0 auto;
+      margin-bottom: 0;
+    }
+
+    .product-info {
+      flex: 0 1 400px;
+      padding: 2rem;
+      background: transparent;
+    }
+
+    .scroll-indicator {
+      bottom: 2rem;
+    }
+  }
+</style>

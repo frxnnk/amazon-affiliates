@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
-import { isUserAdmin, unauthorizedResponse } from '@lib/auth';
+import { unauthorizedResponse } from '@lib/auth';
 import { createProduct, getAllProducts, type ProductInput } from '@lib/db';
 import { slugify } from '@utils/markdown';
 
 // GET - List all products (admin)
 export const GET: APIRoute = async (context) => {
   const { locals, url } = context;
-  const userId = locals.auth?.userId;
+  const auth = locals.auth?.();
+  const userId = auth?.userId;
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -15,9 +16,9 @@ export const GET: APIRoute = async (context) => {
     });
   }
 
-  // Verify admin role
-  const isAdmin = await isUserAdmin(userId, context);
-  if (!isAdmin) {
+  // Verify admin role using Clerk metadata
+  const userRole = (auth?.sessionClaims?.metadata as { role?: string })?.role;
+  if (userRole !== 'admin') {
     return unauthorizedResponse('Admin access required');
   }
 
@@ -44,7 +45,8 @@ export const GET: APIRoute = async (context) => {
 // POST - Create a new product
 export const POST: APIRoute = async (context) => {
   const { request, locals } = context;
-  const userId = locals.auth?.userId;
+  const auth = locals.auth?.();
+  const userId = auth?.userId;
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -53,9 +55,9 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-  // Verify admin role
-  const isAdmin = await isUserAdmin(userId, context);
-  if (!isAdmin) {
+  // Verify admin role using Clerk metadata
+  const userRole = (auth?.sessionClaims?.metadata as { role?: string })?.role;
+  if (userRole !== 'admin') {
     return unauthorizedResponse('Admin access required');
   }
 

@@ -48,6 +48,9 @@ const t = content[lang];
       padding: 0;
       box-sizing: border-box;
     }
+    html, body {
+      height: 100%;
+    }
     body {
       font-family: 'DM Sans', system-ui, sans-serif;
       background: linear-gradient(180deg, #FDFBF7 0%, #F7F4EE 100%);
@@ -61,6 +64,9 @@ const t = content[lang];
       text-align: center;
       width: 100%;
       max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .logo {
       display: inline-flex;
@@ -100,12 +106,12 @@ const t = content[lang];
 <body>
   <div class="login-container">
     <a href={`/${lang}`} class="logo">
-      <svg class="logo-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.9"/>
-        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg class="logo-mark" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M64 8 L112 36 L112 92 L64 120 L16 92 L16 36 Z" fill="currentColor"/>
+        <path d="M48 45 L48 83 M48 45 L70 45 C78 45 84 51 84 59 C84 67 78 73 70 73 L48 73 M70 73 L84 83" 
+              fill="none" stroke="#FEF3C7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      BestDeals
+      RewardHive
     </a>
     <p class="subtitle">{t.subtitle}</p>
 

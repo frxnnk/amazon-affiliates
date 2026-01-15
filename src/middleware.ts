@@ -7,7 +7,7 @@ const isPublicAdminRoute = createRouteMatcher([
   '/admin/unauthorized',
 ]);
 
-export const onRequest = clerkMiddleware(async (auth, context) => {
+export const onRequest = clerkMiddleware((auth, context) => {
   const pathname = new URL(context.request.url).pathname;
 
   // Skip auth check for public admin routes

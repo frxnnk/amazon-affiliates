@@ -1,18 +1,18 @@
 {
   "site": {
-    "name": "BestDeals Hub",
+    "name": "RewardHive",
     "tagline": {
-      "es": "Las mejores ofertas y reviews de productos",
-      "en": "Best deals and product reviews"
+      "es": "Descubre ofertas. Gana recompensas.",
+      "en": "Discover deals. Earn rewards."
     },
-    "url": "https://amazon-affiliates.vercel.app",
+    "url": "https://www.rewardhive.store",
     "defaultLocale": "es",
     "locales": ["es", "en"]
   },
   "amazon": {
     "associates": {
       "es": {
-        "tag": "tutienda-21",
+        "tag": "bestdeal0ee40-20",
         "marketplace": "amazon.es"
       },
       "en": {
@@ -22,11 +22,11 @@
     }
   },
   "seo": {
-    "titleTemplate": "%s | BestDeals Hub",
+    "titleTemplate": "%s | RewardHive",
     "defaultImage": "/images/og/default.jpg"
   },
   "social": {
-    "twitter": "@bestdealshub",
-    "facebook": "bestdealshub"
+    "twitter": "@rewardhive",
+    "instagram": "@rewardhive.store"
   }
 }

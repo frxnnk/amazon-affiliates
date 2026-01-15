@@ -16,7 +16,7 @@ tags: ["iphone", "apple", "smartphone", "premium", "5g"]
 price: 1199.00
 originalPrice: 1299.00
 currency: "USD"
-affiliateUrl: "https://www.amazon.com/dp/B0CHX1W1XY"
+affiliateUrl: "https://www.amazon.com/dp/B0CHX1W1XY?tag=bestdeal0ee40-20"
 
 rating: 4.8
 totalReviews: 8234

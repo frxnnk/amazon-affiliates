@@ -1,0 +1,799 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getAllCuratedDeals } from '@lib/db';
+
+// Fetch curated deals
+const curatedDeals = await getAllCuratedDeals({ limit: 50 });
+---
+
+<AdminLayout title="Deals Curados">
+  <div class="admin-stack-lg">
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <div class="header-left">
+        <p class="description">
+          Gestiona los deals curados por IA y manualmente. Los deals curados aparecen con prioridad en el feed.
+        </p>
+      </div>
+      <div class="header-right">
+        <button class="admin-btn admin-btn-secondary" id="run-curation-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Ejecutar curación IA
+        </button>
+        <button class="admin-btn admin-btn-primary" id="add-deal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 4v16m8-8H4"/>
+          </svg>
+          Agregar Deal
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="admin-grid admin-grid-3">
+      <div class="stat-card">
+        <span class="stat-label">Total Activos</span>
+        <span class="stat-value" id="stat-active">{curatedDeals.filter(d => d.isActive).length}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Curados por IA</span>
+        <span class="stat-value" id="stat-ai">{curatedDeals.filter(d => d.curationType === 'ai').length}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Curados Manual</span>
+        <span class="stat-value" id="stat-admin">{curatedDeals.filter(d => d.curationType === 'admin').length}</span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <select id="filter-type" class="admin-input filter-select">
+        <option value="">Todos los tipos</option>
+        <option value="ai">Solo IA</option>
+        <option value="admin">Solo Manual</option>
+        <option value="trending">Solo Trending</option>
+      </select>
+      <select id="filter-status" class="admin-input filter-select">
+        <option value="">Todos los estados</option>
+        <option value="active">Activos</option>
+        <option value="inactive">Inactivos</option>
+      </select>
+      <button class="admin-btn admin-btn-ghost" id="refresh-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Actualizar
+      </button>
+    </div>
+
+    <!-- Deals List -->
+    <div class="deals-list" id="deals-list">
+      {curatedDeals.length === 0 ? (
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          <p>No hay deals curados</p>
+          <span>Ejecuta la curación automática o agrega deals manualmente</span>
+        </div>
+      ) : (
+        curatedDeals.map(deal => (
+          <div class="deal-card" data-id={deal.id} data-asin={deal.asin}>
+            <div class="deal-image">
+              {deal.imageUrl ? (
+                <img src={deal.imageUrl} alt={deal.title || ''} loading="lazy" />
+              ) : (
+                <div class="placeholder-img">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div class="deal-info">
+              <div class="deal-header">
+                <span class={`type-badge ${deal.curationType}`}>
+                  {deal.curationType === 'ai' ? 'IA' : deal.curationType === 'admin' ? 'Manual' : 'Trending'}
+                </span>
+                <span class={`status-badge ${deal.isActive ? 'active' : 'inactive'}`}>
+                  {deal.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+                <span class="score-badge" title="AI Score">
+                  {deal.aiScore ? `${deal.aiScore}/10` : '-'}
+                </span>
+              </div>
+              <h3 class="deal-title">{deal.title || `ASIN: ${deal.asin}`}</h3>
+              {deal.brand && <span class="deal-brand">{deal.brand}</span>}
+              <div class="deal-pricing">
+                {deal.price && (
+                  <span class="deal-price">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: deal.currency || 'USD' }).format(deal.price)}
+                  </span>
+                )}
+                {deal.originalPrice && deal.originalPrice > (deal.price || 0) && (
+                  <span class="deal-original">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: deal.currency || 'USD' }).format(deal.originalPrice)}
+                  </span>
+                )}
+                {deal.originalPrice && deal.price && deal.originalPrice > deal.price && (
+                  <span class="deal-discount">
+                    -{Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100)}%
+                  </span>
+                )}
+              </div>
+              {deal.reason && <p class="deal-reason">{deal.reason}</p>}
+              <div class="deal-meta">
+                <span class="meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  {new Date(deal.createdAt).toLocaleDateString()}
+                </span>
+                <span class="meta-item">
+                  Prioridad: {deal.priority}
+                </span>
+              </div>
+            </div>
+            <div class="deal-actions">
+              <button class="action-btn toggle-btn" data-id={deal.id} title={deal.isActive ? 'Desactivar' : 'Activar'}>
+                {deal.isActive ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                    <line x1="12" y1="2" x2="12" y2="12"/>
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="16 12 12 8 8 12"/>
+                    <line x1="12" y1="16" x2="12" y2="8"/>
+                  </svg>
+                )}
+              </button>
+              <a href={deal.affiliateUrl} target="_blank" rel="noopener noreferrer" class="action-btn view-btn" title="Ver en Amazon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+              <button class="action-btn delete-btn" data-id={deal.id} title="Eliminar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+
+  <!-- Add Deal Modal -->
+  <div class="modal" id="add-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Agregar Deal Manual</h2>
+        <button class="close-modal-btn" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="add-deal-form">
+        <div class="form-group">
+          <label>ASIN del producto</label>
+          <input type="text" name="asin" class="admin-input" placeholder="B09V3KXJPB" required pattern="[A-Z0-9]{10}" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Marketplace</label>
+            <select name="marketplace" class="admin-input">
+              <option value="com">Amazon.com</option>
+              <option value="es">Amazon.es</option>
+              <option value="de">Amazon.de</option>
+              <option value="co.uk">Amazon.co.uk</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Prioridad (0-100)</label>
+            <input type="number" name="priority" class="admin-input" value="50" min="0" max="100" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Razón (opcional)</label>
+          <textarea name="reason" class="admin-input" rows="2" placeholder="¿Por qué es un buen deal?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Válido hasta (opcional)</label>
+          <input type="date" name="validUntil" class="admin-input" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="admin-btn admin-btn-secondary close-modal-btn">Cancelar</button>
+          <button type="submit" class="admin-btn admin-btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 4v16m8-8H4"/>
+            </svg>
+            Agregar Deal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Modal handling
+  const modal = document.getElementById('add-modal');
+  const addBtn = document.getElementById('add-deal-btn');
+  const closeBtns = modal?.querySelectorAll('.close-modal-btn, .modal-backdrop');
+
+  function openModal() {
+    modal?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  addBtn?.addEventListener('click', openModal);
+  closeBtns?.forEach(btn => btn.addEventListener('click', closeModal));
+
+  // Add deal form
+  const addForm = document.getElementById('add-deal-form') as HTMLFormElement;
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(addForm);
+
+    try {
+      const response = await fetch('/api/admin/curated-deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asin: formData.get('asin'),
+          marketplace: formData.get('marketplace'),
+          priority: Number(formData.get('priority')),
+          reason: formData.get('reason') || undefined,
+          validUntil: formData.get('validUntil') || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        closeModal();
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Error al agregar el deal');
+      }
+    } catch (error) {
+      alert('Error de red');
+    }
+  });
+
+  // Toggle deal status
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = (btn as HTMLElement).dataset.id;
+      try {
+        const response = await fetch(`/api/admin/curated-deals/${id}/toggle`, {
+          method: 'POST',
+        });
+        if (response.ok) {
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error('Toggle error:', error);
+      }
+    });
+  });
+
+  // Delete deal
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro de eliminar este deal?')) return;
+      
+      const id = (btn as HTMLElement).dataset.id;
+      try {
+        const response = await fetch(`/api/admin/curated-deals/${id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    });
+  });
+
+  // Run AI curation
+  const runCurationBtn = document.getElementById('run-curation-btn');
+  runCurationBtn?.addEventListener('click', async () => {
+    runCurationBtn.setAttribute('disabled', 'true');
+    runCurationBtn.innerHTML = '<span class="spinner"></span> Ejecutando...';
+
+    try {
+      const response = await fetch('/api/cron/curate-deals', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Curación completada!\n\nDeals encontrados: ${data.dealsFound}\nDeals creados: ${data.dealsCreated}\nDuración: ${(data.duration / 1000).toFixed(1)}s`);
+        window.location.reload();
+      } else {
+        alert(`Error: ${data.error || 'Error desconocido'}`);
+      }
+    } catch (error) {
+      alert('Error de red al ejecutar curación');
+    } finally {
+      runCurationBtn.removeAttribute('disabled');
+      runCurationBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Ejecutar curación IA
+      `;
+    }
+  });
+
+  // Filters
+  const filterType = document.getElementById('filter-type') as HTMLSelectElement;
+  const filterStatus = document.getElementById('filter-status') as HTMLSelectElement;
+  const dealCards = document.querySelectorAll('.deal-card');
+
+  function applyFilters() {
+    const type = filterType.value;
+    const status = filterStatus.value;
+
+    dealCards.forEach(card => {
+      const cardEl = card as HTMLElement;
+      const typeBadge = cardEl.querySelector('.type-badge');
+      const statusBadge = cardEl.querySelector('.status-badge');
+      
+      const typeMatch = !type || typeBadge?.classList.contains(type);
+      const statusMatch = !status || 
+        (status === 'active' && statusBadge?.classList.contains('active')) ||
+        (status === 'inactive' && statusBadge?.classList.contains('inactive'));
+
+      cardEl.style.display = typeMatch && statusMatch ? 'flex' : 'none';
+    });
+  }
+
+  filterType?.addEventListener('change', applyFilters);
+  filterStatus?.addEventListener('change', applyFilters);
+</script>
+
+<style>
+  .header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  @media (min-width: 640px) {
+    .header-actions {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+  }
+
+  .header-left {
+    flex: 1;
+  }
+
+  .description {
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  .header-right {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .filters-bar {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .filter-select {
+    width: auto;
+    min-width: 150px;
+  }
+
+  .deals-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--text-muted);
+  }
+
+  .empty-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+  }
+
+  .empty-state p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
+  }
+
+  .empty-state span {
+    font-size: 0.875rem;
+  }
+
+  .deal-card {
+    display: flex;
+    gap: var(--space-md);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    transition: all var(--duration) var(--ease);
+  }
+
+  .deal-card:hover {
+    border-color: var(--border-default);
+  }
+
+  .deal-image {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .deal-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .placeholder-img {
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+
+  .placeholder-img svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .deal-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .deal-header {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .type-badge,
+  .status-badge,
+  .score-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .type-badge.ai {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .type-badge.admin {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+  }
+
+  .type-badge.trending {
+    background: rgba(236, 72, 153, 0.15);
+    color: #f472b6;
+  }
+
+  .status-badge.active {
+    background: var(--success-muted);
+    color: var(--success);
+  }
+
+  .status-badge.inactive {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+  }
+
+  .score-badge {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  .deal-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .deal-brand {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .deal-pricing {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  .deal-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .deal-original {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+
+  .deal-discount {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--success);
+    background: var(--success-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .deal-reason {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .deal-meta {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: auto;
+    padding-top: var(--space-xs);
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .meta-item svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .deal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--duration) var(--ease);
+    text-decoration: none;
+  }
+
+  .action-btn:hover {
+    border-color: var(--border-default);
+    color: var(--text-primary);
+  }
+
+  .action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .delete-btn:hover {
+    border-color: var(--error);
+    color: var(--error);
+  }
+
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+  }
+
+  .modal.open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-content {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .modal-header h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .close-modal-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--duration) var(--ease);
+  }
+
+  .close-modal-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  .close-modal-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  #add-deal-form {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .form-group label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+
+  textarea.admin-input {
+    resize: vertical;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: flex-end;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>

@@ -1,0 +1,702 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getAllProducts } from '@lib/db';
+
+const allProducts = await getAllProducts();
+const publishedProducts = allProducts.filter(p => p.status === 'published');
+---
+
+<AdminLayout title="Telegram">
+  <style>
+    .telegram-page {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* Header */
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .page-title svg {
+      width: 28px;
+      height: 28px;
+      color: #0088cc;
+    }
+
+    .page-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Status Card */
+    .status-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-md);
+    }
+
+    .status-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .status-indicator.connected {
+      color: #10b981;
+    }
+
+    .status-indicator.disconnected {
+      color: #ef4444;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-indicator.connected .status-dot {
+      background: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    }
+
+    .status-indicator.disconnected .status-dot {
+      background: #ef4444;
+    }
+
+    .status-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .config-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-md);
+    }
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .config-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .config-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      padding: 8px 12px;
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+    }
+
+    .config-value.masked {
+      letter-spacing: 0.2em;
+    }
+
+    .status-actions {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      border: none;
+    }
+
+    .btn-primary {
+      background: #0088cc;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #229ED9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-base);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bg-hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Setup Guide */
+    .setup-guide {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .guide-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-md);
+    }
+
+    .guide-steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .guide-step {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0, 136, 204, 0.15);
+      color: #0088cc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .step-desc code {
+      background: var(--bg-base);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    /* Products Card */
+    .products-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .products-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-md);
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .products-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .products-count {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: rgba(0, 136, 204, 0.15);
+      color: #0088cc;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+
+    .products-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .product-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-sm);
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .product-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .product-item.selected {
+      background: rgba(0, 136, 204, 0.1);
+      border: 1px solid rgba(0, 136, 204, 0.3);
+    }
+
+    .product-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-default);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .product-item.selected .product-checkbox {
+      background: #0088cc;
+      border-color: #0088cc;
+    }
+
+    .product-checkbox svg {
+      width: 12px;
+      height: 12px;
+      color: white;
+      opacity: 0;
+    }
+
+    .product-item.selected .product-checkbox svg {
+      opacity: 1;
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .product-price {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .publish-actions {
+      display: flex;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-xl);
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: var(--space-md);
+      opacity: 0.3;
+    }
+
+    /* Loading */
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
+  <div class="telegram-page">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.63 3.72-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.42-1.43-.88.03-.24.37-.49 1.02-.75 4-1.73 6.67-2.88 8.02-3.45 3.81-1.6 4.6-1.88 5.12-1.89.11 0 .37.03.54.17.14.12.18.28.2.45-.01.06.01.24 0 .38z"/>
+        </svg>
+        Telegram
+      </h1>
+      <p class="page-subtitle">
+        Publica productos en tu canal de Telegram y notifica ofertas
+      </p>
+    </div>
+
+    <!-- Status Card -->
+    <div class="status-card">
+      <div class="status-header">
+        <h2 class="status-title">Estado de conexión</h2>
+        <div class="status-indicator disconnected" id="statusIndicator">
+          <span class="status-dot"></span>
+          <span id="statusText">Verificando...</span>
+        </div>
+      </div>
+      <div class="status-content">
+        <div class="config-info" id="configInfo" style="display: none;">
+          <div class="config-item">
+            <span class="config-label">Bot Token</span>
+            <span class="config-value masked" id="tokenValue">••••••••••••••••</span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Channel ID</span>
+            <span class="config-value" id="channelValue">-</span>
+          </div>
+        </div>
+        <div class="status-actions">
+          <button type="button" class="btn btn-primary" id="btnTest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            Probar conexión
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnSendTest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Enviar mensaje de prueba
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setup Guide (shown if not configured) -->
+    <div class="setup-guide" id="setupGuide" style="display: none;">
+      <h2 class="guide-title">Cómo configurar Telegram</h2>
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <div class="step-title">Crear un bot</div>
+            <div class="step-desc">
+              Abre Telegram y busca <code>@BotFather</code>. Envía <code>/newbot</code> y sigue las instrucciones.
+              Guarda el token que te da.
+            </div>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <div class="step-title">Crear un canal</div>
+            <div class="step-desc">
+              Crea un canal de Telegram y agrega tu bot como administrador con permisos para publicar mensajes.
+            </div>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <div class="step-title">Configurar variables</div>
+            <div class="step-desc">
+              Agrega a tu archivo <code>.env</code>:<br/>
+              <code>TELEGRAM_BOT_TOKEN=tu_token</code><br/>
+              <code>TELEGRAM_CHANNEL_ID=@tu_canal</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products to Publish -->
+    <div class="products-card">
+      <div class="products-header">
+        <h2 class="products-title">Publicar productos</h2>
+        <span class="products-count" id="selectedCount">0 seleccionados</span>
+      </div>
+
+      {publishedProducts.length > 0 ? (
+        <div class="products-list" id="productsList">
+          {publishedProducts.map((product) => (
+            <div class="product-item" data-id={product.id} data-product={JSON.stringify({
+              title: product.title,
+              brand: product.brand,
+              price: product.price,
+              originalPrice: product.originalPrice,
+              currency: product.currency,
+              affiliateUrl: product.affiliateUrl,
+              imageUrl: product.imageUrl,
+              rating: product.rating,
+            })}>
+              <div class="product-checkbox">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div class="product-info">
+                <div class="product-name">{product.title}</div>
+                <div class="product-meta">
+                  {product.brand} · <span class="product-price">{product.currency} {product.price}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div class="publish-actions">
+          <button type="button" class="btn btn-primary" id="btnPublish" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Publicar seleccionados
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnPublishBulk" disabled>
+            Publicar como resumen
+          </button>
+        </div>
+      ) : (
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+          <p>No hay productos publicados para compartir en Telegram</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <script>
+    // State
+    const selectedProducts: Set<string> = new Set();
+    let isConfigured = false;
+
+    // Elements
+    const statusIndicator = document.getElementById('statusIndicator')!;
+    const statusText = document.getElementById('statusText')!;
+    const configInfo = document.getElementById('configInfo')!;
+    const setupGuide = document.getElementById('setupGuide')!;
+    const btnTest = document.getElementById('btnTest') as HTMLButtonElement;
+    const btnSendTest = document.getElementById('btnSendTest') as HTMLButtonElement;
+    const btnPublish = document.getElementById('btnPublish') as HTMLButtonElement;
+    const btnPublishBulk = document.getElementById('btnPublishBulk') as HTMLButtonElement;
+    const selectedCount = document.getElementById('selectedCount')!;
+
+    // Check connection on load
+    async function checkConnection() {
+      try {
+        const response = await fetch('/api/admin/telegram/test');
+        const data = await response.json();
+
+        isConfigured = data.configured;
+
+        if (data.success) {
+          statusIndicator.classList.remove('disconnected');
+          statusIndicator.classList.add('connected');
+          statusText.textContent = 'Conectado';
+          configInfo.style.display = 'grid';
+          setupGuide.style.display = 'none';
+        } else if (data.configured) {
+          statusText.textContent = 'Error de conexión';
+          configInfo.style.display = 'grid';
+          setupGuide.style.display = 'none';
+        } else {
+          statusText.textContent = 'No configurado';
+          configInfo.style.display = 'none';
+          setupGuide.style.display = 'block';
+        }
+      } catch (error) {
+        statusText.textContent = 'Error';
+      }
+    }
+
+    // Send test message
+    async function sendTestMessage() {
+      btnSendTest.disabled = true;
+      btnSendTest.innerHTML = '<span class="loading-spinner"></span> Enviando...';
+
+      try {
+        const response = await fetch('/api/admin/telegram/test', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✓ Mensaje de prueba enviado correctamente');
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        alert('Error al enviar mensaje');
+      } finally {
+        btnSendTest.disabled = false;
+        btnSendTest.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Enviar mensaje de prueba
+        `;
+      }
+    }
+
+    // Update selection
+    function updateSelection() {
+      const count = selectedProducts.size;
+      selectedCount.textContent = `${count} seleccionado${count !== 1 ? 's' : ''}`;
+      btnPublish.disabled = count === 0;
+      btnPublishBulk.disabled = count === 0;
+    }
+
+    // Product selection
+    document.querySelectorAll('.product-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const id = item.getAttribute('data-id')!;
+        
+        if (selectedProducts.has(id)) {
+          selectedProducts.delete(id);
+          item.classList.remove('selected');
+        } else {
+          selectedProducts.add(id);
+          item.classList.add('selected');
+        }
+        
+        updateSelection();
+      });
+    });
+
+    // Publish products
+    async function publishProducts(mode: 'single' | 'bulk') {
+      const btn = mode === 'single' ? btnPublish : btnPublishBulk;
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span> Publicando...';
+
+      try {
+        const products: any[] = [];
+        
+        document.querySelectorAll('.product-item.selected').forEach(item => {
+          const productData = item.getAttribute('data-product');
+          if (productData) {
+            products.push(JSON.parse(productData));
+          }
+        });
+
+        const response = await fetch('/api/admin/telegram/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            products,
+            mode,
+            lang: 'es',
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert(`✓ ${data.published} producto(s) publicado(s) en Telegram`);
+          // Clear selection
+          selectedProducts.clear();
+          document.querySelectorAll('.product-item.selected').forEach(item => {
+            item.classList.remove('selected');
+          });
+          updateSelection();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        alert('Error al publicar');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // Event listeners
+    btnTest.addEventListener('click', checkConnection);
+    btnSendTest.addEventListener('click', sendTestMessage);
+    btnPublish.addEventListener('click', () => publishProducts('single'));
+    btnPublishBulk.addEventListener('click', () => publishProducts('bulk'));
+
+    // Check connection on load
+    checkConnection();
+  </script>
+</AdminLayout>

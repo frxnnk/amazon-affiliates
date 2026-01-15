@@ -1,0 +1,711 @@
+---
+/**
+ * SwipeDiscovery - Tinder-style swipe interface for product discovery
+ * 
+ * Allows users to swipe right (like) or left (dislike) on products
+ * to train their preference model.
+ */
+import { type Lang } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const texts = {
+  es: {
+    title: 'Descubre productos',
+    subtitle: 'Desliza para descubrir lo que te gusta',
+    like: 'Me gusta',
+    dislike: 'No me interesa',
+    noMore: 'Has visto todos los productos',
+    loading: 'Cargando...',
+    error: 'Error al cargar productos',
+    retry: 'Reintentar',
+    exit: 'Salir',
+    swipeHint: 'Desliza o usa los botones',
+    productsLiked: 'productos te gustaron',
+  },
+  en: {
+    title: 'Discover products',
+    subtitle: 'Swipe to discover what you like',
+    like: 'Like',
+    dislike: 'Not interested',
+    noMore: 'You\'ve seen all products',
+    loading: 'Loading...',
+    error: 'Error loading products',
+    retry: 'Retry',
+    exit: 'Exit',
+    swipeHint: 'Swipe or use the buttons',
+    productsLiked: 'products liked',
+  }
+};
+
+const t = texts[lang];
+---
+
+<div class="swipe-discovery" id="swipe-discovery" data-lang={lang}>
+  <!-- Header -->
+  <header class="swipe-header">
+    <button class="exit-btn" id="swipe-exit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+    <div class="header-info">
+      <h2>{t.title}</h2>
+      <p>{t.subtitle}</p>
+    </div>
+    <div class="liked-count" id="liked-count">
+      <span id="liked-number">0</span>
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+      </svg>
+    </div>
+  </header>
+
+  <!-- Cards Stack -->
+  <div class="cards-stack" id="cards-stack">
+    <!-- Loading State -->
+    <div class="swipe-loading" id="swipe-loading">
+      <div class="spinner"></div>
+      <p>{t.loading}</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="swipe-error" id="swipe-error">
+      <p>{t.error}</p>
+      <button id="swipe-retry">{t.retry}</button>
+    </div>
+
+    <!-- Empty State -->
+    <div class="swipe-empty" id="swipe-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p>{t.noMore}</p>
+      <span id="final-liked">0 {t.productsLiked}</span>
+    </div>
+
+    <!-- Cards will be inserted here -->
+  </div>
+
+  <!-- Hint -->
+  <p class="swipe-hint" id="swipe-hint">{t.swipeHint}</p>
+
+  <!-- Action Buttons -->
+  <div class="swipe-actions">
+    <button class="action-btn dislike-btn" id="btn-dislike" title={t.dislike}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+    <button class="action-btn like-btn" id="btn-like" title={t.like}>
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script define:vars={{ lang, texts }}>
+class SwipeDiscovery {
+  constructor() {
+    this.container = document.getElementById('swipe-discovery');
+    this.stack = document.getElementById('cards-stack');
+    this.loading = document.getElementById('swipe-loading');
+    this.error = document.getElementById('swipe-error');
+    this.empty = document.getElementById('swipe-empty');
+    this.hint = document.getElementById('swipe-hint');
+    this.likedNumber = document.getElementById('liked-number');
+    this.finalLiked = document.getElementById('final-liked');
+    
+    this.t = texts[lang];
+    this.products = [];
+    this.currentIndex = 0;
+    this.likedCount = 0;
+    this.likedAsins = [];
+    this.dislikedAsins = [];
+    
+    this.isDragging = false;
+    this.startX = 0;
+    this.startY = 0;
+    this.currentX = 0;
+    
+    this.init();
+  }
+  
+  async init() {
+    this.bindEvents();
+    await this.loadProducts();
+  }
+  
+  bindEvents() {
+    document.getElementById('swipe-exit')?.addEventListener('click', () => this.close());
+    document.getElementById('swipe-retry')?.addEventListener('click', () => this.loadProducts());
+    document.getElementById('btn-like')?.addEventListener('click', () => this.swipe('right'));
+    document.getElementById('btn-dislike')?.addEventListener('click', () => this.swipe('left'));
+    
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (!this.container?.classList.contains('active')) return;
+      if (e.key === 'ArrowRight') this.swipe('right');
+      if (e.key === 'ArrowLeft') this.swipe('left');
+      if (e.key === 'Escape') this.close();
+    });
+  }
+  
+  async loadProducts() {
+    this.showLoading();
+    
+    try {
+      const res = await fetch(`/api/feed/products?page=1&lang=${lang}&limit=20`);
+      const data = await res.json();
+      
+      if (!data.success || !data.products?.length) {
+        this.showEmpty();
+        return;
+      }
+      
+      this.products = data.products;
+      this.currentIndex = 0;
+      this.hideLoading();
+      this.renderCards();
+    } catch (e) {
+      console.error('Error loading products:', e);
+      this.showError();
+    }
+  }
+  
+  renderCards() {
+    // Clear existing cards
+    this.stack?.querySelectorAll('.swipe-card').forEach(c => c.remove());
+    
+    // Render next 3 cards for stack effect
+    const remaining = this.products.slice(this.currentIndex, this.currentIndex + 3);
+    
+    remaining.reverse().forEach((product, i) => {
+      const card = this.createCard(product, remaining.length - 1 - i);
+      this.stack?.insertBefore(card, this.loading);
+    });
+    
+    // Setup drag on top card
+    const topCard = this.stack?.querySelector('.swipe-card:last-of-type');
+    if (topCard) this.setupCardDrag(topCard);
+  }
+  
+  createCard(product, zIndex) {
+    const el = document.createElement('div');
+    el.className = 'swipe-card';
+    el.dataset.asin = product.asin;
+    el.style.zIndex = zIndex.toString();
+    
+    const price = new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+      style: 'currency',
+      currency: product.currency || 'EUR'
+    }).format(product.price);
+    
+    const discount = product.originalPrice 
+      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+      : 0;
+    
+    el.innerHTML = `
+      <div class="card-image">
+        <img src="${product.featuredImage?.url || ''}" alt="${product.title}" loading="lazy" />
+        ${discount >= 15 ? `<span class="card-badge">-${discount}%</span>` : ''}
+      </div>
+      <div class="card-info">
+        <span class="card-brand">${product.brand || ''}</span>
+        <h3 class="card-title">${product.title}</h3>
+        <span class="card-price">${price}</span>
+      </div>
+      <div class="card-overlay like-overlay">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+        </svg>
+      </div>
+      <div class="card-overlay dislike-overlay">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </div>
+    `;
+    
+    return el;
+  }
+  
+  setupCardDrag(card) {
+    const onStart = (e) => {
+      this.isDragging = true;
+      const touch = e.touches ? e.touches[0] : e;
+      this.startX = touch.clientX;
+      this.startY = touch.clientY;
+      card.style.transition = 'none';
+    };
+    
+    const onMove = (e) => {
+      if (!this.isDragging) return;
+      const touch = e.touches ? e.touches[0] : e;
+      this.currentX = touch.clientX - this.startX;
+      const rotate = this.currentX * 0.05;
+      
+      card.style.transform = `translateX(${this.currentX}px) rotate(${rotate}deg)`;
+      
+      // Show overlays based on direction
+      const likeOverlay = card.querySelector('.like-overlay');
+      const dislikeOverlay = card.querySelector('.dislike-overlay');
+      
+      if (this.currentX > 50) {
+        likeOverlay.style.opacity = Math.min((this.currentX - 50) / 100, 1).toString();
+        dislikeOverlay.style.opacity = '0';
+      } else if (this.currentX < -50) {
+        dislikeOverlay.style.opacity = Math.min((-this.currentX - 50) / 100, 1).toString();
+        likeOverlay.style.opacity = '0';
+      } else {
+        likeOverlay.style.opacity = '0';
+        dislikeOverlay.style.opacity = '0';
+      }
+    };
+    
+    const onEnd = () => {
+      if (!this.isDragging) return;
+      this.isDragging = false;
+      
+      card.style.transition = 'transform 0.3s ease';
+      
+      if (this.currentX > 100) {
+        this.swipe('right');
+      } else if (this.currentX < -100) {
+        this.swipe('left');
+      } else {
+        card.style.transform = '';
+        card.querySelector('.like-overlay').style.opacity = '0';
+        card.querySelector('.dislike-overlay').style.opacity = '0';
+      }
+      
+      this.currentX = 0;
+    };
+    
+    card.addEventListener('mousedown', onStart);
+    card.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+  }
+  
+  async swipe(direction) {
+    const topCard = this.stack?.querySelector('.swipe-card:last-of-type');
+    if (!topCard) return;
+    
+    const asin = topCard.dataset.asin;
+    const isLike = direction === 'right';
+    
+    // Animate card off screen
+    const translateX = direction === 'right' ? 500 : -500;
+    const rotate = direction === 'right' ? 30 : -30;
+    topCard.style.transition = 'transform 0.4s ease';
+    topCard.style.transform = `translateX(${translateX}px) rotate(${rotate}deg)`;
+    
+    // Update counts
+    if (isLike) {
+      this.likedCount++;
+      this.likedAsins.push(asin);
+      this.likedNumber.textContent = this.likedCount.toString();
+    } else {
+      this.dislikedAsins.push(asin);
+    }
+    
+    // Hide hint after first swipe
+    if (this.hint) this.hint.style.display = 'none';
+    
+    // Save preference
+    this.savePreference(asin, isLike);
+    
+    // Remove card after animation
+    setTimeout(() => {
+      topCard.remove();
+      this.currentIndex++;
+      
+      if (this.currentIndex >= this.products.length) {
+        this.showEmpty();
+      } else {
+        this.renderCards();
+      }
+    }, 400);
+  }
+  
+  async savePreference(asin, isLike) {
+    try {
+      await fetch('/api/user/swipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asin, liked: isLike }),
+      });
+    } catch (e) {
+      // Silently fail, save locally
+      const key = isLike ? 'swipeLiked' : 'swipeDisliked';
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      stored.push(asin);
+      localStorage.setItem(key, JSON.stringify(stored));
+    }
+  }
+  
+  showLoading() {
+    this.loading.style.display = 'flex';
+    this.error.style.display = 'none';
+    this.empty.style.display = 'none';
+  }
+  
+  hideLoading() {
+    this.loading.style.display = 'none';
+  }
+  
+  showError() {
+    this.loading.style.display = 'none';
+    this.error.style.display = 'flex';
+    this.empty.style.display = 'none';
+  }
+  
+  showEmpty() {
+    this.loading.style.display = 'none';
+    this.error.style.display = 'none';
+    this.empty.style.display = 'flex';
+    this.finalLiked.textContent = `${this.likedCount} ${this.t.productsLiked}`;
+    
+    // Disable action buttons
+    document.getElementById('btn-like')?.setAttribute('disabled', 'true');
+    document.getElementById('btn-dislike')?.setAttribute('disabled', 'true');
+  }
+  
+  close() {
+    this.container?.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Dispatch event with results
+    window.dispatchEvent(new CustomEvent('swipe:complete', {
+      detail: {
+        liked: this.likedAsins,
+        disliked: this.dislikedAsins,
+        count: this.likedCount,
+      }
+    }));
+  }
+  
+  open() {
+    this.container?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    this.loadProducts();
+  }
+}
+
+// Initialize and expose globally
+window.swipeDiscovery = new SwipeDiscovery();
+
+// Listen for open events
+window.addEventListener('swipe:open', () => window.swipeDiscovery?.open());
+</script>
+
+<style>
+.swipe-discovery {
+  position: fixed;
+  inset: 0;
+  background: #FDFBF7;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+}
+
+.swipe-discovery.active {
+  display: flex;
+}
+
+/* Header */
+.swipe-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid #E5E2DD;
+}
+
+.exit-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #6B6560;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.exit-btn:hover {
+  color: #1A1815;
+}
+
+.exit-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.header-info {
+  flex: 1;
+}
+
+.header-info h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1A1815;
+  margin: 0;
+}
+
+.header-info p {
+  font-size: 0.8125rem;
+  color: #6B6560;
+  margin: 0;
+}
+
+.liked-count {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  background: #FEF7ED;
+  border-radius: 20px;
+  color: #C8956C;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.liked-count svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Cards Stack */
+.cards-stack {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.swipe-card {
+  position: absolute;
+  width: calc(100% - 2rem);
+  max-width: 340px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.swipe-card:active {
+  cursor: grabbing;
+}
+
+.card-image {
+  position: relative;
+  height: 280px;
+  background: #F7F4EE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-image img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  background: #059669;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.card-info {
+  padding: 1.25rem;
+}
+
+.card-brand {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9CA3AF;
+  margin-bottom: 0.375rem;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #1A1815;
+  margin: 0 0 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-price {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1A1815;
+}
+
+/* Overlays */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.like-overlay {
+  background: rgba(5, 150, 105, 0.15);
+  color: #059669;
+}
+
+.dislike-overlay {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+}
+
+.card-overlay svg {
+  width: 80px;
+  height: 80px;
+}
+
+/* States */
+.swipe-loading,
+.swipe-error,
+.swipe-empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #6B6560;
+  text-align: center;
+}
+
+.swipe-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #E5E2DD;
+  border-top-color: #C8956C;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.swipe-error button,
+.swipe-empty button {
+  padding: 0.75rem 1.5rem;
+  background: #C8956C;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.swipe-empty svg {
+  width: 64px;
+  height: 64px;
+  color: #C8956C;
+}
+
+.swipe-empty #final-liked {
+  font-size: 0.875rem;
+  color: #9CA3AF;
+}
+
+/* Hint */
+.swipe-hint {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #9CA3AF;
+  padding: 0.5rem;
+}
+
+/* Actions */
+.swipe-actions {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #E5E2DD;
+}
+
+.action-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn svg {
+  width: 28px;
+  height: 28px;
+}
+
+.dislike-btn {
+  background: white;
+  border: 2px solid #EF4444;
+  color: #EF4444;
+}
+
+.dislike-btn:hover:not(:disabled) {
+  background: #FEE2E2;
+  transform: scale(1.1);
+}
+
+.like-btn {
+  background: #059669;
+  color: white;
+}
+
+.like-btn:hover:not(:disabled) {
+  background: #047857;
+  transform: scale(1.1);
+}
+</style>

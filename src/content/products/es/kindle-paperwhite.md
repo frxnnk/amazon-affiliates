@@ -16,7 +16,7 @@ tags: ["kindle", "ereader", "lectura", "amazon", "libros"]
 price: 149.99
 originalPrice: 169.99
 currency: "EUR"
-affiliateUrl: "https://www.amazon.es/dp/B09TMN58KL"
+affiliateUrl: "https://www.amazon.es/dp/B09TMN58KL?tag=bestdeal0ee40-20"
 
 rating: 4.6
 totalReviews: 45678

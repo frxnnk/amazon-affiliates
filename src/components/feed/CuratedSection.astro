@@ -1,0 +1,474 @@
+---
+import { type Lang } from '@i18n/utils';
+
+interface Product {
+  productId: string;
+  asin: string;
+  title: string;
+  brand: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  rating?: number;
+  featuredImage: { url: string; alt: string };
+  affiliateUrl: string;
+  category?: string;
+  shortDescription?: string;
+}
+
+interface Props {
+  products: Product[];
+  lang: Lang;
+}
+
+const { products, lang } = Astro.props;
+
+// Format price
+function formatPrice(price: number, currency: string, lang: string) {
+  return new Intl.NumberFormat(lang === 'es' ? 'es-ES' : 'en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+  }).format(price);
+}
+
+const title = lang === 'es' ? 'Destacados' : 'Featured';
+const subtitle = lang === 'es' 
+  ? 'Nuestra selección curada de los mejores productos' 
+  : 'Our curated selection of the best products';
+---
+
+<section class="curated-section">
+  <div class="curated-header">
+    <div class="curated-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+      </svg>
+      {title}
+    </div>
+    <h2 class="curated-title">{title}</h2>
+    <p class="curated-subtitle">{subtitle}</p>
+  </div>
+
+  <div class="curated-carousel">
+    <div class="carousel-track" id="curated-track">
+      {products.map((product, index) => {
+        const discount = product.originalPrice 
+          ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
+          : 0;
+        
+        return (
+          <a 
+            href={product.affiliateUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            class="curated-card"
+            style={`--card-index: ${index}`}
+            data-product-id={product.productId}
+          >
+            {discount > 0 && (
+              <div class="card-badge">-{discount}%</div>
+            )}
+            
+            <div class="card-image">
+              <img 
+                src={product.featuredImage?.url} 
+                alt={product.featuredImage?.alt || product.title}
+                loading={index < 3 ? 'eager' : 'lazy'}
+              />
+            </div>
+            
+            <div class="card-content">
+              <span class="card-brand">{product.brand}</span>
+              <h3 class="card-title">{product.title}</h3>
+              
+              <div class="card-price">
+                <span class="price-current">{formatPrice(product.price, product.currency, lang)}</span>
+                {product.originalPrice && (
+                  <span class="price-original">{formatPrice(product.originalPrice, product.currency, lang)}</span>
+                )}
+              </div>
+              
+              {product.rating && (
+                <div class="card-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                  </svg>
+                  {product.rating.toFixed(1)}
+                </div>
+              )}
+            </div>
+
+            <div class="card-cta">
+              <span>{lang === 'es' ? 'Ver en Amazon' : 'View on Amazon'}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+
+  <!-- Navigation dots -->
+  <div class="carousel-nav">
+    {products.map((_, index) => (
+      <button 
+        type="button" 
+        class={`nav-dot ${index === 0 ? 'active' : ''}`}
+        data-index={index}
+        aria-label={`Go to slide ${index + 1}`}
+      />
+    ))}
+  </div>
+</section>
+
+<script>
+  function initCarousel() {
+    const track = document.getElementById('curated-track');
+    const dots = document.querySelectorAll('.nav-dot');
+    
+    if (!track || !dots.length) return;
+
+    let currentIndex = 0;
+    const cards = track.querySelectorAll('.curated-card');
+    const totalCards = cards.length;
+
+    function scrollToCard(index: number) {
+      const card = cards[index] as HTMLElement;
+      if (card) {
+        track.scrollTo({
+          left: card.offsetLeft - 24,
+          behavior: 'smooth'
+        });
+        
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === index);
+        });
+        currentIndex = index;
+      }
+    }
+
+    // Dot click handlers
+    dots.forEach((dot, index) => {
+      dot.addEventListener('click', () => scrollToCard(index));
+    });
+
+    // Auto scroll
+    let autoScrollInterval: ReturnType<typeof setInterval> | null = null;
+    
+    function startAutoScroll() {
+      autoScrollInterval = setInterval(() => {
+        const next = (currentIndex + 1) % totalCards;
+        scrollToCard(next);
+      }, 5000);
+    }
+
+    function stopAutoScroll() {
+      if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        autoScrollInterval = null;
+      }
+    }
+
+    // Update active dot on scroll
+    track.addEventListener('scroll', () => {
+      const scrollLeft = track.scrollLeft;
+      const cardWidth = (cards[0] as HTMLElement)?.offsetWidth || 300;
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      
+      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalCards) {
+        currentIndex = newIndex;
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === currentIndex);
+        });
+      }
+    }, { passive: true });
+
+    // Pause auto-scroll on hover
+    track.addEventListener('mouseenter', stopAutoScroll);
+    track.addEventListener('mouseleave', startAutoScroll);
+
+    // Start auto scroll
+    startAutoScroll();
+  }
+
+  // Initialize
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCarousel);
+  } else {
+    initCarousel();
+  }
+  document.addEventListener('astro:page-load', initCarousel);
+</script>
+
+<style>
+  .curated-section {
+    width: 100%;
+    padding: 3rem 0 2rem;
+    background: linear-gradient(180deg, rgba(255, 153, 0, 0.05) 0%, transparent 100%);
+  }
+
+  .curated-header {
+    text-align: center;
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .curated-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    background: linear-gradient(135deg, #FF9900 0%, #FFB84D 100%);
+    color: #000;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+  }
+
+  .curated-title {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    font-weight: 400;
+    color: white;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .curated-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+  }
+
+  /* Carousel */
+  .curated-carousel {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .carousel-track {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem 2rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Cards */
+  .curated-card {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    scroll-snap-align: start;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeInUp 0.6s ease-out backwards;
+    animation-delay: calc(var(--card-index) * 0.1s);
+    position: relative;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .curated-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255, 153, 0, 0.4);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 0.375rem 0.75rem;
+    background: #22c55e;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    z-index: 10;
+  }
+
+  .card-image {
+    width: 100%;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+  }
+
+  .card-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease-out;
+  }
+
+  .curated-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+
+  .card-content {
+    flex: 1;
+    padding: 0 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .card-brand {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: white;
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .price-current {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #FF9900;
+  }
+
+  .price-original {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: line-through;
+  }
+
+  .card-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .card-rating svg {
+    color: #fbbf24;
+  }
+
+  .card-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(255, 153, 0, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #FF9900;
+    transition: all 0.2s ease-out;
+  }
+
+  .curated-card:hover .card-cta {
+    background: rgba(255, 153, 0, 0.2);
+  }
+
+  .card-cta svg {
+    transition: transform 0.2s ease-out;
+  }
+
+  .curated-card:hover .card-cta svg {
+    transform: translateX(4px);
+  }
+
+  /* Navigation dots */
+  .carousel-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 1.5rem;
+  }
+
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+    padding: 0;
+  }
+
+  .nav-dot:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .nav-dot.active {
+    background: #FF9900;
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  /* Responsive */
+  @media (min-width: 640px) {
+    .curated-card {
+      flex: 0 0 320px;
+    }
+
+    .card-image {
+      height: 200px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .carousel-track {
+      padding: 1rem 2rem 2rem;
+      gap: 1.5rem;
+    }
+
+    .curated-card {
+      flex: 0 0 340px;
+    }
+  }
+</style>

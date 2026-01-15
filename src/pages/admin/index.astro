@@ -132,6 +132,81 @@ const recentProducts = allProducts
       box-shadow: 0 8px 24px rgba(255, 153, 0, 0.3);
     }
 
+    .action-card.ai-studio {
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      border-color: transparent;
+    }
+
+    .action-card.ai-studio:hover {
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+    }
+
+    .action-card.ai-studio .action-icon {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .action-card.ai-studio .action-icon svg {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .action-card.ai-studio .action-title {
+      color: #fff;
+    }
+
+    .action-card.ai-studio .action-desc {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .action-card.deal-agent {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      border-color: transparent;
+    }
+
+    .action-card.deal-agent:hover {
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    }
+
+    .action-card.deal-agent .action-icon {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .action-card.deal-agent .action-icon svg {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .action-card.deal-agent .action-title {
+      color: #fff;
+    }
+
+    .action-card.deal-agent .action-desc {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .action-card.telegram {
+      background: linear-gradient(135deg, #0088cc 0%, #229ED9 100%);
+      border-color: transparent;
+    }
+
+    .action-card.telegram:hover {
+      box-shadow: 0 8px 24px rgba(0, 136, 204, 0.3);
+    }
+
+    .action-card.telegram .action-icon {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .action-card.telegram .action-icon svg {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .action-card.telegram .action-title {
+      color: #fff;
+    }
+
+    .action-card.telegram .action-desc {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
     .action-icon {
       width: 44px;
       height: 44px;
@@ -399,6 +474,55 @@ const recentProducts = allProducts
           <div class="action-content">
             <div class="action-title">Nuevo Producto</div>
             <div class="action-desc">Crear manualmente</div>
+          </div>
+        </a>
+
+        <a href="/admin/tools/ai-studio" class="action-card ai-studio">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">AI Studio</div>
+            <div class="action-desc">Generar 3D y contenido</div>
+          </div>
+        </a>
+
+        <a href="/admin/tools/deal-agent" class="action-card deal-agent">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">Deal Agent</div>
+            <div class="action-desc">Buscar ofertas con IA</div>
+          </div>
+        </a>
+
+        <a href="/admin/tools/telegram" class="action-card telegram">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.63 3.72-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.42-1.43-.88.03-.24.37-.49 1.02-.75 4-1.73 6.67-2.88 8.02-3.45 3.81-1.6 4.6-1.88 5.12-1.89.11 0 .37.03.54.17.14.12.18.28.2.45-.01.06.01.24 0 .38z"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">Telegram</div>
+            <div class="action-desc">Publicar en canal</div>
+          </div>
+        </a>
+
+        <a href="/admin/tools/agent-config" class="action-card">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+          <div class="action-content">
+            <div class="action-title">Agent Config</div>
+            <div class="action-desc">Keywords automáticos</div>
           </div>
         </a>
       </div>

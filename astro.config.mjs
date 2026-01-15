@@ -8,7 +8,7 @@ import db from '@astrojs/db';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://rewardhive.store',
+  site: 'https://www.rewardhive.store',
   output: 'server', // SSR para APIs
 
   i18n: {
@@ -29,8 +29,8 @@ export default defineConfig({
   integrations: [
     db(),
     clerk({
-      afterSignInUrl: '/admin',
-      afterSignUpUrl: '/admin',
+      signInFallbackRedirectUrl: '/admin',
+      signUpFallbackRedirectUrl: '/admin',
     }),
     sitemap({
       filter: (page) => !page.includes('/admin'),
