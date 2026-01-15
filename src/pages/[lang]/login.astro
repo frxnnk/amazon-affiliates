@@ -42,7 +42,11 @@ const t = content[lang];
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t.title}</title>
   <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
+    /* Neo-Brutalist Login */
     * {
       margin: 0;
       padding: 0;
@@ -53,7 +57,7 @@ const t = content[lang];
     }
     body {
       font-family: 'DM Sans', system-ui, sans-serif;
-      background: linear-gradient(180deg, #FDFBF7 0%, #F7F4EE 100%);
+      background: #FFFEF9;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -63,28 +67,43 @@ const t = content[lang];
     .login-container {
       text-align: center;
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      padding: 2rem;
+      background: #FFFEF9;
+      border: 4px solid #1A1A1A;
+      box-shadow: 8px 8px 0 #1A1A1A;
     }
     .logo {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #1A1815;
+      gap: 0.75rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1A1A1A;
       text-decoration: none;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    }
+    .logo:hover {
+      transform: translate(-2px, -2px);
     }
     .logo-mark {
-      width: 2rem;
-      height: 2rem;
-      color: #C8956C;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: #1A1A1A;
+      background: #FFE14D;
+      padding: 0.375rem;
+      border: 2px solid #1A1A1A;
     }
     .subtitle {
-      color: #6B6560;
+      font-family: 'DM Sans', sans-serif;
+      color: #1A1A1A;
+      opacity: 0.7;
       font-size: 0.9375rem;
       margin-bottom: 2rem;
     }
@@ -93,13 +112,22 @@ const t = content[lang];
       display: block;
     }
     .back-link a {
-      color: #6B6560;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #1A1A1A;
       text-decoration: none;
-      font-size: 0.875rem;
-      transition: color 0.2s;
+      padding: 0.625rem 1.25rem;
+      border: 2px solid #1A1A1A;
+      background: #FFFEF9;
+      transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
     }
     .back-link a:hover {
-      color: #1A1815;
+      background: #FFE14D;
+      transform: translate(-2px, -2px);
+      box-shadow: 3px 3px 0 #1A1A1A;
     }
   </style>
 </head>
@@ -108,8 +136,8 @@ const t = content[lang];
     <a href={`/${lang}`} class="logo">
       <svg class="logo-mark" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M64 8 L112 36 L112 92 L64 120 L16 92 L16 36 Z" fill="currentColor"/>
-        <path d="M48 45 L48 83 M48 45 L70 45 C78 45 84 51 84 59 C84 67 78 73 70 73 L48 73 M70 73 L84 83" 
-              fill="none" stroke="#FEF3C7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M48 45 L48 83 M48 45 L70 45 C78 45 84 51 84 59 C84 67 78 73 70 73 L48 73 M70 73 L84 83"
+              fill="none" stroke="#FFE14D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       RewardHive
     </a>

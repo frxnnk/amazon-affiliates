@@ -7,48 +7,58 @@
 
 @theme {
   /* ===========================================
-     COLOR PALETTE: Earth & Warmth
+     COLOR PALETTE: Neo-Brutalist
+     Bold, raw, unapologetic
      =========================================== */
 
-  /* Background tones - warm, not clinical */
-  --color-cream: #FDFBF7;
-  --color-cream-dark: #F7F4EE;
+  /* Background tones - warm paper, not sterile white */
+  --color-cream: #FFFEF9;
+  --color-cream-dark: #F5F4EF;
   --color-white: #FFFFFF;
 
-  /* Text hierarchy */
-  --color-ink: #1A1815;
-  --color-ink-light: #2D2926;
-  --color-stone: #6B6560;
-  --color-stone-light: #9C9690;
-  --color-mist: #C4BFB8;
+  /* Text hierarchy - high contrast */
+  --color-ink: #1A1A1A;
+  --color-ink-light: #333333;
+  --color-stone: #666666;
+  --color-stone-light: #999999;
+  --color-mist: #CCCCCC;
 
-  /* Primary accent - Honey/Amber */
-  --color-honey: #C8956C;
-  --color-honey-light: #D4A67D;
-  --color-honey-dark: #A67B5B;
-  --color-honey-muted: #E8D5C4;
+  /* Primary accent - Electric Yellow */
+  --color-honey: #FFE14D;
+  --color-honey-light: #FFF06A;
+  --color-honey-dark: #E6C200;
+  --color-honey-muted: #FFF9DB;
 
-  /* Secondary accent - Terracotta (CTAs) */
-  --color-terra: #C17B5E;
-  --color-terra-light: #D08B6E;
-  --color-terra-dark: #A66B50;
+  /* Secondary accent - Burnt Orange (CTAs, urgency) */
+  --color-terra: #FF6B35;
+  --color-terra-light: #FF8555;
+  --color-terra-dark: #E55A2B;
 
-  /* Success - Sage green (cashback, earnings) */
-  --color-sage: #7D8B6A;
-  --color-sage-light: #94A67B;
-  --color-sage-dark: #6B7A5A;
-  --color-sage-muted: #E5EAD9;
+  /* Success - Bold Green */
+  --color-sage: #2D9D4E;
+  --color-sage-light: #3DB85E;
+  --color-sage-dark: #238B3E;
+  --color-sage-muted: #D4F5DC;
 
   /* Warning & Error */
-  --color-amber: #D4A04A;
-  --color-coral: #C75D5D;
+  --color-amber: #FFB800;
+  --color-coral: #FF4444;
 
-  /* Borders & Separators */
-  --color-sand: #E8E4DD;
-  --color-sand-dark: #D4CFC6;
+  /* Borders & Separators - BOLD */
+  --color-sand: #E0E0E0;
+  --color-sand-dark: #1A1A1A;
+  --color-border: #1A1A1A;
 
-  /* Typography */
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  /* Neo-Brutal specific */
+  --color-brutal-black: #1A1A1A;
+  --color-brutal-yellow: #FFE14D;
+  --color-brutal-orange: #FF6B35;
+  --color-brutal-blue: #4A90D9;
+  --color-brutal-pink: #FF6B9D;
+  --color-brutal-green: #2D9D4E;
+
+  /* Typography - Mix of display and mono */
+  --font-display: 'Space Grotesk', 'DM Sans', -apple-system, sans-serif;
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace;
 
@@ -62,26 +72,95 @@
   --space-3xl: 4rem;
   --space-4xl: 6rem;
 
-  /* Border radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
+  /* Border radius - MINIMAL for brutalism */
+  --radius-sm: 0px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-full: 0px;
 
-  /* Shadows - soft, warm */
-  --shadow-sm: 0 1px 2px rgba(26, 24, 21, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 24, 21, 0.06);
-  --shadow-lg: 0 8px 24px rgba(26, 24, 21, 0.08);
-  --shadow-xl: 0 16px 48px rgba(26, 24, 21, 0.10);
-  --shadow-glow: 0 0 40px rgba(200, 149, 108, 0.15);
+  /* Neo-Brutal borders */
+  --border-thin: 2px solid var(--color-brutal-black);
+  --border-thick: 3px solid var(--color-brutal-black);
+  --border-brutal: 4px solid var(--color-brutal-black);
 
-  /* Transitions */
+  /* Shadows - OFFSET SOLID, no blur */
+  --shadow-sm: 2px 2px 0 var(--color-brutal-black);
+  --shadow-md: 4px 4px 0 var(--color-brutal-black);
+  --shadow-lg: 6px 6px 0 var(--color-brutal-black);
+  --shadow-xl: 8px 8px 0 var(--color-brutal-black);
+  --shadow-glow: none;
+
+  /* Hover shadows - shift effect */
+  --shadow-hover: 6px 6px 0 var(--color-brutal-black);
+  --shadow-active: 2px 2px 0 var(--color-brutal-black);
+
+  /* Transitions - SNAPPY, not smooth */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
+  --ease-brutal: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 250ms;
+}
+
+/* ===========================================
+   ACCESSIBILITY
+   =========================================== */
+
+/* Skip links - visible on focus for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 1rem 2rem;
+  background: var(--color-ink);
+  color: var(--color-cream);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transition: top 0.2s ease-out;
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid var(--color-honey);
+  outline-offset: 2px;
+}
+
+/* Screen reader only - hidden visually but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus visible indicator - enhanced for accessibility */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid var(--color-honey);
+  outline-offset: 3px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ===========================================
@@ -189,7 +268,7 @@ h4 { font-size: clamp(1.25rem, 2vw, 1.5rem); }
 }
 
 /* ===========================================
-   BUTTONS
+   BUTTONS - Neo-Brutalist
    =========================================== */
 
 .btn {
@@ -199,155 +278,178 @@ h4 { font-size: clamp(1.25rem, 2vw, 1.5rem); }
   gap: var(--space-sm);
   padding: 0.875rem 1.75rem;
   font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 0.9375rem;
-  letter-spacing: 0.01em;
-  border-radius: var(--radius-md);
-  border: none;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 3px solid var(--color-brutal-black);
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: transform var(--duration-fast), box-shadow var(--duration-fast);
   text-decoration: none;
   white-space: nowrap;
+  position: relative;
 }
 
 .btn-primary {
-  background: var(--color-ink);
+  background: var(--color-brutal-black);
   color: var(--color-cream);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-primary:hover {
-  background: var(--color-ink-light);
-  transform: translateY(-1px);
+  transform: translate(-2px, -2px);
   box-shadow: var(--shadow-lg);
 }
 
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-sm);
+}
+
 .btn-secondary {
-  background: var(--color-white);
-  color: var(--color-ink);
-  border: 1px solid var(--color-sand-dark);
+  background: var(--color-cream);
+  color: var(--color-brutal-black);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary:hover {
-  background: var(--color-cream-dark);
-  border-color: var(--color-mist);
+  background: var(--color-brutal-yellow);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-accent {
-  background: var(--color-honey);
-  color: var(--color-white);
+  background: var(--color-brutal-yellow);
+  color: var(--color-brutal-black);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-accent:hover {
-  background: var(--color-honey-dark);
-  transform: translateY(-1px);
+  background: var(--color-brutal-black);
+  color: var(--color-brutal-yellow);
+  transform: translate(-2px, -2px);
   box-shadow: var(--shadow-lg);
 }
 
 .btn-amazon {
-  background: #FF9900;
-  color: #0F1111;
-  font-weight: 600;
+  background: var(--color-brutal-orange);
+  color: var(--color-brutal-black);
+  font-weight: 800;
+  box-shadow: var(--shadow-md);
 }
 
 .btn-amazon:hover {
-  background: #FFB030;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(255, 153, 0, 0.25);
+  background: var(--color-brutal-black);
+  color: var(--color-brutal-orange);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--color-stone);
+  color: var(--color-brutal-black);
   padding: 0.75rem 1rem;
+  border: 2px solid var(--color-brutal-black);
+  box-shadow: none;
 }
 
 .btn-ghost:hover {
-  background: var(--color-sand);
-  color: var(--color-ink);
+  background: var(--color-brutal-black);
+  color: var(--color-cream);
 }
 
 .btn-sm {
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  border-width: 2px;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-lg {
   padding: 1rem 2.25rem;
   font-size: 1rem;
+  border-width: 4px;
+  box-shadow: var(--shadow-lg);
 }
 
 /* ===========================================
-   CARDS
+   CARDS - Neo-Brutalist
    =========================================== */
 
 .card {
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-sand);
+  background: var(--color-cream);
+  border: 3px solid var(--color-brutal-black);
   overflow: hidden;
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: transform var(--duration-fast), box-shadow var(--duration-fast);
+  box-shadow: var(--shadow-md);
 }
 
 .card:hover {
-  border-color: var(--color-sand-dark);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  transform: translate(-4px, -4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-elevated {
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  border: none;
+  background: var(--color-brutal-yellow);
+  border: 3px solid var(--color-brutal-black);
+  box-shadow: var(--shadow-lg);
 }
 
 .card-elevated:hover {
-  box-shadow: var(--shadow-xl);
-  transform: translateY(-4px);
+  transform: translate(-4px, -4px);
+  box-shadow: 10px 10px 0 var(--color-brutal-black);
 }
 
 /* ===========================================
-   BADGES & TAGS
+   BADGES & TAGS - Neo-Brutalist
    =========================================== */
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 0.375rem 0.875rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-radius: var(--radius-full);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 2px solid var(--color-brutal-black);
+  box-shadow: 2px 2px 0 var(--color-brutal-black);
 }
 
 .badge-default {
-  background: var(--color-sand);
-  color: var(--color-stone);
+  background: var(--color-cream);
+  color: var(--color-brutal-black);
 }
 
 .badge-honey {
-  background: var(--color-honey-muted);
-  color: var(--color-honey-dark);
+  background: var(--color-brutal-yellow);
+  color: var(--color-brutal-black);
 }
 
 .badge-sage {
-  background: var(--color-sage-muted);
-  color: var(--color-sage-dark);
+  background: var(--color-brutal-green);
+  color: white;
 }
 
 .badge-featured {
-  background: var(--color-ink);
-  color: var(--color-cream);
+  background: var(--color-brutal-black);
+  color: var(--color-brutal-yellow);
 }
 
 /* Cashback badge - special treatment */
 .badge-cashback {
-  background: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sage-dark) 100%);
-  color: var(--color-white);
-  font-weight: 700;
+  background: var(--color-brutal-green);
+  color: white;
+  font-weight: 800;
   padding: 0.5rem 1rem;
-  box-shadow: 0 2px 8px rgba(125, 139, 106, 0.3);
+  box-shadow: 3px 3px 0 var(--color-brutal-black);
+  border: 2px solid var(--color-brutal-black);
 }
 
 /* ===========================================
@@ -867,4 +969,86 @@ h4 { font-size: clamp(1.25rem, 2vw, 1.5rem); }
 
 .safe-right {
   padding-right: env(safe-area-inset-right, 0);
+}
+
+/* ===========================================
+   TOUCH TARGET ACCESSIBILITY
+   Minimum 44x44px touch targets per WCAG 2.5.5
+   =========================================== */
+
+/* Utility class for minimum touch targets */
+.touch-target {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Expand small clickable elements for touch */
+.touch-target-expand::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+}
+
+/* Touch-friendly button sizes on mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Ensure buttons meet minimum touch target */
+  .btn,
+  button:not(.carousel-dot) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Ensure links in navigation meet touch targets */
+  nav a,
+  .nav-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Small interactive elements get expanded hit areas */
+  .carousel-dot {
+    position: relative;
+  }
+
+  .carousel-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Close buttons and icon-only buttons */
+  [aria-label]:not(a):not(main):not(nav):not(section) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :focus-visible {
+    outline: 3px solid currentColor !important;
+    outline-offset: 2px !important;
+  }
+
+  .btn,
+  button {
+    border: 2px solid currentColor;
+  }
+
+  .badge,
+  .status::before {
+    border: 1px solid currentColor;
+  }
 }

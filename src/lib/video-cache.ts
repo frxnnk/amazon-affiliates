@@ -1,16 +1,21 @@
 /**
  * Video Cache Service
- * 
- * Manages YouTube video lookups with intelligent caching to minimize API quota usage.
- * 
+ *
+ * Manages video lookups with intelligent caching.
+ *
+ * Video Source Priority:
+ * 1. Piped API (free, no quota limits) - PRIMARY
+ * 2. YouTube API (if configured and has quota) - FALLBACK
+ *
  * Cache strategy:
  * - Videos found: cached for 30 days
  * - Videos not found: cached for 7 days (to retry later)
- * - Quota tracking: stops API calls when daily limit approached
  */
 
 import { db, VideoCache, DealAgentConfig, eq, lte, sql } from 'astro:db';
 import { searchProductVideo, type YouTubeVideo, isYouTubeConfigured } from './youtube-api';
+import { searchProductVideoPiped, isPipedConfigured } from './piped-api';
+import { searchProductVideoRapidAPI, isRapidAPIYouTubeConfigured } from './rapidapi-youtube';
 
 // Cache duration in days
 const CACHE_DAYS_FOUND = 30;
@@ -122,6 +127,17 @@ async function useQuota(units: number): Promise<void> {
 }
 
 /**
+ * Mark quota as exhausted (when YouTube API returns 403)
+ * This synchronizes our internal tracking with YouTube's actual state
+ */
+async function markQuotaExhausted(): Promise<void> {
+  const today = getTodayISO();
+  quotaCache = { used: DAILY_QUOTA_LIMIT, date: today };
+  await saveQuotaToDB(quotaCache);
+  console.log('[VideoCache] Quota marked as exhausted');
+}
+
+/**
  * Get current quota status
  */
 export async function getQuotaStatus(): Promise<{
@@ -139,6 +155,14 @@ export async function getQuotaStatus(): Promise<{
     percentUsed: Math.round((quota.used / DAILY_QUOTA_LIMIT) * 100),
     date: quota.date,
   };
+}
+
+/**
+ * Check if ANY video source is configured
+ * Returns true if RapidAPI YouTube, Piped, or YouTube official is available
+ */
+export function isAnyVideoSourceConfigured(): boolean {
+  return isRapidAPIYouTubeConfigured() || isPipedConfigured() || isYouTubeConfigured();
 }
 
 /**
@@ -171,8 +195,8 @@ export async function getProductVideo(
   title: string,
   lang: 'es' | 'en' = 'es'
 ): Promise<YouTubeVideo | null> {
-  // Check if YouTube API is configured
-  if (!isYouTubeConfigured()) {
+  // Check if any video source is configured
+  if (!isAnyVideoSourceConfigured()) {
     return null;
   }
 
@@ -211,20 +235,71 @@ export async function getProductVideo(
       };
     }
 
-    // Cache miss or expired - check quota before API call
-    if (!(await canUseQuota(100))) {
-      console.warn('[VideoCache] Daily quota exhausted, skipping API call');
-      return null;
+    // Cache miss or expired - try video sources in priority order
+    let video: YouTubeVideo | undefined;
+    let searchSuccess = false;
+
+    // === PRIMARY: Try RapidAPI YouTube (uses existing RAPIDAPI_KEY, 500 free/month) ===
+    if (isRapidAPIYouTubeConfigured()) {
+      console.log('[VideoCache] Trying RapidAPI YouTube...');
+      const rapidResult = await searchProductVideoRapidAPI(title, lang);
+
+      if (rapidResult.success) {
+        searchSuccess = true;
+        video = rapidResult.video;
+        if (video) {
+          console.log(`[VideoCache] Found via RapidAPI: ${video.videoId}`);
+        }
+      } else {
+        console.warn('[VideoCache] RapidAPI YouTube failed:', rapidResult.error);
+      }
     }
 
-    // Search YouTube API
-    const result = await searchProductVideo(title, lang);
-    await useQuota(result.quotaUsed);
+    // === FALLBACK 1: Try Piped API (free, no limits, but can be unstable) ===
+    if (!searchSuccess && isPipedConfigured()) {
+      console.log('[VideoCache] Trying Piped API fallback...');
+      const pipedResult = await searchProductVideoPiped(title, lang);
 
-    if (!result.success) {
-      console.error('[VideoCache] YouTube API error:', result.error);
-      return null;
+      if (pipedResult.success) {
+        searchSuccess = true;
+        video = pipedResult.video;
+        if (video) {
+          console.log(`[VideoCache] Found via Piped: ${video.videoId}`);
+        }
+      } else {
+        console.warn('[VideoCache] Piped failed:', pipedResult.error);
+      }
     }
+
+    // === FALLBACK 2: Try YouTube official API (limited quota) ===
+    if (!searchSuccess && !video && isYouTubeConfigured()) {
+      // Check quota before YouTube API call
+      if (await canUseQuota(100)) {
+        console.log('[VideoCache] Trying YouTube official API fallback...');
+        const ytResult = await searchProductVideo(title, lang, 1); // Only 1 strategy to save quota
+        await useQuota(ytResult.quotaUsed);
+
+        if (ytResult.quotaExceeded) {
+          console.error('[VideoCache] YouTube quota exceeded');
+          await markQuotaExhausted();
+        } else if (ytResult.success) {
+          searchSuccess = true;
+          video = ytResult.video;
+          if (video) {
+            console.log(`[VideoCache] Found via YouTube official: ${video.videoId}`);
+          }
+        }
+      } else {
+        console.warn('[VideoCache] YouTube quota exhausted');
+      }
+    }
+
+    // If no source worked, mark as searched but not found
+    if (!searchSuccess) {
+      console.log('[VideoCache] No video source available');
+    }
+
+    const result = { success: searchSuccess, video };
 
     // Calculate expiration date
     const expiresAt = new Date();
@@ -290,7 +365,7 @@ export async function getProductVideos(
 ): Promise<Map<string, YouTubeVideo | null>> {
   const results = new Map<string, YouTubeVideo | null>();
 
-  if (!isYouTubeConfigured()) {
+  if (!isAnyVideoSourceConfigured()) {
     // Return empty map if not configured
     for (const p of products) {
       results.set(p.asin, null);
@@ -399,4 +474,36 @@ export async function cleanupExpiredCache(): Promise<number> {
 
   console.log(`[VideoCache] Cleaned up ${expired.length} expired entries`);
   return expired.length;
+}
+
+/**
+ * Invalidate all video cache entries
+ * Forces fresh YouTube searches with updated quality scoring
+ * USE WITH CAUTION: This will use API quota when videos are re-fetched
+ */
+export async function invalidateAllVideoCache(): Promise<number> {
+  const all = await db.select({ id: VideoCache.id }).from(VideoCache).all();
+
+  if (all.length === 0) {
+    return 0;
+  }
+
+  // Delete all cache entries
+  await db.delete(VideoCache);
+
+  console.log(`[VideoCache] Invalidated ${all.length} cache entries`);
+  return all.length;
+}
+
+/**
+ * Invalidate cache for a specific product (by ASIN)
+ * Useful when you want to refresh just one product's video
+ */
+export async function invalidateProductVideo(asin: string): Promise<boolean> {
+  const result = await db
+    .delete(VideoCache)
+    .where(eq(VideoCache.asin, asin));
+
+  console.log(`[VideoCache] Invalidated cache for ASIN: ${asin}`);
+  return true;
 }

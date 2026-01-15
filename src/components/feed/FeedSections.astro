@@ -1,0 +1,627 @@
+---
+/**
+ * FeedSections - Save and manage custom feed sections
+ * Allows users to save search + filter combinations as named sections
+ */
+
+interface Props {
+  lang: string;
+}
+
+const { lang } = Astro.props;
+
+const translations = {
+  es: {
+    sections: 'Secciones',
+    addSection: 'Guardar vista',
+    noSections: 'Sin secciones guardadas',
+    delete: 'Eliminar',
+    apply: 'Aplicar',
+    savePrompt: 'Nombre de la sección:',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    placeholder: 'Mi selecci\u00f3n...',
+    saved: 'Guardado',
+  },
+  en: {
+    sections: 'Sections',
+    addSection: 'Save view',
+    noSections: 'No saved sections',
+    delete: 'Delete',
+    apply: 'Apply',
+    savePrompt: 'Section name:',
+    save: 'Save',
+    cancel: 'Cancel',
+    placeholder: 'My selection...',
+    saved: 'Saved',
+  }
+};
+
+const t = translations[lang as 'es' | 'en'] || translations.en;
+---
+
+<div class="feed-sections" id="feed-sections">
+  <!-- Sections dropdown trigger -->
+  <button type="button" class="sections-trigger" id="sections-trigger">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      <line x1="12" y1="11" x2="12" y2="17"/>
+      <line x1="9" y1="14" x2="15" y2="14"/>
+    </svg>
+    <span class="sections-label">{t.sections}</span>
+    <svg class="sections-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="m6 9 6 6 6-6"/>
+    </svg>
+  </button>
+
+  <!-- Dropdown -->
+  <div class="sections-dropdown" id="sections-dropdown">
+    <div class="sections-list" id="sections-list">
+      <p class="no-sections">{t.noSections}</p>
+    </div>
+
+    <div class="sections-actions">
+      <button type="button" class="add-section-btn" id="add-section-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        <span>{t.addSection}</span>
+      </button>
+    </div>
+
+    <!-- Save section modal (inline) -->
+    <div class="save-modal" id="save-modal">
+      <label class="save-label">{t.savePrompt}</label>
+      <input
+        type="text"
+        id="section-name-input"
+        class="section-name-input"
+        placeholder={t.placeholder}
+        maxlength="30"
+      />
+      <div class="save-actions">
+        <button type="button" class="btn-cancel" id="btn-cancel-save">{t.cancel}</button>
+        <button type="button" class="btn-save" id="btn-confirm-save">{t.save}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ t: translations[lang as 'es' | 'en'] || translations.en, lang }}>
+function initFeedSections() {
+  const container = document.getElementById('feed-sections');
+  const trigger = document.getElementById('sections-trigger');
+  const dropdown = document.getElementById('sections-dropdown');
+  const sectionsList = document.getElementById('sections-list');
+  const addBtn = document.getElementById('add-section-btn');
+  const saveModal = document.getElementById('save-modal');
+  const nameInput = document.getElementById('section-name-input');
+  const cancelBtn = document.getElementById('btn-cancel-save');
+  const confirmBtn = document.getElementById('btn-confirm-save');
+
+  if (!container || !trigger || !dropdown) return;
+
+  let isOpen = false;
+  let showingSaveModal = false;
+
+  // Current state to save
+  let currentState = {
+    search: '',
+    category: 'all',
+    filters: {}
+  };
+
+  // Load saved sections
+  function loadSections() {
+    const saved = JSON.parse(localStorage.getItem('feedSections') || '[]');
+    return saved;
+  }
+
+  // Save sections
+  function saveSections(sections) {
+    localStorage.setItem('feedSections', JSON.stringify(sections));
+  }
+
+  // Render sections list
+  function renderSections() {
+    const sections = loadSections();
+
+    if (sections.length === 0) {
+      sectionsList.innerHTML = `<p class="no-sections">${t.noSections}</p>`;
+      return;
+    }
+
+    sectionsList.innerHTML = sections.map((section, index) => `
+      <div class="section-item" data-index="${index}">
+        <button type="button" class="section-apply" data-index="${index}">
+          <span class="section-name">${escapeHtml(section.name)}</span>
+          <span class="section-preview">${getSectionPreview(section)}</span>
+        </button>
+        <button type="button" class="section-delete" data-index="${index}" title="${t.delete}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+    `).join('');
+
+    // Add event listeners
+    sectionsList.querySelectorAll('.section-apply').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        applySection(sections[index]);
+        closeDropdown();
+      });
+    });
+
+    sectionsList.querySelectorAll('.section-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const index = parseInt(btn.dataset.index);
+        deleteSection(index);
+      });
+    });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function getSectionPreview(section) {
+    const parts = [];
+    if (section.search) parts.push(`"${section.search}"`);
+    if (section.category && section.category !== 'all') parts.push(section.category);
+    if (section.filters?.dealsOnly) parts.push(lang === 'es' ? 'ofertas' : 'deals');
+    if (section.filters?.minRating) parts.push(`${section.filters.minRating}+`);
+    return parts.length > 0 ? parts.slice(0, 2).join(' \u00b7 ') : (lang === 'es' ? 'Todo' : 'All');
+  }
+
+  function applySection(section) {
+    // Dispatch events to apply the section
+    if (section.search !== undefined) {
+      window.dispatchEvent(new CustomEvent('search:apply', {
+        detail: { query: section.search }
+      }));
+    }
+
+    if (section.category) {
+      window.dispatchEvent(new CustomEvent('category:change', {
+        detail: { category: section.category }
+      }));
+    }
+
+    if (section.filters) {
+      localStorage.setItem('feedFilters', JSON.stringify(section.filters));
+      window.dispatchEvent(new CustomEvent('filters:change', {
+        detail: section.filters
+      }));
+    }
+
+    // Show feedback
+    trigger.classList.add('applied');
+    setTimeout(() => trigger.classList.remove('applied'), 1000);
+  }
+
+  function deleteSection(index) {
+    const sections = loadSections();
+    sections.splice(index, 1);
+    saveSections(sections);
+    renderSections();
+  }
+
+  function openDropdown() {
+    isOpen = true;
+    dropdown.classList.add('open');
+
+    // Position dropdown below trigger
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.top = `${rect.bottom + 10}px`;
+
+    renderSections();
+  }
+
+  function closeDropdown() {
+    isOpen = false;
+    showingSaveModal = false;
+    dropdown.classList.remove('open');
+    saveModal.classList.remove('show');
+  }
+
+  function showSaveModal() {
+    showingSaveModal = true;
+    saveModal.classList.add('show');
+    nameInput.value = '';
+    nameInput.focus();
+  }
+
+  function hideSaveModal() {
+    showingSaveModal = false;
+    saveModal.classList.remove('show');
+  }
+
+  function saveCurrentSection() {
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+
+    const sections = loadSections();
+    sections.push({
+      name,
+      search: currentState.search,
+      category: currentState.category,
+      filters: currentState.filters,
+      createdAt: new Date().toISOString()
+    });
+
+    saveSections(sections);
+    hideSaveModal();
+    renderSections();
+
+    // Show saved feedback
+    trigger.classList.add('saved');
+    setTimeout(() => trigger.classList.remove('saved'), 1500);
+  }
+
+  // Event listeners
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isOpen) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  });
+
+  addBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showSaveModal();
+  });
+
+  cancelBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hideSaveModal();
+  });
+
+  confirmBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    saveCurrentSection();
+  });
+
+  nameInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveCurrentSection();
+    }
+    if (e.key === 'Escape') {
+      hideSaveModal();
+    }
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (isOpen && !container.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  // Listen for state changes to track current state
+  window.addEventListener('search:change', (e) => {
+    currentState.search = e.detail?.query || '';
+  });
+
+  window.addEventListener('category:change', (e) => {
+    currentState.category = e.detail?.category || 'all';
+  });
+
+  window.addEventListener('filters:change', (e) => {
+    currentState.filters = e.detail || {};
+  });
+
+  // Initial render
+  renderSections();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFeedSections);
+} else {
+  initFeedSections();
+}
+document.addEventListener('astro:page-load', initFeedSections);
+</script>
+
+<style>
+  .feed-sections {
+    position: relative;
+  }
+
+  .sections-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.7rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .sections-trigger:hover {
+    background: var(--color-brutal-blue, #3B82F6);
+    color: white;
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .sections-trigger.applied {
+    background: var(--color-brutal-green, #22C55E);
+    color: white;
+  }
+
+  .sections-trigger.saved {
+    background: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .sections-trigger svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sections-chevron {
+    width: 14px !important;
+    height: 14px !important;
+    margin-left: 0.1rem;
+    transition: transform 150ms;
+  }
+
+  .sections-dropdown.open ~ .sections-trigger .sections-chevron,
+  .feed-sections:has(.sections-dropdown.open) .sections-chevron {
+    transform: rotate(180deg);
+  }
+
+  .sections-dropdown {
+    position: fixed;
+    top: auto;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: 300px;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 180ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    z-index: 9999;
+    overflow: hidden;
+  }
+
+  .sections-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) rotate(0deg);
+  }
+
+  .sections-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .no-sections {
+    padding: 1rem;
+    text-align: center;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.7rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+  }
+
+  .section-item {
+    display: flex;
+    align-items: stretch;
+    margin-bottom: 0.4rem;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    background: var(--color-white, #FFFFFF);
+    transition: all 100ms;
+  }
+
+  .section-item:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .section-apply {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    padding: 0.5rem 0.6rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .section-name {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .section-preview {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.65rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
+  }
+
+  .section-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    background: transparent;
+    border: none;
+    border-left: 2px solid var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: all 100ms;
+  }
+
+  .section-delete:hover {
+    background: var(--color-brutal-red, #EF4444);
+  }
+
+  .section-delete:hover svg {
+    color: white;
+  }
+
+  .section-delete svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+  }
+
+  .sections-actions {
+    padding: 0.5rem;
+    border-top: 2px dashed var(--color-brutal-black, #1A1A1A);
+  }
+
+  .add-section-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.6rem;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .add-section-btn:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .add-section-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Save Modal */
+  .save-modal {
+    display: none;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    background: var(--color-brutal-blue, #3B82F6);
+    border-top: 3px solid var(--color-brutal-black, #1A1A1A);
+  }
+
+  .save-modal.show {
+    display: flex;
+  }
+
+  .save-label {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: white;
+  }
+
+  .section-name-input {
+    padding: 0.6rem;
+    background: var(--color-white, #FFFFFF);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .section-name-input:focus {
+    outline: 3px solid var(--color-brutal-yellow, #FFE14D);
+    outline-offset: -3px;
+  }
+
+  .save-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-cancel,
+  .btn-save {
+    flex: 1;
+    padding: 0.5rem;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    transition: all 100ms;
+  }
+
+  .btn-cancel {
+    background: white;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-cancel:hover {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: white;
+  }
+
+  .btn-save {
+    background: var(--color-brutal-yellow, #FFE14D);
+    color: var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-save:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 480px) {
+    .sections-label {
+      display: none;
+    }
+
+    .sections-trigger {
+      padding: 0.5rem;
+    }
+
+    .sections-dropdown {
+      right: auto;
+      left: 0;
+      width: 240px;
+    }
+  }
+</style>

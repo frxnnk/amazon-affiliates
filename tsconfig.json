@@ -12,7 +12,8 @@
       "@data/*": ["src/data/*"],
       "@content/*": ["src/content/*"],
       "@lib/*": ["src/lib/*"],
-      "@db/*": ["src/db/*"]
+      "@db/*": ["src/db/*"],
+      "@styles/*": ["src/styles/*"]
     }
   }
 }

@@ -25,6 +25,7 @@ export interface YouTubeSearchResult {
   video?: YouTubeVideo;
   error?: string;
   quotaUsed: number;
+  quotaExceeded?: boolean; // True if YouTube API returned 403 quota exceeded
 }
 
 /**
@@ -44,31 +45,48 @@ type SearchStrategy = {
   params?: Record<string, string>;
 };
 
+/**
+ * Known quality tech review channels
+ * Videos from these channels get a score boost
+ */
+const TRUSTED_CHANNELS = [
+  'mkbhd', 'marques brownlee', 'linus tech tips', 'dave2d', 'austin evans',
+  'unbox therapy', 'mrwhosetheboss', 'tech reviewer', 'supersaf', 'ijustine',
+  'jonathan morrison', 'tailosive tech', 'snazzy labs', 'joeq',
+  // Spanish tech channels
+  'pro android', 'suprapixel', 'topes de gama', 'andro4all', 'xataka',
+  'el test de la abuela', 'poderpda', 'cnet en español', 'geekfactory',
+];
+
 const SEARCH_STRATEGIES: SearchStrategy[] = [
   {
-    // Strategy 1: Shorts específicos (mejor para feed móvil)
-    name: 'shorts',
+    // Strategy 1: Professional reviews from quality channels
+    name: 'pro-review',
     buildQuery: (name, brand, lang) => {
-      const keyword = lang === 'es' ? 'reseña' : 'review';
+      const reviewWord = lang === 'es' ? 'review análisis' : 'review';
+      const base = brand ? `${brand} ${name.split(' ').slice(0, 4).join(' ')}` : name;
+      return `${base} ${reviewWord}`;
+    },
+    params: { order: 'relevance', videoEmbeddable: 'true' },
+  },
+  {
+    // Strategy 2: Hands-on / First look (usually high quality)
+    name: 'hands-on',
+    buildQuery: (name, brand, lang) => {
+      const keyword = lang === 'es' ? 'primeras impresiones' : 'hands on';
       const base = brand ? `${brand} ${name.split(' ').slice(0, 3).join(' ')}` : name;
-      return `${base} #shorts ${keyword}`;
+      return `${base} ${keyword}`;
     },
-    params: { videoDuration: 'short', order: 'viewCount' },
+    params: { order: 'relevance', videoEmbeddable: 'true' },
   },
   {
-    // Strategy 2: Reviews populares
-    name: 'popular-review',
-    buildQuery: (name, brand, lang) => {
-      const keyword = lang === 'es' ? 'review' : 'review';
-      return `${name} ${keyword}`;
+    // Strategy 3: Shorts ONLY as last resort (will be heavily filtered by scoring)
+    name: 'quality-shorts',
+    buildQuery: (name, brand, _lang) => {
+      const base = brand ? `${brand} ${name.split(' ').slice(0, 3).join(' ')}` : name;
+      return `${base} review #shorts`;
     },
-    params: { videoDuration: 'short', order: 'viewCount' },
-  },
-  {
-    // Strategy 3: Unboxing (suelen ser más visuales)
-    name: 'unboxing',
-    buildQuery: (name, _brand, _lang) => `${name} unboxing`,
-    params: { videoDuration: 'short', order: 'relevance' },
+    params: { videoDuration: 'short', order: 'relevance', videoEmbeddable: 'true' },
   },
 ];
 
@@ -144,8 +162,22 @@ export async function searchProductVideo(
       totalQuotaUsed += 100;
 
       if (data.error) {
-        console.error(`[YouTube API] Error (${strategy.name}):`, data.error.message);
-        // Don't return yet, try next strategy
+        const errorMsg = data.error.message || '';
+        const errorReason = data.error.errors?.[0]?.reason || '';
+        console.error(`[YouTube API] Error (${strategy.name}):`, errorMsg);
+
+        // Check if it's a quota exceeded error - don't try more strategies
+        if (errorReason === 'quotaExceeded' || data.error.code === 403) {
+          console.error('[YouTube API] QUOTA EXCEEDED - stopping all searches');
+          return {
+            success: false,
+            error: 'Quota exceeded',
+            quotaUsed: totalQuotaUsed,
+            quotaExceeded: true,
+          };
+        }
+
+        // For other errors, try next strategy
         continue;
       }
 
@@ -163,9 +195,9 @@ export async function searchProductVideo(
       scoredItems.sort((a: any, b: any) => b.score - a.score);
       const best = scoredItems[0];
 
-      // Only accept if score is reasonable
-      if (best.score < 10) {
-        console.log(`[YouTube API] Low quality results for '${strategy.name}', trying next...`);
+      // Only accept if score is high enough (quality threshold)
+      if (best.score < 30) {
+        console.log(`[YouTube API] Low quality results for '${strategy.name}' (score: ${best.score}), trying next...`);
         continue;
       }
 
@@ -205,7 +237,7 @@ export async function searchProductVideo(
 }
 
 /**
- * Score a video result for relevance
+ * Score a video result for relevance and quality
  * Higher score = better match
  */
 function scoreVideo(item: any, productName: string, brand: string | null): number {
@@ -213,6 +245,25 @@ function scoreVideo(item: any, productName: string, brand: string | null): numbe
   const title = item.snippet?.title?.toLowerCase() || '';
   const channel = item.snippet?.channelTitle?.toLowerCase() || '';
   const description = item.snippet?.description?.toLowerCase() || '';
+
+  // === QUALITY SIGNALS (prioritize professional content) ===
+
+  // Trusted channel bonus (HUGE - these are known quality reviewers)
+  if (TRUSTED_CHANNELS.some(tc => channel.includes(tc))) {
+    score += 50;
+  }
+
+  // Professional channel patterns
+  if (/tech|review|unbox|gadget|análisis|test/i.test(channel)) {
+    score += 15;
+  }
+
+  // Verified-style naming (channels with consistent branding)
+  if (/^[A-Z]/.test(item.snippet?.channelTitle || '') && channel.length < 25) {
+    score += 5;
+  }
+
+  // === CONTENT RELEVANCE ===
 
   // Product name words in title
   const nameWords = productName.toLowerCase().split(/\s+/).filter(w => w.length > 2);
@@ -224,29 +275,66 @@ function scoreVideo(item: any, productName: string, brand: string | null): numbe
     score += 25;
   }
 
-  // Is a Short (preferred for mobile)
-  if (isLikelyShort(title, description)) {
+  // Professional review indicators
+  if (/review|reseña|análisis|hands.?on|first look|primeras impresiones/i.test(title)) {
     score += 20;
   }
 
-  // Review/unboxing indicators
-  if (/review|reseña|análisis|unboxing|hands.?on/i.test(title)) {
-    score += 15;
+  // In-depth content indicators
+  if (/honest|real|in.?depth|complete|full|definitivo|completo/i.test(title)) {
+    score += 10;
   }
 
-  // Penalize likely spam
-  if (/cheap|free|win|giveaway|gratis/i.test(title)) {
+  // Unboxing (visual, but less informative)
+  if (/unboxing/i.test(title)) {
+    score += 5;
+  }
+
+  // === QUALITY PENALTIES ===
+
+  // Spam/clickbait indicators (heavy penalty)
+  if (/cheap|free|win|giveaway|gratis|fake|scam|amazing|incredible|must.?buy/i.test(title)) {
+    score -= 40;
+  }
+
+  // Overly promotional language
+  if (/best ever|you won't believe|shocking|insane deal/i.test(title)) {
     score -= 30;
   }
 
-  // Penalize very long titles (often spam)
-  if (title.length > 80) {
-    score -= 10;
+  // Excessive punctuation (clickbait signal)
+  if ((title.match(/[!?]/g) || []).length > 2) {
+    score -= 15;
   }
 
-  // Trusted channel patterns (tech reviewers)
-  if (/tech|review|unbox|gadget/i.test(channel)) {
-    score += 10;
+  // ALL CAPS in title (clickbait)
+  if (/[A-Z]{5,}/.test(item.snippet?.title || '')) {
+    score -= 20;
+  }
+
+  // Very long titles (often spam/keyword stuffing)
+  if (title.length > 80) {
+    score -= 15;
+  }
+
+  // Generic channel names (often low quality)
+  if (/official|store|shop|deals|offers/i.test(channel)) {
+    score -= 25;
+  }
+
+  // === SHORTS HANDLING ===
+  // Shorts ONLY acceptable from trusted channels
+  const isShort = isLikelyShort(title, description);
+  const isTrustedChannel = TRUSTED_CHANNELS.some(tc => channel.includes(tc));
+
+  if (isShort) {
+    if (isTrustedChannel) {
+      // Good short from trusted channel - bonus
+      score += 20;
+    } else {
+      // Short from unknown channel - heavy penalty (reject these)
+      score -= 50;
+    }
   }
 
   return score;

@@ -1,6 +1,11 @@
-import { db, Products, eq } from 'astro:db';
+import { db, Products, DealAgentKeywords, AgentConfig, eq } from 'astro:db';
 
 export default async function seed() {
+  // Seed Agent Keywords for Deal Hunter
+  await seedDealAgentKeywords();
+
+  // Seed Agent Configurations
+  await seedAgentConfigs();
   const now = new Date();
 
   // Check if we need to add more products (updated to 16)
@@ -544,4 +549,155 @@ export default async function seed() {
   });
 
   console.log('✅ Test products seeded successfully!');
+}
+
+/**
+ * Seed Deal Agent Keywords
+ * Mix of popular categories + rare/unusual niches for discovery
+ */
+async function seedDealAgentKeywords() {
+  const existing = await db.select().from(DealAgentKeywords);
+  if (existing.length >= 20) {
+    console.log('Keywords already seeded, skipping...');
+    return;
+  }
+
+  console.log('Seeding deal agent keywords...');
+  const now = new Date();
+
+  // Keywords with mix of general + rare niches
+  const keywords = [
+    // === POPULAR TECH (high volume, reliable) ===
+    { keyword: 'bluetooth earbuds deal', marketplace: 'com', category: 'electronics' },
+    { keyword: 'wireless charger discount', marketplace: 'com', category: 'electronics' },
+    { keyword: 'gaming mouse sale', marketplace: 'com', category: 'electronics' },
+    { keyword: 'mechanical keyboard deal', marketplace: 'com', category: 'electronics' },
+    { keyword: 'portable power bank', marketplace: 'com', category: 'electronics' },
+
+    // === SPANISH MARKET ===
+    { keyword: 'auriculares inalambricos oferta', marketplace: 'es', category: 'electronics' },
+    { keyword: 'cargador rapido movil', marketplace: 'es', category: 'electronics' },
+    { keyword: 'altavoz bluetooth portatil', marketplace: 'es', category: 'electronics' },
+
+    // === RARE/UNUSUAL NICHES (buscador de nichos raros) ===
+    { keyword: 'vintage mechanical watch under 100', marketplace: 'com', category: 'fashion' },
+    { keyword: 'japanese stationery set', marketplace: 'com', category: 'office' },
+    { keyword: 'ergonomic vertical mouse', marketplace: 'com', category: 'electronics' },
+    { keyword: 'korean skincare deal', marketplace: 'com', category: 'beauty' },
+    { keyword: 'standing desk converter', marketplace: 'com', category: 'home' },
+    { keyword: 'retro pixel art lamp', marketplace: 'com', category: 'home' },
+    { keyword: 'bonsai starter kit', marketplace: 'com', category: 'garden' },
+    { keyword: 'portable espresso maker', marketplace: 'com', category: 'kitchen' },
+    { keyword: 'noise cancelling earplugs sleep', marketplace: 'com', category: 'health' },
+    { keyword: 'mini projector portable', marketplace: 'com', category: 'electronics' },
+    { keyword: 'smart water bottle', marketplace: 'com', category: 'sports' },
+    { keyword: 'led strip lights room', marketplace: 'com', category: 'home' },
+
+    // === HIGH VALUE NICHES ===
+    { keyword: 'robot vacuum deal', marketplace: 'com', category: 'home' },
+    { keyword: 'air purifier hepa sale', marketplace: 'com', category: 'home' },
+    { keyword: 'electric toothbrush deal', marketplace: 'com', category: 'health' },
+
+    // === SEASONAL/TRENDING ===
+    { keyword: 'camping gear sale', marketplace: 'com', category: 'sports' },
+    { keyword: 'home office setup deal', marketplace: 'com', category: 'office' },
+  ];
+
+  for (const kw of keywords) {
+    await db.insert(DealAgentKeywords).values({
+      keyword: kw.keyword,
+      marketplace: kw.marketplace,
+      category: kw.category,
+      isActive: true,
+      resultsCount: 0,
+      createdAt: now,
+    });
+  }
+
+  console.log(`✅ Seeded ${keywords.length} deal agent keywords`);
+}
+
+/**
+ * Seed Agent Configurations
+ * Initialize all 4 agents with default settings
+ */
+async function seedAgentConfigs() {
+  const existing = await db.select().from(AgentConfig);
+  if (existing.length >= 4) {
+    console.log('Agent configs already seeded, skipping...');
+    return;
+  }
+
+  console.log('Seeding agent configurations...');
+  const now = new Date();
+
+  const agents = [
+    {
+      agentType: 'deal_hunter',
+      isEnabled: true,
+      intervalHours: 6,
+      config: {
+        maxKeywordsPerRun: 5,
+        minScore: 40,
+        minDiscount: 15,
+        autoImport: true,
+        autoQueueContent: true,
+      },
+      quotaLimit: 50,
+    },
+    {
+      agentType: 'content_creator',
+      isEnabled: true,
+      intervalHours: 4,
+      config: {
+        maxItemsPerRun: 5,
+        contentTypes: ['full'],
+        autoPublish: true,
+        model: 'gpt-4o-mini',
+      },
+      quotaLimit: 100,
+    },
+    {
+      agentType: 'price_monitor',
+      isEnabled: true,
+      intervalHours: 8,
+      config: {
+        maxProductsPerRun: 20,
+        dropThresholdPercent: 15,
+        checkCuratedDeals: true,
+        checkProducts: true,
+        createAlerts: true,
+      },
+      quotaLimit: 50,
+    },
+    {
+      agentType: 'channel_manager',
+      isEnabled: true,
+      intervalHours: 2,
+      config: {
+        enabledChannels: ['telegram'],
+        maxPostsPerRun: 10,
+        delayBetweenPosts: 2000,
+        language: 'es',
+      },
+      quotaLimit: 100,
+    },
+  ];
+
+  for (const agent of agents) {
+    await db.insert(AgentConfig).values({
+      agentType: agent.agentType,
+      isEnabled: agent.isEnabled,
+      intervalHours: agent.intervalHours,
+      config: agent.config,
+      quotaUsedToday: 0,
+      quotaLimit: agent.quotaLimit,
+      quotaResetAt: now,
+      lastRunAt: null,
+      nextRunAt: null,
+      updatedAt: now,
+    });
+  }
+
+  console.log('✅ Seeded 4 agent configurations');
 }
