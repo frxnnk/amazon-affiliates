@@ -1,0 +1,603 @@
+---
+/**
+ * MediaCarousel - Horizontal swipe for images + video
+ *
+ * Features:
+ * - Swipe horizontal between product images
+ * - Video as first slide if available (auto-selected)
+ * - Dot indicators with video icon
+ * - Fullscreen mode on tap
+ */
+
+interface Props {
+  images: string[];
+  title: string;
+  video?: {
+    videoId: string;
+    title: string;
+    channelTitle: string;
+    thumbnail: string;
+  } | null;
+  lang: 'es' | 'en';
+}
+
+const { images, title, video, lang } = Astro.props;
+
+// Build media items array - video first if available
+const mediaItems: Array<{ type: 'video' | 'image'; src: string; videoId?: string }> = [];
+
+if (video) {
+  mediaItems.push({
+    type: 'video',
+    src: video.thumbnail,
+    videoId: video.videoId,
+  });
+}
+
+images.forEach(img => {
+  mediaItems.push({ type: 'image', src: img });
+});
+
+const hasMultiple = mediaItems.length > 1;
+---
+
+<div
+  class="media-carousel"
+  data-carousel
+  data-has-video={video ? 'true' : 'false'}
+  role="region"
+  aria-roledescription={lang === 'es' ? 'carrusel de medios' : 'media carousel'}
+  aria-label={title}
+>
+  <!-- Track -->
+  <div class="carousel-track" data-track>
+    {mediaItems.map((item, index) => (
+      <div
+        class={`carousel-item ${item.type === 'video' ? 'is-video' : ''}`}
+        data-index={index}
+        data-type={item.type}
+        data-video-id={item.videoId || ''}
+        role="group"
+        aria-roledescription={lang === 'es' ? 'diapositiva' : 'slide'}
+        aria-label={`${index + 1} ${lang === 'es' ? 'de' : 'of'} ${mediaItems.length}`}
+      >
+        {item.type === 'video' ? (
+          <div class="video-wrapper">
+            <img
+              src={item.src}
+              alt={video?.title || title}
+              class="video-thumb"
+              loading={index === 0 ? 'eager' : 'lazy'}
+            />
+            <div class="video-play-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <iframe
+              class="video-iframe"
+              data-src={`https://www.youtube.com/embed/${item.videoId}?autoplay=1&mute=0&rel=0&playsinline=1&enablejsapi=1`}
+              title={video?.title || title}
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+            {video?.channelTitle && (
+              <div class="video-channel">
+                <svg viewBox="0 0 24 24" fill="#ff0000" width="14" height="14">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                  <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
+                </svg>
+                <span>{video.channelTitle}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <img
+            src={item.src}
+            alt={`${title} - ${index + 1}`}
+            class="product-image"
+            loading={index === 0 ? 'eager' : 'lazy'}
+          />
+        )}
+      </div>
+    ))}
+  </div>
+
+  <!-- Indicators -->
+  {hasMultiple && (
+    <div class="carousel-dots" role="tablist">
+      {mediaItems.map((item, index) => (
+        <button
+          class={`dot ${index === 0 ? 'active' : ''} ${item.type === 'video' ? 'dot-video' : ''}`}
+          data-dot={index}
+          role="tab"
+          aria-selected={index === 0 ? 'true' : 'false'}
+          aria-label={item.type === 'video'
+            ? (lang === 'es' ? 'Ver video' : 'Watch video')
+            : `${lang === 'es' ? 'Imagen' : 'Image'} ${index + 1}`
+          }
+        >
+          {item.type === 'video' && (
+            <svg viewBox="0 0 24 24" fill="currentColor" class="dot-icon">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          )}
+        </button>
+      ))}
+    </div>
+  )}
+
+  <!-- Swipe hint (first time) -->
+  <div class="swipe-hint" data-hint>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+    <span>{lang === 'es' ? 'Desliza' : 'Swipe'}</span>
+  </div>
+</div>
+
+<style>
+  .media-carousel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: pan-y pinch-zoom;
+    background: var(--color-cream, #FFFEF9);
+  }
+
+  .carousel-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+  }
+
+  .carousel-item {
+    flex: 0 0 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  /* Product Image - BRUTAL FRAME */
+  .product-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 4px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 8px 8px 0 var(--color-brutal-black, #1A1A1A);
+    background: #fff;
+    padding: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .carousel-item:hover .product-image {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  /* Video Slide */
+  .is-video {
+    padding: 0;
+    background: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s, filter 0.3s;
+  }
+
+  .video-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 4px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 5;
+  }
+
+  .video-play-btn svg {
+    width: 36px;
+    height: 36px;
+    margin-left: 4px;
+  }
+
+  .video-play-btn:hover {
+    transform: translate(-52%, -52%);
+    box-shadow: 10px 10px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .video-iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 10;
+  }
+
+  .is-video.playing .video-thumb,
+  .is-video.playing .video-play-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .is-video.playing .video-iframe {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .video-channel {
+    position: absolute;
+    bottom: 100px;
+    left: 16px;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .video-channel span {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Dot Indicators */
+  .carousel-dots {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 20;
+    padding: 8px 12px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dot.active {
+    background: var(--color-brutal-black, #1A1A1A);
+    transform: scale(1.2);
+  }
+
+  .dot:hover:not(.active) {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  /* Video dot is wider with icon */
+  .dot-video {
+    width: 24px;
+    background: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .dot-video.active {
+    background: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .dot-icon {
+    width: 10px;
+    height: 10px;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .dot-video.active .dot-icon {
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  /* Swipe Hint */
+  .swipe-hint {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0;
+    pointer-events: none;
+    animation: hint-pulse 2s ease-in-out 1s 3;
+    z-index: 25;
+  }
+
+  .swipe-hint svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @keyframes hint-pulse {
+    0%, 100% {
+      opacity: 0;
+      transform: translateY(-50%) translateX(0);
+    }
+    20%, 80% {
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(-50%) translateX(-8px);
+    }
+  }
+
+  .media-carousel[data-swiped="true"] .swipe-hint {
+    display: none;
+  }
+
+  /* Hide hint on single image */
+  .media-carousel:not([data-has-multiple="true"]) .swipe-hint {
+    display: none;
+  }
+
+  /* Responsive */
+  @media (min-width: 640px) {
+    .carousel-item {
+      padding: 40px;
+    }
+
+    .product-image {
+      border-width: 5px;
+      box-shadow: 10px 10px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .carousel-dots {
+      bottom: 140px;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+    }
+
+    .dot-video {
+      width: 28px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .carousel-item {
+      padding: 60px;
+    }
+
+    .video-play-btn {
+      width: 100px;
+      height: 100px;
+    }
+
+    .video-play-btn svg {
+      width: 48px;
+      height: 48px;
+    }
+  }
+</style>
+
+<script>
+  function initCarousels() {
+    document.querySelectorAll('[data-carousel]').forEach(carousel => {
+      if ((carousel as HTMLElement).dataset.initialized) return;
+      (carousel as HTMLElement).dataset.initialized = 'true';
+
+      const track = carousel.querySelector('[data-track]') as HTMLElement;
+      const items = carousel.querySelectorAll('.carousel-item');
+      const dots = carousel.querySelectorAll('.dot');
+
+      if (!track || items.length <= 1) {
+        // Single item - no interaction needed
+        carousel.removeAttribute('data-has-multiple');
+        return;
+      }
+
+      (carousel as HTMLElement).dataset.hasMultiple = 'true';
+
+      let current = 0;
+      let startX = 0;
+      let isDragging = false;
+      let currentTranslate = 0;
+      let prevTranslate = 0;
+
+      function goTo(index: number) {
+        current = Math.max(0, Math.min(index, items.length - 1));
+        track.style.transform = `translateX(-${current * 100}%)`;
+        currentTranslate = -current * track.offsetWidth;
+        prevTranslate = currentTranslate;
+
+        // Update dots
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === current);
+          dot.setAttribute('aria-selected', i === current ? 'true' : 'false');
+        });
+
+        // Update aria
+        items.forEach((item, i) => {
+          item.setAttribute('aria-hidden', i === current ? 'false' : 'true');
+        });
+
+        // Mark as swiped (hide hint)
+        if (current > 0) {
+          (carousel as HTMLElement).dataset.swiped = 'true';
+        }
+
+        // Handle video - pause if leaving, play if entering
+        items.forEach((item, i) => {
+          const isVideo = item.classList.contains('is-video');
+          if (!isVideo) return;
+
+          const iframe = item.querySelector('.video-iframe') as HTMLIFrameElement;
+          if (i === current) {
+            // Current slide - keep as is (user can tap to play)
+          } else {
+            // Not current - stop video
+            item.classList.remove('playing');
+            if (iframe) iframe.src = '';
+          }
+        });
+      }
+
+      // Touch events
+      track.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+        track.style.transition = 'none';
+      }, { passive: true });
+
+      track.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const x = e.touches[0].clientX;
+        const diff = x - startX;
+        currentTranslate = prevTranslate + diff;
+        track.style.transform = `translateX(${currentTranslate}px)`;
+      }, { passive: true });
+
+      track.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+
+        const diff = currentTranslate - prevTranslate;
+        const threshold = track.offsetWidth * 0.2;
+
+        if (Math.abs(diff) > threshold) {
+          if (diff < 0) goTo(current + 1);
+          else goTo(current - 1);
+        } else {
+          goTo(current); // Snap back
+        }
+      });
+
+      // Dot clicks
+      dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => goTo(i));
+      });
+
+      // Video play button
+      carousel.querySelectorAll('.video-play-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const item = btn.closest('.carousel-item');
+          if (!item) return;
+
+          const iframe = item.querySelector('.video-iframe') as HTMLIFrameElement;
+          const videoId = (item as HTMLElement).dataset.videoId;
+
+          if (iframe && videoId) {
+            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&playsinline=1&enablejsapi=1`;
+            item.classList.add('playing');
+          }
+        });
+      });
+
+      // Tap on video to toggle pause (outside of play button)
+      carousel.querySelectorAll('.video-wrapper').forEach(wrapper => {
+        wrapper.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.video-play-btn') || target.closest('.video-channel')) return;
+
+          const item = wrapper.closest('.carousel-item');
+          if (!item?.classList.contains('playing')) return;
+
+          // Toggle pause
+          const iframe = item.querySelector('.video-iframe') as HTMLIFrameElement;
+          if (iframe && iframe.contentWindow) {
+            // Send pause command
+            iframe.contentWindow.postMessage(JSON.stringify({
+              event: 'command',
+              func: 'pauseVideo',
+              args: []
+            }), '*');
+
+            // Show thumbnail again
+            item.classList.remove('playing');
+          }
+        });
+      });
+
+      // Keyboard navigation
+      carousel.addEventListener('keydown', (e: Event) => {
+        const key = (e as KeyboardEvent).key;
+        if (key === 'ArrowLeft') goTo(current - 1);
+        else if (key === 'ArrowRight') goTo(current + 1);
+      });
+    });
+  }
+
+  // Init on load
+  initCarousels();
+  document.addEventListener('astro:page-load', initCarousels);
+
+  // Re-init when new slides are added
+  const observer = new MutationObserver(() => {
+    initCarousels();
+  });
+
+  const feedScroll = document.getElementById('reel-slides');
+  if (feedScroll) {
+    observer.observe(feedScroll, { childList: true, subtree: true });
+  }
+</script>
