@@ -817,51 +817,44 @@ export const GET: APIRoute = async ({ url, locals }) => {
       videoStats.quotaRemaining = quotaStatus.remaining;
       console.log(`[Feed API] YouTube quota: ${quotaStatus.used}/${quotaStatus.limit} (remaining: ${quotaStatus.remaining})`);
 
-      // Conservative quota management:
-      // - Only check top 2 products per page to conserve quota
-      // - Need at least 200 units remaining to try
+      // Fetch videos for top products
+      // Note: Piped API is always available (free, no quota), so we always try
+      // The video-cache handles fallback logic internally
       const MAX_VIDEO_FETCHES = 2;
-      const MIN_QUOTA_REQUIRED = 200;
+      const productsForVideo = feedProducts
+        .slice(0, MAX_VIDEO_FETCHES)
+        .map(p => ({ asin: p.asin, title: p.title }));
 
-      if (quotaStatus.remaining >= MIN_QUOTA_REQUIRED) {
-        // Only fetch videos for first N products (cached results don't use quota)
-        const productsForVideo = feedProducts
-          .slice(0, MAX_VIDEO_FETCHES)
-          .map(p => ({ asin: p.asin, title: p.title }));
+      videoStats.productsChecked = productsForVideo.length;
+      console.log(`[Feed API] Fetching videos for ${productsForVideo.length} products...`);
 
-        videoStats.productsChecked = productsForVideo.length;
-        console.log(`[Feed API] Fetching videos for ${productsForVideo.length} products (quota-optimized)...`);
+      const videoMap = await getProductVideos(
+        productsForVideo,
+        lang as 'es' | 'en',
+        1 // Sequential to minimize burst requests
+      );
 
-        const videoMap = await getProductVideos(
-          productsForVideo,
-          lang as 'es' | 'en',
-          1 // Sequential to minimize burst requests
-        );
+      // Count videos found
+      let videosFound = 0;
+      videoMap.forEach(v => { if (v) videosFound++; });
+      videoStats.videosFound = videosFound;
+      console.log(`[Feed API] Videos found: ${videosFound}/${productsForVideo.length}`);
 
-        // Count videos found
-        let videosFound = 0;
-        videoMap.forEach(v => { if (v) videosFound++; });
-        videoStats.videosFound = videosFound;
-        console.log(`[Feed API] Videos found: ${videosFound}/${productsForVideo.length}`);
-
-        // Add video info to products that have it
-        enrichedProducts = feedProducts.map(product => {
-          const video = videoMap.get(product.asin);
-          return {
-            ...product,
-            youtubeVideo: video ? {
-              videoId: video.videoId,
-              title: video.title,
-              channelTitle: video.channelTitle,
-              thumbnail: video.thumbnail,
-              embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: false, mute: false }),
-              isShort: video.isShort,
-            } : null,
-          };
-        });
-      } else {
-        console.log(`[Feed API] Skipping video fetch - quota too low (${quotaStatus.remaining} < ${MIN_QUOTA_REQUIRED})`);
-      }
+      // Add video info to products that have it
+      enrichedProducts = feedProducts.map(product => {
+        const video = videoMap.get(product.asin);
+        return {
+          ...product,
+          youtubeVideo: video ? {
+            videoId: video.videoId,
+            title: video.title,
+            channelTitle: video.channelTitle,
+            thumbnail: video.thumbnail,
+            embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: false, mute: false }),
+            isShort: video.isShort,
+          } : null,
+        };
+      });
     }
 
     // Check for lowest prices in 30 days (adds "lowest_price" badge)
