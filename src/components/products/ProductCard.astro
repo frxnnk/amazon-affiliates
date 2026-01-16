@@ -22,6 +22,10 @@ interface Props {
     isFeatured?: boolean;
     shortDescription?: string;
     category?: string;
+    // Text variants (new)
+    displayTitle?: string;
+    shortTitle?: string;
+    cardDescription?: string;
   };
   lang: Lang;
   variant?: 'default' | 'featured' | 'compact';
@@ -40,13 +44,14 @@ const productImages = product.images && product.images.length > 0
   : [product.featuredImage?.url].filter(Boolean) as string[];
 const hasMultipleImages = productImages.length > 1;
 
-// Truncate description for "see more" functionality
-const MAX_DESC_LENGTH = 20;
-const fullDescription = product.shortDescription || '';
-const shouldTruncate = fullDescription.length > MAX_DESC_LENGTH;
-const truncatedDescription = shouldTruncate
-  ? fullDescription.slice(0, MAX_DESC_LENGTH) + '...'
-  : fullDescription;
+// Use text variants with fallbacks
+const displayTitle = variant === 'compact'
+  ? (product.shortTitle || product.displayTitle || product.title)
+  : (product.displayTitle || product.title);
+
+// Description handling - show preview with expandable full text
+const fullDescription = product.cardDescription || product.shortDescription || '';
+const hasDescription = fullDescription.length > 0;
 ---
 
 <article class:list={['product-card', `variant-${variant}`]}>
@@ -140,21 +145,19 @@ const truncatedDescription = shouldTruncate
     <!-- Title -->
     <h3 class="card-title">
       <a href={`/${lang}/products/${product.productId}`}>
-        {product.title}
+        {displayTitle}
       </a>
     </h3>
 
-    <!-- Description with see more (non-compact only) -->
-    {variant !== 'compact' && fullDescription && (
-      <div class="card-description-wrapper">
-        <p class="card-description" data-card-description data-full={fullDescription} data-truncated={truncatedDescription} data-lang={lang}>
-          <span class="card-description-text">{truncatedDescription}</span>
-          {shouldTruncate && (
-            <button class="card-see-more" data-card-see-more type="button">
-              {lang === 'es' ? 'ver más' : 'see more'}
-            </button>
-          )}
+    <!-- Description with expandable text (non-compact only) -->
+    {variant !== 'compact' && hasDescription && (
+      <div class="card-description-wrapper" data-description-wrapper>
+        <p class="card-description" data-card-description data-full={fullDescription} data-lang={lang}>
+          {fullDescription}
         </p>
+        <button class="card-see-more" data-card-see-more type="button">
+          {lang === 'es' ? 'ver más' : 'see more'}
+        </button>
       </div>
     )}
 
@@ -175,19 +178,45 @@ const truncatedDescription = shouldTruncate
         />
       </div>
 
-      <AffiliateLink
-        productId={product.productId}
-        asin={product.asin}
-        affiliateUrl={product.affiliateUrl}
-        lang={lang}
-        variant="card"
-        trackingLabel="product-card"
-      >
-        <span class="cta-text">{t('common.viewOnAmazon')}</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cta-arrow">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </AffiliateLink>
+      <div class="card-actions">
+        <button
+          type="button"
+          class="btn-add-cart"
+          data-add-to-cart
+          data-product={JSON.stringify({
+            asin: product.asin,
+            productId: product.productId,
+            title: product.title,
+            brand: product.brand,
+            image: product.featuredImage?.url || '',
+            price: product.price,
+            currency: product.currency,
+            affiliateUrl: product.affiliateUrl
+          })}
+          aria-label={lang === 'es' ? 'Agregar al carrito' : 'Add to cart'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+          <span class="btn-add-cart-plus">+</span>
+        </button>
+
+        <AffiliateLink
+          productId={product.productId}
+          asin={product.asin}
+          affiliateUrl={product.affiliateUrl}
+          lang={lang}
+          variant="card"
+          trackingLabel="product-card"
+        >
+          <span class="cta-text">{t('common.viewOnAmazon')}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cta-arrow">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </AffiliateLink>
+      </div>
     </div>
   </div>
 </article>
@@ -360,9 +389,10 @@ const truncatedDescription = shouldTruncate
     text-underline-offset: 2px;
   }
 
-  /* Description */
+  /* Description - Expandable */
   .card-description-wrapper {
     margin-bottom: 0.25rem;
+    position: relative;
   }
 
   .card-description {
@@ -371,29 +401,43 @@ const truncatedDescription = shouldTruncate
     opacity: 0.7;
     line-height: 1.5;
     margin: 0;
-    display: inline;
+    /* Default: collapsed state with line-clamp */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: all 200ms ease-out;
   }
 
-  .card-description-text {
-    display: inline;
+  /* Expanded state */
+  .card-description-wrapper[data-expanded="true"] .card-description {
+    -webkit-line-clamp: unset;
+    display: block;
   }
 
   .card-see-more {
-    display: inline;
+    display: inline-block;
     background: none;
     border: none;
     padding: 0;
-    margin-left: 0.25rem;
-    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
     color: var(--color-brutal-orange, #FF6B35);
     cursor: pointer;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .card-see-more:hover {
     text-decoration: underline;
     text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+  }
+
+  /* Hide see more button for short descriptions */
+  .card-description-wrapper[data-short="true"] .card-see-more {
+    display: none;
   }
 
   /* Rating */
@@ -419,8 +463,67 @@ const truncatedDescription = shouldTruncate
     gap: 0.25rem;
   }
 
+  /* Card Actions Row */
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Add to Cart Button */
+  .btn-add-cart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .btn-add-cart:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-add-cart:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-add-cart svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .btn-add-cart-plus {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* Added state */
+  .btn-add-cart[data-added="true"] {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .btn-add-cart[data-added="true"] .btn-add-cart-plus::after {
+    content: '✓';
+  }
+
   /* CTA Button styling override */
-  .card-footer :global(a) {
+  .card-actions :global(a) {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -439,14 +542,14 @@ const truncatedDescription = shouldTruncate
     transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .card-footer :global(a:hover) {
+  .card-actions :global(a:hover) {
     background: var(--color-brutal-black, #1A1A1A);
     color: var(--color-brutal-orange, #FF6B35);
     transform: translate(-2px, -2px);
     box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .card-footer :global(a:active) {
+  .card-actions :global(a:active) {
     transform: translate(2px, 2px);
     box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
@@ -457,7 +560,7 @@ const truncatedDescription = shouldTruncate
     transition: transform 150ms;
   }
 
-  .card-footer :global(a:hover) .cta-arrow {
+  .card-actions :global(a:hover) .cta-arrow {
     transform: translateX(4px);
   }
 
@@ -617,6 +720,20 @@ const truncatedDescription = shouldTruncate
 
   // See more functionality - use event delegation for dynamic content
   function initCardSeeMore() {
+    // Check if descriptions are short enough to hide "see more" button
+    document.querySelectorAll('[data-description-wrapper]').forEach((wrapper) => {
+      const description = wrapper.querySelector('[data-card-description]') as HTMLElement;
+      if (!description) return;
+
+      // Check if content is truncated by comparing scrollHeight to clientHeight
+      requestAnimationFrame(() => {
+        const isTruncated = description.scrollHeight > description.clientHeight;
+        if (!isTruncated) {
+          (wrapper as HTMLElement).dataset.short = 'true';
+        }
+      });
+    });
+
     document.removeEventListener('click', handleCardSeeMoreClick);
     document.addEventListener('click', handleCardSeeMoreClick);
   }
@@ -629,34 +746,70 @@ const truncatedDescription = shouldTruncate
     e.stopPropagation();
 
     const btn = target;
-    const description = btn.closest('[data-card-description]') as HTMLElement;
+    const wrapper = btn.closest('[data-description-wrapper]') as HTMLElement;
+    if (!wrapper) return;
+
+    const description = wrapper.querySelector('[data-card-description]') as HTMLElement;
     if (!description) return;
 
-    const fullText = description.dataset.full || '';
-    const truncatedText = description.dataset.truncated || '';
-    const textSpan = description.querySelector('.card-description-text');
     const isSpanish = description.dataset.lang === 'es';
-
-    if (!textSpan) return;
-
-    const isExpanded = description.dataset.expanded === 'true';
+    const isExpanded = wrapper.dataset.expanded === 'true';
 
     if (isExpanded) {
-      textSpan.textContent = truncatedText;
+      wrapper.dataset.expanded = 'false';
       btn.textContent = isSpanish ? 'ver más' : 'see more';
-      description.dataset.expanded = 'false';
     } else {
-      textSpan.textContent = fullText;
+      wrapper.dataset.expanded = 'true';
       btn.textContent = isSpanish ? 'ver menos' : 'see less';
-      description.dataset.expanded = 'true';
+    }
+  }
+
+  // Add to cart functionality - event delegation
+  function initAddToCart() {
+    document.removeEventListener('click', handleAddToCartClick);
+    document.addEventListener('click', handleAddToCartClick);
+  }
+
+  function handleAddToCartClick(e: Event) {
+    const target = e.target as HTMLElement;
+    const btn = target.closest('[data-add-to-cart]') as HTMLElement;
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const productData = JSON.parse(btn.dataset.product || '{}');
+      if (productData.asin && (window as any).cart?.add) {
+        (window as any).cart.add(productData);
+
+        // Visual feedback
+        btn.dataset.added = 'true';
+        const plusSpan = btn.querySelector('.btn-add-cart-plus');
+        if (plusSpan) {
+          plusSpan.textContent = '✓';
+        }
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+          btn.dataset.added = 'false';
+          if (plusSpan) {
+            plusSpan.textContent = '+';
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
     }
   }
 
   // Run on load and after Astro page transitions
   initProductCard();
   initCardSeeMore();
+  initAddToCart();
   document.addEventListener('astro:after-swap', () => {
     initProductCard();
     initCardSeeMore();
+    initAddToCart();
   });
 </script>
