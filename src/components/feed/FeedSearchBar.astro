@@ -76,6 +76,51 @@ function initFeedSearch() {
     searchWrap?.classList.toggle('searching', loading);
   }
 
+  // Check if input looks like an Amazon URL
+  function isAmazonUrl(text) {
+    return text.includes('amazon.') && (
+      text.includes('/dp/') ||
+      text.includes('/gp/product/') ||
+      text.includes('/gp/aw/d/') ||
+      /amazon\.[a-z.]+\/[A-Z0-9]{10}/i.test(text)
+    );
+  }
+
+  // Fetch product from Amazon link
+  async function fetchAmazonProduct(url) {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/feed/product-by-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+
+      if (data.success && data.product) {
+        // Clear the input after successful fetch
+        input.value = '';
+        updateClearButton();
+
+        // Dispatch event with the product to show in feed
+        window.dispatchEvent(new CustomEvent('amazon:product', {
+          detail: { product: data.product }
+        }));
+      } else {
+        // Show error feedback
+        searchWrap?.classList.add('error');
+        setTimeout(() => searchWrap?.classList.remove('error'), 2000);
+        console.warn('[Search] Failed to fetch Amazon product:', data.error);
+      }
+    } catch (err) {
+      console.error('[Search] Error fetching Amazon product:', err);
+      searchWrap?.classList.add('error');
+      setTimeout(() => searchWrap?.classList.remove('error'), 2000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Dispatch search event
   function dispatchSearch(query) {
     if (query === currentQuery) return;
@@ -92,8 +137,8 @@ function initFeedSearch() {
     setTimeout(() => setLoading(false), 3000);
   }
 
-  // Input event with debounce
-  input.addEventListener('input', () => {
+  // Handle input - detect Amazon links or regular search
+  function handleInput() {
     updateClearButton();
 
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -107,10 +152,30 @@ function initFeedSearch() {
       return;
     }
 
-    // Debounce non-empty queries
+    // Check if it's an Amazon URL - process immediately
+    if (isAmazonUrl(query)) {
+      fetchAmazonProduct(query);
+      return;
+    }
+
+    // Debounce non-empty regular queries
     debounceTimer = setTimeout(() => {
       dispatchSearch(query);
     }, 400);
+  }
+
+  // Input event with debounce
+  input.addEventListener('input', handleInput);
+
+  // Handle paste event - detect Amazon links immediately
+  input.addEventListener('paste', (e) => {
+    // Small delay to let the paste complete
+    setTimeout(() => {
+      const pastedText = input.value.trim();
+      if (isAmazonUrl(pastedText)) {
+        fetchAmazonProduct(pastedText);
+      }
+    }, 50);
   });
 
   // Clear button
@@ -125,7 +190,14 @@ function initFeedSearch() {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       if (debounceTimer) clearTimeout(debounceTimer);
-      dispatchSearch(input.value.trim());
+      const query = input.value.trim();
+
+      // Check for Amazon URL first
+      if (isAmazonUrl(query)) {
+        fetchAmazonProduct(query);
+      } else {
+        dispatchSearch(query);
+      }
     }
     if (e.key === 'Escape') {
       input.value = '';
@@ -164,8 +236,8 @@ document.addEventListener('astro:page-load', initFeedSearch);
   .feed-search {
     position: relative;
     flex: 1;
-    max-width: 200px;
-    min-width: 120px;
+    max-width: 260px;
+    min-width: 140px;
   }
 
   .search-input-wrap {
@@ -188,6 +260,16 @@ document.addEventListener('astro:page-load', initFeedSearch);
 
   .feed-search.searching .search-input-wrap {
     border-color: var(--color-brutal-blue, #3B82F6);
+  }
+
+  .feed-search.error .search-input-wrap {
+    background: var(--color-brutal-red, #EF4444);
+    border-color: var(--color-brutal-red, #EF4444);
+  }
+
+  .feed-search.error .search-input,
+  .feed-search.error .search-icon {
+    color: white;
   }
 
   .search-icon {
@@ -298,7 +380,7 @@ document.addEventListener('astro:page-load', initFeedSearch);
   /* Mobile adjustments */
   @media (max-width: 480px) {
     .feed-search {
-      max-width: 140px;
+      max-width: 180px;
     }
 
     .search-input {
@@ -310,6 +392,70 @@ document.addEventListener('astro:page-load', initFeedSearch);
       width: 14px;
       height: 14px;
       margin-left: 0.5rem;
+    }
+  }
+
+  /* Very small screens */
+  @media (max-width: 360px) {
+    .feed-search {
+      max-width: 100px;
+      min-width: 70px;
+    }
+
+    .search-input {
+      font-size: 0.65rem;
+      padding: 0.4rem 0.3rem;
+    }
+
+    .search-icon {
+      width: 12px;
+      height: 12px;
+      margin-left: 0.4rem;
+    }
+
+    .search-input-wrap {
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .search-clear {
+      width: 24px;
+      height: 24px;
+      margin-right: 0.15rem;
+    }
+
+    .search-clear svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  /* Extra small screens (iPhone SE - 320px) */
+  @media (max-width: 340px) {
+    .feed-search {
+      max-width: 85px;
+      min-width: 60px;
+    }
+
+    .search-input {
+      font-size: 0.6rem;
+      padding: 0.35rem 0.25rem;
+    }
+
+    .search-icon {
+      width: 11px;
+      height: 11px;
+      margin-left: 0.35rem;
+    }
+
+    .search-clear {
+      width: 22px;
+      height: 22px;
+    }
+
+    .search-clear svg {
+      width: 10px;
+      height: 10px;
     }
   }
 </style>
