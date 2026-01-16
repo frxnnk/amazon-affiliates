@@ -15,7 +15,6 @@
 import { type Lang } from '@i18n/utils';
 import '@styles/feed-brutal.css';
 import FeedSearchBar from './FeedSearchBar.astro';
-import FeedSections from './FeedSections.astro';
 import FilterPanel from './FilterPanel.astro';
 
 interface Props {
@@ -32,6 +31,9 @@ const texts = {
     retry: 'Reintentar',
     error: 'Error al cargar',
     buy: 'Ver en Amazon',
+    addToCart: 'Agregar al carrito',
+    addedToCart: 'Agregado al carrito',
+    viewCart: 'Ver carrito',
   },
   en: {
     loading: 'Loading...',
@@ -39,6 +41,9 @@ const texts = {
     retry: 'Retry',
     error: 'Failed to load',
     buy: 'View on Amazon',
+    addToCart: 'Add to cart',
+    addedToCart: 'Added to cart',
+    viewCart: 'View cart',
   }
 };
 
@@ -90,14 +95,11 @@ const categories = [
   <!-- Floating Top Controls Bar - Search, Sections, Filters, Category -->
   <div class="feed-controls" id="feed-controls">
 
-    <!-- Full Controls: Search + Sections + Filters + Category -->
+    <!-- Full Controls: Search + Filters + Category + Cart -->
     <div class="controls-pill">
 
-      <!-- Search Bar (inline) -->
+      <!-- Search Bar (inline, centered) -->
       <FeedSearchBar lang={lang} />
-
-      <!-- Saved Sections -->
-      <FeedSections lang={lang} />
 
       <!-- Filter Panel -->
       <FilterPanel lang={lang} />
@@ -147,6 +149,16 @@ const categories = [
           </div>
         </div>
       </div>
+
+      <!-- Cart Button -->
+      <button type="button" class="cart-ctrl" id="feed-cart-btn" aria-label={lang === 'es' ? 'Ver carrito' : 'View cart'}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+        <span class="cart-badge" id="feed-cart-badge">0</span>
+      </button>
 
     </div>
 
@@ -406,6 +418,69 @@ class Feed {
     }
   }
 
+  // Toast notification for cart
+  showCartToast(product) {
+    // Create toast container if it doesn't exist
+    let container = document.getElementById('cart-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'cart-toast-container';
+      container.innerHTML = `
+        <div class="cart-toast">
+          <img class="toast-image" src="" alt="" />
+          <div class="toast-content">
+            <p class="toast-title"></p>
+            <p class="toast-message"></p>
+          </div>
+          <button type="button" class="toast-action"></button>
+        </div>
+      `;
+      document.body.appendChild(container);
+
+      // View cart action
+      container.querySelector('.toast-action')?.addEventListener('click', () => {
+        this.hideCartToast();
+        window.dispatchEvent(new CustomEvent('cart:open'));
+      });
+    }
+
+    // Update toast content
+    const imgEl = container.querySelector('.toast-image');
+    const titleEl = container.querySelector('.toast-title');
+    const messageEl = container.querySelector('.toast-message');
+    const actionEl = container.querySelector('.toast-action');
+
+    if (imgEl) {
+      imgEl.src = product.image || '';
+      imgEl.alt = product.title;
+    }
+    if (titleEl) titleEl.textContent = product.title;
+    if (messageEl) messageEl.textContent = this.texts.addedToCart;
+    if (actionEl) actionEl.textContent = this.texts.viewCart;
+
+    // Clear existing timeout
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+
+    // Show toast
+    requestAnimationFrame(() => {
+      container.classList.add('visible');
+    });
+
+    // Auto-hide after 3 seconds
+    this.toastTimeout = setTimeout(() => {
+      this.hideCartToast();
+    }, 3000);
+  }
+
+  hideCartToast() {
+    const container = document.getElementById('cart-toast-container');
+    if (container) container.classList.remove('visible');
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+      this.toastTimeout = null;
+    }
+  }
+
   // Observe a slide for view tracking
   observeSlideForViews(slide) {
     if (this.viewObserver && slide.dataset.asin) {
@@ -416,6 +491,36 @@ class Feed {
   // Top Controls Setup (simplified - category only)
   setupTopControls() {
     this.setupCategorySelector();
+    this.setupCartButton();
+  }
+
+  // Cart Button Setup
+  setupCartButton() {
+    const cartBtn = document.getElementById('feed-cart-btn');
+    const cartBadge = document.getElementById('feed-cart-badge');
+
+    if (!cartBtn) return;
+
+    // Open cart modal on click
+    cartBtn.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('cart:open'));
+    });
+
+    // Update badge count
+    const updateBadge = () => {
+      const items = window.cart?.getItems() || [];
+      const count = items.reduce((sum, item) => sum + item.quantity, 0);
+      if (cartBadge) {
+        cartBadge.textContent = count > 99 ? '99+' : String(count);
+        cartBadge.classList.toggle('has-items', count > 0);
+      }
+    };
+
+    // Initial update
+    updateBadge();
+
+    // Listen for cart updates
+    window.addEventListener('cart:updated', updateBadge);
   }
 
   reloadFeed() {
@@ -479,16 +584,6 @@ class Feed {
   toggleCategoryExpanded() {
     this.categoryExpanded = !this.categoryExpanded;
     this.categoryFloat?.classList.toggle('open', this.categoryExpanded);
-
-    // Position dropdown dynamically when opening
-    if (this.categoryExpanded && this.categoryToggle) {
-      const catMenu = this.categoryFloat?.querySelector('.cat-menu');
-      if (catMenu) {
-        const rect = this.categoryToggle.getBoundingClientRect();
-        catMenu.style.top = `${rect.bottom + 10}px`;
-        catMenu.style.right = '16px';
-      }
-    }
   }
 
   collapseCategorySelector() {
@@ -798,6 +893,13 @@ class Feed {
       this.reloadFeed();
     });
 
+    // Listen for Amazon product links pasted in search
+    window.addEventListener('amazon:product', (e) => {
+      if (e.detail?.product) {
+        this.insertAmazonProduct(e.detail.product);
+      }
+    });
+
     // Send pending views when user leaves
     window.addEventListener('beforeunload', () => {
       this.sendViewBatch();
@@ -835,7 +937,57 @@ class Feed {
     this.endEl?.classList.remove('show');
     this.load();
   }
-  
+
+  // Insert a product from Amazon link at the top of the feed
+  insertAmazonProduct(product) {
+    console.log('[Feed] Inserting Amazon product:', product.title);
+
+    // Don't add if we've already seen this product
+    if (this.seen.has(product.asin)) {
+      // Scroll to the existing product
+      const existingSlide = this.scroll?.querySelector(`[data-asin="${product.asin}"]`);
+      if (existingSlide) {
+        existingSlide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+
+    // Add to seen set
+    this.seen.add(product.asin);
+    this.products.unshift(product);
+
+    // Create the slide
+    const slide = this.createSlide(product);
+
+    // Add a special class for pasted products
+    slide.classList.add('slide-pasted');
+
+    // Hide skeleton if visible
+    this.skeleton?.classList.add('hide');
+
+    // Insert at the top of the feed (after any skeleton)
+    const firstSlide = this.scroll?.querySelector('.slide:not(.skeleton-slide)');
+    if (firstSlide) {
+      this.scroll?.insertBefore(slide, firstSlide);
+    } else {
+      // No slides yet, insert before sentinel
+      this.scroll?.insertBefore(slide, this.sentinel);
+    }
+
+    // Observe the new slide
+    this.observeSlide(slide);
+    this.observeSlideForViews(slide);
+
+    // Scroll to top to show the new product
+    this.scroll?.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Show a brief highlight animation
+    setTimeout(() => {
+      slide.classList.add('slide-highlight');
+      setTimeout(() => slide.classList.remove('slide-highlight'), 1500);
+    }, 100);
+  }
+
   async load() {
     if (this.loading || !this.hasMore) return;
     
@@ -996,10 +1148,22 @@ class Feed {
         </div>`
       : `<img src="${p.featuredImage?.url || ''}" alt="${p.title}" loading="lazy" class="product-img" />`;
     
-    // Build badges HTML
+    // Build badges HTML - includes new MCP badges
     const badges = p.badges || [];
-    const badgesHtml = badges.length > 0 ? `
+    const badgesHtml = `
       <div class="product-badges">
+        ${p.isBestSeller ? `<span class="badge badge-bestseller" title="${this.lang === 'es' ? 'Más vendido en Amazon' : 'Amazon Best Seller'}">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm7 14l4-8h-3V5h-2v4H8l4 8z"/></svg>
+          ${this.lang === 'es' ? 'Top Ventas' : 'Best Seller'}
+        </span>` : ''}
+        ${p.isAmazonChoice ? `<span class="badge badge-choice" title="${this.lang === 'es' ? 'Selección de Amazon' : "Amazon's Choice"}">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          ${this.lang === 'es' ? 'Favorito' : "Amazon's Choice"}
+        </span>` : ''}
+        ${p.isPrime ? `<span class="badge badge-prime" title="Amazon Prime">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M3 8l9-5 9 5v8l-9 5-9-5V8z"/><path d="M12 22V12"/><path d="M3 8l9 4 9-4"/></svg>
+          Prime
+        </span>` : ''}
         ${badges.includes('curated') ? `<span class="badge badge-curated" title="${this.lang === 'es' ? 'Deal destacado' : 'Featured Deal'}">
           <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
           ${this.lang === 'es' ? 'Destacado' : 'Featured'}
@@ -1013,7 +1177,7 @@ class Feed {
           ${this.lang === 'es' ? 'Verificado' : 'Verified'}
         </span>` : ''}
       </div>
-    ` : '';
+    `;
     
     el.innerHTML = `
       <div class="slide-main">
@@ -1029,49 +1193,39 @@ class Feed {
         </button>
       </div>
 
-      <div class="slide-footer" data-panel>
-        <!-- Collapsed View -->
-        <div class="panel-collapsed" data-collapsed>
-          <button class="expand-handle" data-expand-btn aria-label="${this.lang === 'es' ? 'Ver detalles' : 'See details'}">
-            <span class="handle-bar"></span>
+      <div class="slide-footer">
+        <div class="footer-top-row">
+          <span class="brand">${p.brand || ''}</span>
+          ${badgesHtml}
+        </div>
+        <h2 class="title">${this.truncateTitle(p.title)}</h2>
+        ${this.getRatingHtml(p)}
+        <div class="pricing">
+          <span class="price">${price}</span>
+          ${oldPrice ? `<span class="old-price">${oldPrice}</span>` : ''}
+          ${discount >= 15 ? `<span class="badge-discount">-${discount}%</span>` : ''}
+        </div>
+        ${this.getPriceContextHtml(p)}
+        <div class="cta-row">
+          <button type="button" class="add-cart-btn" data-add-to-cart
+            data-asin="${p.asin || ''}"
+            data-product-id="${p.productId || p.asin || ''}"
+            data-title="${(p.title || '').replace(/"/g, '&quot;')}"
+            data-brand="${(p.brand || '').replace(/"/g, '&quot;')}"
+            data-image="${p.featuredImage?.url || ''}"
+            data-price="${p.price || 0}"
+            data-currency="${p.currency || 'EUR'}"
+            data-affiliate-url="${p.affiliateUrl || ''}"
+            aria-label="${this.texts.addToCart || 'Agregar al carrito'}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            <span class="plus-badge">+</span>
           </button>
-          <div class="footer-top-row">
-            <span class="brand">${p.brand || ''}</span>
-            ${badgesHtml}
-          </div>
-          <h2 class="title">${this.truncateTitle(p.title)}</h2>
-          ${this.getRatingHtml(p)}
-          <div class="pricing">
-            <span class="price">${price}</span>
-            ${oldPrice ? `<span class="old-price">${oldPrice}</span>` : ''}
-            ${discount >= 15 ? `<span class="badge-discount">-${discount}%</span>` : ''}
-          </div>
-          ${this.getPriceContextHtml(p)}
           <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta">
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
-            ${this.texts.buy}
-            <svg viewBox="0 0 20 20" fill="currentColor" class="arrow"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
-          </a>
-        </div>
-
-        <!-- Expanded View -->
-        <div class="panel-expanded" data-expanded>
-          <button class="collapse-handle" data-collapse-btn aria-label="${this.lang === 'es' ? 'Menos' : 'Less'}">
-            <span class="handle-bar"></span>
-          </button>
-          ${this.getBadgesHtml(p)}
-          <span class="brand">${p.brand || ''}</span>
-          <h2 class="title-full">${p.title}</h2>
-          ${this.getRatingExpandedHtml(p)}
-          ${this.getDescriptionHtml(p)}
-          <div class="pricing-big">
-            <span class="price-big">${price}</span>
-            ${oldPrice ? `<span class="old-price-big">${oldPrice}</span>` : ''}
-            ${discount >= 15 ? `<span class="discount-big">-${discount}%</span>` : ''}
-          </div>
-          ${this.getPriceContextExpandedHtml(p)}
-          <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta cta-big">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
             ${this.texts.buy}
             <svg viewBox="0 0 20 20" fill="currentColor" class="arrow"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
           </a>
@@ -1201,99 +1355,58 @@ class Feed {
     }
 
     // Track affiliate link clicks (highest value signal)
-    const ctaLinks = el.querySelectorAll('.cta');
-    ctaLinks.forEach(cta => {
-      cta.addEventListener('click', () => {
-        this.trackEngagement(p.asin, 'affiliate_click', { category: p.category });
-      });
+    const ctaLink = el.querySelector('.cta');
+    ctaLink?.addEventListener('click', () => {
+      this.trackEngagement(p.asin, 'affiliate_click', { category: p.category });
     });
-    
-    // Expandable panel logic
-    const panel = el.querySelector('[data-panel]');
-    if (panel) {
-      const expandBtn = panel.querySelector('[data-expand-btn]');
-      const collapseBtn = panel.querySelector('[data-collapse-btn]');
-      const collapsedView = panel.querySelector('[data-collapsed]');
-      const expandedView = panel.querySelector('[data-expanded]');
 
-      let startY = 0;
-      let isDragging = false;
+    // Add to Cart button
+    const addCartBtn = el.querySelector('.add-cart-btn');
+    addCartBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
 
-      const expand = () => {
-        collapsedView.style.display = 'none';
-        expandedView.style.display = 'flex';
-        panel.classList.add('expanded');
-        // Track expand engagement
-        this.trackEngagement(p.asin, 'expand', { category: p.category });
+      // Check if cart API is available
+      if (!window.cart) {
+        console.warn('Cart API not available');
+        return;
+      }
+
+      // Get product data from data attributes
+      const btn = e.currentTarget;
+      const product = {
+        asin: btn.dataset.asin || '',
+        productId: btn.dataset.productId || '',
+        title: btn.dataset.title || '',
+        brand: btn.dataset.brand || '',
+        image: btn.dataset.image || '',
+        price: parseFloat(btn.dataset.price || '0'),
+        currency: btn.dataset.currency || 'EUR',
+        affiliateUrl: btn.dataset.affiliateUrl || '',
       };
 
-      const collapse = () => {
-        expandedView.style.display = 'none';
-        collapsedView.style.display = 'flex';
-        panel.classList.remove('expanded');
-      };
+      // Add to cart
+      window.cart.add(product);
 
-      // Button clicks
-      expandBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        expand();
-      });
-      collapseBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        collapse();
-      });
+      // Show toast notification
+      this.showCartToast(product);
 
-      // Swipe gestures
-      panel.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
-        isDragging = true;
-      }, { passive: true });
+      // Visual feedback
+      addCartBtn.classList.add('added');
+      setTimeout(() => {
+        addCartBtn.classList.remove('added');
+      }, 1500);
 
-      panel.addEventListener('touchend', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        const diff = startY - e.changedTouches[0].clientY;
-        const threshold = 50;
-        if (diff > threshold) expand();
-        else if (diff < -threshold) collapse();
-      }, { passive: true });
-    }
+      // Track engagement
+      this.trackEngagement(p.asin, 'add_to_cart', { category: p.category });
+    });
   }
   
   truncateTitle(title) {
     if (title.length <= 60) return title;
     return title.substring(0, 60).trim() + '...';
   }
-  
-  // Check if description is meaningfully different from title
-  isDescriptionUnique(title, desc) {
-    if (!desc) return false;
-    const normTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
-    const normDesc = desc.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
-    // If description starts the same as title, it's not unique
-    if (normDesc.startsWith(normTitle.slice(0, 30))) return false;
-    if (normTitle.startsWith(normDesc.slice(0, 30))) return false;
-    return true;
-  }
-  
-  getDescriptionHtml(p) {
-    const desc = p.shortDescription || p.description;
-    if (!desc) return '';
 
-    // Always show description truncated to 20 chars with "see more"
-    const maxLen = 20;
-    const isLong = desc.length > maxLen;
-    const truncated = isLong ? desc.substring(0, maxLen).trim() + '...' : desc;
-    const seeMoreText = this.lang === 'es' ? 'ver más' : 'see more';
-
-    return `
-      <div class="description-section">
-        <p class="description-text">${desc}</p>
-      </div>
-    `;
-  }
-
-  // Rating HTML (compact)
   getRatingHtml(p) {
     if (!p.rating) return '';
     const stars = Math.round(p.rating);
@@ -1309,86 +1422,74 @@ class Feed {
     `;
   }
 
-  // Rating HTML (expanded)
-  getRatingExpandedHtml(p) {
-    if (!p.rating) return '';
-    const stars = Math.round(p.rating);
-    const reviewsText = this.lang === 'es' ? 'opiniones' : 'reviews';
-    return `
-      <div class="rating-section">
-        <div class="rating-big">
-          <span class="rating-number">${p.rating.toFixed(1)}</span>
-          <div class="stars-big">
-            ${[1,2,3,4,5].map(s => `<svg class="star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`).join('')}
-          </div>
-        </div>
-        ${p.totalReviews ? `<span class="reviews-total">${p.totalReviews.toLocaleString()} ${reviewsText}</span>` : ''}
-      </div>
-    `;
-  }
-
-  // Price context badges (compact)
   getPriceContextHtml(p) {
     if (!p.priceContext) return '';
-    const lowestText = this.lang === 'es' ? 'Precio más bajo en 30 días' : 'Lowest price in 30 days';
-    const belowText = this.lang === 'es' ? 'por debajo del promedio' : 'below average';
+    // Short labels for mobile-friendly display
+    const lowestText = this.lang === 'es' ? 'Mín. 30d' : 'Low 30d';
+    const belowText = this.lang === 'es' ? 'bajo avg' : 'below avg';
+    const dropText = this.lang === 'es' ? 'bajó' : 'dropped';
+
+    const { isLowestIn30Days, percentBelowAvg, priceDrop7Days, priceHistory } = p.priceContext;
+    const hasPriceRange = priceHistory && priceHistory.length >= 3;
+
+    // Calculate min/max from price history
+    const minPrice30d = hasPriceRange ? Math.min(...priceHistory) : 0;
+    const maxPrice30d = hasPriceRange ? Math.max(...priceHistory) : 0;
+
+    // Generate price range bar
+    let priceRangeHtml = '';
+    if (hasPriceRange && minPrice30d && maxPrice30d && maxPrice30d > minPrice30d) {
+      const currentPrice = p.price;
+      const range = maxPrice30d - minPrice30d;
+      const position = Math.max(0, Math.min(100, ((currentPrice - minPrice30d) / range) * 100));
+      const isGoodDeal = position <= 30; // In lower 30% of range
+
+      const currency = p.currency || 'USD';
+      const formatPrice = (val) => new Intl.NumberFormat(this.lang === 'es' ? 'es-ES' : 'en-US', {
+        style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0
+      }).format(val);
+
+      const rangeLabel = this.lang === 'es' ? 'Rango 30d' : '30d range';
+
+      priceRangeHtml = `
+        <div class="price-range-bar" title="${rangeLabel}: ${formatPrice(minPrice30d)} - ${formatPrice(maxPrice30d)}">
+          <div class="range-labels">
+            <span class="range-min">${formatPrice(minPrice30d)}</span>
+            <span class="range-label">${rangeLabel}</span>
+            <span class="range-max">${formatPrice(maxPrice30d)}</span>
+          </div>
+          <div class="range-track">
+            <div class="range-fill" style="width: ${position}%"></div>
+            <div class="range-marker ${isGoodDeal ? 'good-deal' : ''}" style="left: ${position}%">
+              <span class="marker-dot"></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="price-context">
-        ${p.priceContext.isLowestIn30Days ? `
+        ${priceDrop7Days && priceDrop7Days >= 10 ? `
+          <span class="context-badge price-drop">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            -${priceDrop7Days}%
+          </span>
+        ` : ''}
+        ${isLowestIn30Days && !(priceDrop7Days && priceDrop7Days >= 10) ? `
           <span class="context-badge lowest">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l-1 9h-9l7 5-3 9 6-5 6 5-3-9 7-5h-9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2l-1 9h-9l7 5-3 9 6-5 6 5-3-9 7-5h-9z"/></svg>
             ${lowestText}
           </span>
         ` : ''}
-        ${p.priceContext.percentBelowAvg > 0 ? `
+        ${percentBelowAvg > 0 ? `
           <span class="context-badge below-avg">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-            ${p.priceContext.percentBelowAvg}% ${belowText}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            ${percentBelowAvg}% ${belowText}
           </span>
         ` : ''}
       </div>
-    `;
-  }
-
-  // Price context (expanded)
-  getPriceContextExpandedHtml(p) {
-    if (!p.priceContext) return '';
-    const lowestText = this.lang === 'es' ? 'Precio más bajo en 30 días' : 'Lowest price in 30 days';
-    const belowText = this.lang === 'es' ? 'por debajo del promedio' : 'below average';
-    return `
-      <div class="price-context-expanded">
-        ${p.priceContext.isLowestIn30Days ? `
-          <div class="context-item lowest">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>${lowestText}</span>
-          </div>
-        ` : ''}
-        ${p.priceContext.percentBelowAvg > 0 ? `
-          <div class="context-item below">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
-            <span>${p.priceContext.percentBelowAvg}% ${belowText}</span>
-          </div>
-        ` : ''}
-      </div>
-    `;
-  }
-
-  // Badges HTML
-  getBadgesHtml(p) {
-    if (!p.badges || p.badges.length === 0) return '';
-    const labels = {
-      verified_deal: this.lang === 'es' ? 'Verificado' : 'Verified',
-      for_you: this.lang === 'es' ? 'Para ti' : 'For you',
-      curated: this.lang === 'es' ? 'Destacado' : 'Featured',
-      great_discount: this.lang === 'es' ? 'Descuento' : 'Discount',
-      popular: 'Popular',
-      lowest_price: this.lang === 'es' ? 'Precio más bajo' : 'Lowest price',
-      has_video: 'Video'
-    };
-    return `
-      <div class="badges-row">
-        ${p.badges.map(badge => `<span class="badge badge-${badge.replace('_', '-')}">${labels[badge] || badge}</span>`).join('')}
-      </div>
+      ${priceRangeHtml}
     `;
   }
 

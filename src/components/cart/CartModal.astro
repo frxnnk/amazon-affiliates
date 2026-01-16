@@ -1,0 +1,695 @@
+---
+import { type Lang } from '@i18n/utils';
+import siteConfig from '@data/site-config.json';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const affiliateTag = siteConfig.amazon.associates[lang]?.tag || siteConfig.amazon.associates.en.tag;
+const marketplace = siteConfig.amazon.associates[lang]?.marketplace || 'amazon.com';
+
+const t = {
+  title: lang === 'es' ? 'Tu Carrito' : 'Your Cart',
+  empty: lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty',
+  emptyDesc: lang === 'es' ? 'Agrega productos para comprarlos todos juntos en Amazon' : 'Add products to buy them all together on Amazon',
+  continueShopping: lang === 'es' ? 'Seguir comprando' : 'Continue shopping',
+  clearCart: lang === 'es' ? 'Vaciar carrito' : 'Clear cart',
+  total: lang === 'es' ? 'Total estimado' : 'Estimated total',
+  buyAll: lang === 'es' ? 'Comprar todo en Amazon' : 'Buy all on Amazon',
+  disclaimer: lang === 'es'
+    ? 'Serás redirigido a Amazon para completar tu compra. Los precios pueden variar.'
+    : 'You will be redirected to Amazon to complete your purchase. Prices may vary.',
+  items: lang === 'es' ? 'productos' : 'items',
+  remove: lang === 'es' ? 'Eliminar' : 'Remove',
+};
+---
+
+<div
+  id="cart-modal"
+  class="cart-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-labelledby="cart-modal-title"
+>
+  <div class="cart-backdrop"></div>
+  <div class="cart-container">
+    <div class="cart-header">
+      <h2 id="cart-modal-title" class="cart-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+        {t.title}
+        <span class="cart-count-label" id="cart-modal-count">(0 {t.items})</span>
+      </h2>
+      <button
+        type="button"
+        id="cart-close"
+        class="cart-close"
+        aria-label={lang === 'es' ? 'Cerrar carrito' : 'Close cart'}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="cart-body">
+      <!-- Empty state -->
+      <div class="cart-empty" id="cart-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="empty-icon">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+        <p class="empty-title">{t.empty}</p>
+        <p class="empty-desc">{t.emptyDesc}</p>
+        <button type="button" class="btn-continue" id="cart-continue">
+          {t.continueShopping}
+        </button>
+      </div>
+
+      <!-- Cart items list -->
+      <div class="cart-items" id="cart-items-list"></div>
+    </div>
+
+    <div class="cart-footer" id="cart-footer">
+      <div class="cart-summary">
+        <div class="cart-total">
+          <span class="total-label">{t.total}:</span>
+          <span class="total-amount" id="cart-total-amount">$0.00</span>
+        </div>
+        <p class="cart-disclaimer">{t.disclaimer}</p>
+      </div>
+
+      <div class="cart-actions">
+        <button type="button" class="btn-clear" id="cart-clear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+          {t.clearCart}
+        </button>
+        <a
+          href="#"
+          class="btn-buy-all"
+          id="cart-buy-all"
+          target="_blank"
+          rel="nofollow noopener sponsored"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+          </svg>
+          {t.buyAll}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-icon">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Neo-Brutalist Cart Modal */
+  .cart-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 150ms, visibility 150ms;
+  }
+
+  .cart-modal[aria-hidden="false"] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .cart-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .cart-container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 100vh;
+    background: var(--color-cream, #FFFEF9);
+    border-left: 4px solid var(--color-brutal-black, #1A1A1A);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 200ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .cart-modal[aria-hidden="false"] .cart-container {
+    transform: translateX(0);
+  }
+
+  /* Header */
+  .cart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .cart-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+
+  .cart-title svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .cart-count-label {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+
+  .cart-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .cart-close:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .cart-close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* Body */
+  .cart-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  /* Empty state */
+  .cart-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1rem;
+    gap: 1rem;
+  }
+
+  .cart-empty.hidden {
+    display: none;
+  }
+
+  .empty-icon {
+    width: 4rem;
+    height: 4rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.2;
+  }
+
+  .empty-title {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .empty-desc {
+    font-size: 0.875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
+    margin: 0;
+    max-width: 280px;
+  }
+
+  .btn-continue {
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-continue:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  /* Cart items */
+  .cart-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cart-items.hidden {
+    display: none;
+  }
+
+  /* Footer */
+  .cart-footer {
+    padding: 1.5rem;
+    border-top: 3px solid var(--color-brutal-black, #1A1A1A);
+    background: var(--color-cream, #FFFEF9);
+  }
+
+  .cart-footer.hidden {
+    display: none;
+  }
+
+  .cart-summary {
+    margin-bottom: 1rem;
+  }
+
+  .cart-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .total-label {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .total-amount {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .cart-disclaimer {
+    font-size: 0.6875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .cart-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-cream, #FFFEF9);
+    color: var(--color-brutal-black, #1A1A1A);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-clear:hover {
+    background: #ffeeee;
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-clear svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .btn-buy-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-buy-all:hover {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-buy-all svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .btn-buy-all .arrow-icon {
+    transition: transform 150ms;
+  }
+
+  .btn-buy-all:hover .arrow-icon {
+    transform: translateX(4px);
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 480px) {
+    .cart-container {
+      max-width: 100%;
+    }
+
+    .cart-footer {
+      padding-bottom: calc(1.5rem + 70px); /* Extra space for bottom nav */
+    }
+  }
+</style>
+
+<script define:vars={{ affiliateTag, marketplace, t }}>
+  const modal = document.getElementById('cart-modal');
+  const closeBtn = document.getElementById('cart-close');
+  const continueBtn = document.getElementById('cart-continue');
+  const clearBtn = document.getElementById('cart-clear');
+  const buyAllBtn = document.getElementById('cart-buy-all');
+  const itemsList = document.getElementById('cart-items-list');
+  const emptyState = document.getElementById('cart-empty');
+  const footer = document.getElementById('cart-footer');
+  const totalAmount = document.getElementById('cart-total-amount');
+  const countLabel = document.getElementById('cart-modal-count');
+
+  function closeModal() {
+    modal?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function openModal() {
+    modal?.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    renderCart();
+  }
+
+  function formatPrice(price, currency) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'USD'
+    }).format(price);
+  }
+
+  function renderCart() {
+    const items = window.cart?.getItems() || [];
+    const count = items.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Update count label
+    if (countLabel) {
+      countLabel.textContent = `(${count} ${t.items})`;
+    }
+
+    if (items.length === 0) {
+      emptyState?.classList.remove('hidden');
+      itemsList?.classList.add('hidden');
+      footer?.classList.add('hidden');
+      return;
+    }
+
+    emptyState?.classList.add('hidden');
+    itemsList?.classList.remove('hidden');
+    footer?.classList.remove('hidden');
+
+    // Calculate total
+    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const currency = items[0]?.currency || 'USD';
+    if (totalAmount) {
+      totalAmount.textContent = formatPrice(total, currency);
+    }
+
+    // Render items
+    if (itemsList) {
+      itemsList.innerHTML = items.map(item => `
+        <div class="cart-item" data-asin="${item.asin}">
+          <img src="${item.image}" alt="${item.title}" class="item-image" />
+          <div class="item-content">
+            <span class="item-brand">${item.brand}</span>
+            <h4 class="item-title">${item.title}</h4>
+            <div class="item-price-row">
+              <span class="item-price">${formatPrice(item.price, item.currency)}</span>
+              <div class="item-quantity">
+                <button type="button" class="qty-btn qty-minus" data-asin="${item.asin}" data-action="decrease">-</button>
+                <span class="qty-value">${item.quantity}</span>
+                <button type="button" class="qty-btn qty-plus" data-asin="${item.asin}" data-action="increase">+</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="item-remove" data-asin="${item.asin}" aria-label="${t.remove}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `).join('');
+
+      // Add styles for cart items
+      const style = document.createElement('style');
+      style.textContent = `
+        .cart-item {
+          display: flex;
+          gap: 1rem;
+          padding: 1rem;
+          background: var(--color-white, #FFFFFF);
+          border: 2px solid var(--color-brutal-black, #1A1A1A);
+          box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+          position: relative;
+        }
+        .item-image {
+          width: 80px;
+          height: 80px;
+          object-fit: contain;
+          background: var(--color-cream, #FFFEF9);
+          border: 2px solid var(--color-brutal-black, #1A1A1A);
+          flex-shrink: 0;
+        }
+        .item-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          min-width: 0;
+        }
+        .item-brand {
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.625rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          opacity: 0.6;
+        }
+        .item-title {
+          font-family: var(--font-display, 'Space Grotesk', sans-serif);
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin: 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .item-price-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: auto;
+        }
+        .item-price {
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: var(--color-brutal-orange, #FF6B35);
+        }
+        .item-quantity {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+        .qty-btn {
+          width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-cream, #FFFEF9);
+          border: 2px solid var(--color-brutal-black, #1A1A1A);
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.875rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 100ms;
+        }
+        .qty-btn:hover {
+          background: var(--color-brutal-yellow, #FFE14D);
+        }
+        .qty-value {
+          min-width: 1.5rem;
+          text-align: center;
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.75rem;
+          font-weight: 700;
+        }
+        .item-remove {
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: none;
+          border: none;
+          cursor: pointer;
+          opacity: 0.4;
+          transition: opacity 100ms;
+        }
+        .item-remove:hover {
+          opacity: 1;
+        }
+        .item-remove svg {
+          width: 1rem;
+          height: 1rem;
+        }
+      `;
+      if (!document.getElementById('cart-item-styles')) {
+        style.id = 'cart-item-styles';
+        document.head.appendChild(style);
+      }
+    }
+
+    // Update buy all button href
+    updateBuyAllUrl(items);
+  }
+
+  function updateBuyAllUrl(items) {
+    if (!buyAllBtn || items.length === 0) return;
+
+    const baseUrl = `https://www.${marketplace}/gp/aws/cart/add.html`;
+    const params = new URLSearchParams({ AssociateTag: affiliateTag });
+
+    items.forEach((item, index) => {
+      params.append(`ASIN.${index + 1}`, item.asin);
+      params.append(`Quantity.${index + 1}`, String(item.quantity));
+    });
+
+    buyAllBtn.href = `${baseUrl}?${params.toString()}`;
+  }
+
+  // Event listeners
+  closeBtn?.addEventListener('click', closeModal);
+  continueBtn?.addEventListener('click', closeModal);
+  modal?.querySelector('.cart-backdrop')?.addEventListener('click', closeModal);
+
+  clearBtn?.addEventListener('click', () => {
+    if (confirm(t.clearCart + '?')) {
+      window.cart?.clear();
+      renderCart();
+    }
+  });
+
+  // Quantity buttons and remove - event delegation
+  itemsList?.addEventListener('click', (e) => {
+    const target = e.target.closest('button');
+    if (!target) return;
+
+    const asin = target.dataset.asin;
+    if (!asin) return;
+
+    if (target.classList.contains('item-remove')) {
+      window.cart?.remove(asin);
+      renderCart();
+    } else if (target.dataset.action === 'increase') {
+      const items = window.cart?.getItems() || [];
+      const item = items.find(i => i.asin === asin);
+      if (item) {
+        window.cart?.updateQuantity(asin, item.quantity + 1);
+        renderCart();
+      }
+    } else if (target.dataset.action === 'decrease') {
+      const items = window.cart?.getItems() || [];
+      const item = items.find(i => i.asin === asin);
+      if (item) {
+        window.cart?.updateQuantity(asin, item.quantity - 1);
+        renderCart();
+      }
+    }
+  });
+
+  // Keyboard escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.getAttribute('aria-hidden') === 'false') {
+      closeModal();
+    }
+  });
+
+  // Listen for cart open event
+  window.addEventListener('cart:open', openModal);
+
+  // Listen for cart updates
+  window.addEventListener('cart:updated', renderCart);
+</script>
