@@ -1,6 +1,7 @@
 ---
 import { type Lang, getTranslation } from '@i18n/utils';
 import LanguageSwitcher from './LanguageSwitcher.astro';
+import CartButton from '@components/cart/CartButton.astro';
 import siteConfig from '@data/site-config.json';
 import { SignedIn, SignedOut, UserButton } from '@clerk/astro/components';
 
@@ -52,12 +53,27 @@ function isActive(href: string, exact?: boolean) {
 
     <!-- Right side -->
     <div class="header-actions">
-      <!-- Search -->
+      <!-- Search Bar (Desktop) -->
       <button
         type="button"
-        class="search-btn"
+        class="search-bar-desktop"
         aria-label={t('nav.search')}
-        id="search-trigger"
+        id="search-trigger-desktop"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <span class="search-placeholder">{t('common.searchPlaceholder')}</span>
+        <kbd class="search-shortcut">⌘K</kbd>
+      </button>
+
+      <!-- Search Button (Mobile) -->
+      <button
+        type="button"
+        class="search-btn-mobile"
+        aria-label={t('nav.search')}
+        id="search-trigger-mobile"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="11" cy="11" r="8" />
@@ -65,13 +81,25 @@ function isActive(href: string, exact?: boolean) {
         </svg>
       </button>
 
+      <!-- Cart -->
+      <CartButton lang={lang} />
+
       <!-- Auth -->
       <div class="auth-section">
         <SignedOut>
-          <a href={`/${lang}/login`} class="btn-login">{t('nav.login')}</a>
+          <a href={`/${lang}/login`} class="btn-login">
+            <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span class="auth-label">{t('nav.login')}</span>
+          </a>
         </SignedOut>
         <SignedIn>
-          <UserButton />
+          <div class="user-section">
+            <UserButton />
+            <span class="auth-label user-label">{lang === 'es' ? 'Mi cuenta' : 'Account'}</span>
+          </div>
         </SignedIn>
       </div>
 
@@ -122,7 +150,13 @@ function isActive(href: string, exact?: boolean) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 2rem;
+    gap: 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .header-inner {
+      gap: 2rem;
+    }
   }
 
   /* Logo */
@@ -211,10 +245,69 @@ function isActive(href: string, exact?: boolean) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0;
   }
 
-  /* Search Button */
-  .search-btn {
+  /* Search Bar Desktop */
+  .search-bar-desktop {
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    min-width: 180px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
+  }
+
+  @media (min-width: 768px) {
+    .search-bar-desktop {
+      display: flex;
+    }
+  }
+
+  .search-bar-desktop:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .search-bar-desktop:active {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .search-bar-desktop svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .search-placeholder {
+    flex: 1;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.5;
+  }
+
+  .search-shortcut {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+    border-radius: 3px;
+    opacity: 0.8;
+  }
+
+  /* Search Button Mobile */
+  .search-btn-mobile {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -228,18 +321,24 @@ function isActive(href: string, exact?: boolean) {
     transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
 
-  .search-btn:hover {
+  @media (min-width: 768px) {
+    .search-btn-mobile {
+      display: none;
+    }
+  }
+
+  .search-btn-mobile:hover {
     background: var(--color-brutal-yellow, #FFE14D);
     transform: translate(-2px, -2px);
     box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .search-btn:active {
+  .search-btn-mobile:active {
     transform: translate(1px, 1px);
     box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .search-btn svg {
+  .search-btn-mobile svg {
     width: 1.25rem;
     height: 1.25rem;
   }
@@ -252,7 +351,10 @@ function isActive(href: string, exact?: boolean) {
   }
 
   .btn-login {
-    padding: 0.625rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
     font-family: var(--font-display, 'Space Grotesk', sans-serif);
     font-size: 0.75rem;
     font-weight: 700;
@@ -261,6 +363,7 @@ function isActive(href: string, exact?: boolean) {
     color: var(--color-cream, #FFFEF9);
     background: var(--color-brutal-black, #1A1A1A);
     border: 2px solid var(--color-brutal-black, #1A1A1A);
+    text-decoration: none;
     cursor: pointer;
     box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
     transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
@@ -276,6 +379,48 @@ function isActive(href: string, exact?: boolean) {
   .btn-login:active {
     transform: translate(1px, 1px);
     box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .auth-icon {
+    width: 1rem;
+    height: 1rem;
+    display: none;
+  }
+
+  .auth-label {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .auth-label {
+      display: inline;
+    }
+  }
+
+  /* User Section (signed in) */
+  .user-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .user-section:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .user-label {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-brutal-black, #1A1A1A);
   }
 
   /* Mobile Menu Button */
@@ -361,10 +506,27 @@ function isActive(href: string, exact?: boolean) {
 </style>
 
 <script>
+  // Mobile menu toggle
   const button = document.getElementById('mobile-menu-button');
   const menu = document.getElementById('mobile-menu');
 
   button?.addEventListener('click', () => {
     menu?.classList.toggle('hidden');
   });
+
+  // Search triggers - both open the search modal
+  const searchTriggerDesktop = document.getElementById('search-trigger-desktop');
+  const searchTriggerMobile = document.getElementById('search-trigger-mobile');
+  const searchModal = document.getElementById('search-modal');
+
+  function openSearchModal() {
+    if (searchModal) {
+      searchModal.setAttribute('aria-hidden', 'false');
+      const searchInput = searchModal.querySelector('#search-input') as HTMLInputElement;
+      searchInput?.focus();
+    }
+  }
+
+  searchTriggerDesktop?.addEventListener('click', openSearchModal);
+  searchTriggerMobile?.addEventListener('click', openSearchModal);
 </script>
