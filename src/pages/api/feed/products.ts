@@ -15,7 +15,7 @@ import { isRainforestConfigured } from '@lib/rainforest-api';
 import { cachedSearchProducts, getApiUsageStats, canMakeApiCall } from '@lib/product-cache';
 import { getFeedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices } from '@lib/db';
 import { db, ProductLikes, Products, eq, desc } from 'astro:db';
-import { trackPrices } from '@lib/keepa-api';
+import { trackPrices, getPriceHistory, isKeepaConfigured } from '@lib/keepa-api';
 import { validateDeal, calculateEnhancedScore, toAnalyzableProduct } from '@lib/deal-analyzer';
 import { getProductVideos, getQuotaStatus, isAnyVideoSourceConfigured } from '@lib/video-cache';
 import { getVideoEmbedUrl } from '@lib/youtube-api';
@@ -130,10 +130,18 @@ interface FeedProduct {
   discountPercent?: number;
   dealScore?: number; // 0-100 score for deal quality
   // Badges for UI
-  badges?: string[]; // ['verified_deal', 'curated', 'for_you', 'great_discount']
+  badges?: string[]; // ['verified_deal', 'curated', 'for_you', 'great_discount', 'best_seller', 'amazon_choice', 'trending']
   isCurated?: boolean;
   isVerified?: boolean;
   isForYou?: boolean;
+  // Extended MCP fields
+  salesVolume?: string | null; // "10K+ bought in past month"
+  isBestSeller?: boolean;
+  isAmazonChoice?: boolean;
+  couponText?: string | null; // "Save 20% with coupon"
+  productBadge?: string | null; // "Overall Pick", "Limited time deal"
+  deliveryInfo?: string | null;
+  isPrime?: boolean;
   // YouTube video (if available)
   youtubeVideo?: {
     videoId: string;
@@ -142,11 +150,15 @@ interface FeedProduct {
     thumbnail: string;
     embedUrl: string;
     isShort: boolean;
+    isPremiumChannel: boolean; // True if from a known quality tech review channel
+    isHidden: boolean; // Admin can hide specific videos from appearing
   } | null;
   // Price context for conversion signals
   priceContext?: {
     isLowestIn30Days: boolean;
     percentBelowAvg: number;
+    priceHistory?: number[];  // Last 30 days prices for sparkline
+    priceDrop7Days?: number;  // % price drop in last 7 days
   };
 }
 
@@ -348,6 +360,7 @@ function sequenceProductsForRetention(products: FeedProduct[], seed?: number): F
 
 /**
  * Add conversion badges based on product characteristics
+ * Now includes MCP-derived badges for better conversion
  */
 function addConversionBadges(product: FeedProduct, priceStats?: { isLowest: boolean; daysSinceLowest?: number }): string[] {
   const badges: string[] = product.badges || [];
@@ -377,6 +390,41 @@ function addConversionBadges(product: FeedProduct, priceStats?: { isLowest: bool
   // "Video Review" badge - has YouTube video
   if (product.youtubeVideo && !badges.includes('has_video')) {
     badges.push('has_video');
+  }
+
+  // === NEW MCP-DERIVED BADGES ===
+
+  // "Best Seller" badge - Amazon's best seller ranking
+  if (product.isBestSeller && !badges.includes('best_seller')) {
+    badges.push('best_seller');
+  }
+
+  // "Amazon's Choice" badge - quality + value endorsement
+  if (product.isAmazonChoice && !badges.includes('amazon_choice')) {
+    badges.push('amazon_choice');
+  }
+
+  // "Trending" badge - high sales volume
+  if (product.salesVolume && !badges.includes('trending')) {
+    const salesText = product.salesVolume.toLowerCase();
+    if (salesText.includes('10k') || salesText.includes('20k') || salesText.includes('50k')) {
+      badges.push('trending');
+    }
+  }
+
+  // "Has Coupon" badge - extra savings available
+  if (product.couponText && !badges.includes('has_coupon')) {
+    badges.push('has_coupon');
+  }
+
+  // "Prime" badge - fast delivery
+  if (product.isPrime && !badges.includes('prime')) {
+    badges.push('prime');
+  }
+
+  // "Limited Deal" badge - urgency signal
+  if (product.productBadge?.toLowerCase().includes('limited') && !badges.includes('limited_deal')) {
+    badges.push('limited_deal');
   }
 
   return badges;
@@ -874,6 +922,14 @@ export const GET: APIRoute = async ({ url, locals }) => {
                 isCurated,
                 isVerified,
                 isForYou,
+                // Extended MCP fields for UI
+                salesVolume: product.salesVolume || undefined,
+                isBestSeller: product.isBestSeller || false,
+                isAmazonChoice: product.isAmazonChoice || false,
+                couponText: product.couponText || undefined,
+                productBadge: product.productBadge || undefined,
+                deliveryInfo: product.deliveryInfo || undefined,
+                isPrime: product.isPrime || false,
               };
             })
         );
@@ -918,9 +974,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
     let enrichedProducts = feedProducts;
     let videoStats = { configured: false, quotaRemaining: 0, videosFound: 0, productsChecked: 0 };
 
-    console.log(`[Feed API] Video sources configured: ${isAnyVideoSourceConfigured()}`);
+    // VIDEO FEATURE DISABLED - set to true to re-enable
+    const VIDEOS_ENABLED = false;
 
-    if (isAnyVideoSourceConfigured() && feedProducts.length > 0) {
+    console.log(`[Feed API] Video sources configured: ${isAnyVideoSourceConfigured()} (feature enabled: ${VIDEOS_ENABLED})`);
+
+    if (VIDEOS_ENABLED && isAnyVideoSourceConfigured() && feedProducts.length > 0) {
       videoStats.configured = true;
       const quotaStatus = await getQuotaStatus();
       videoStats.quotaRemaining = quotaStatus.remaining;
@@ -961,12 +1020,15 @@ export const GET: APIRoute = async ({ url, locals }) => {
             thumbnail: video.thumbnail,
             embedUrl: getVideoEmbedUrl(video.videoId, { autoplay: false, mute: false }),
             isShort: video.isShort,
+            isPremiumChannel: video.isPremiumChannel ?? false,
+            isHidden: video.isHidden ?? false,
           } : null,
         };
       });
     }
 
     // Check for lowest prices in 30 days (adds "lowest_price" badge)
+    // First try local DB, then enrich with Keepa API if configured
     const productsWithPrices = enrichedProducts
       .filter(p => p.price)
       .map(p => ({ asin: p.asin, currentPrice: p.price }));
@@ -975,16 +1037,112 @@ export const GET: APIRoute = async ({ url, locals }) => {
       ? await checkLowestPrices(productsWithPrices, marketplace)
       : new Map();
 
+    // If Keepa is configured, enrich products that have no local history with Keepa data
+    const keepaConfigured = isKeepaConfigured();
+    console.log(`[Feed API] Keepa configured: ${keepaConfigured}`);
+
+    if (keepaConfigured) {
+      // Find products with no local history (historyPoints = 0)
+      const productsNeedingKeepa = enrichedProducts
+        .filter(p => {
+          const stats = lowestPriceMap.get(p.asin);
+          return !stats?.priceHistory || stats.priceHistory.length < 3;
+        })
+        .slice(0, 3); // Limit to 3 products per request to save API calls
+
+      if (productsNeedingKeepa.length > 0) {
+        console.log(`[Feed API] Fetching Keepa data for ${productsNeedingKeepa.length} products...`);
+
+        // Fetch Keepa data in parallel
+        const keepaPromises = productsNeedingKeepa.map(async (product) => {
+          try {
+            const keepaData = await getPriceHistory(product.asin, marketplace, { useKeepa: true, days: 30 });
+            return { asin: product.asin, data: keepaData };
+          } catch (error) {
+            console.error(`[Keepa] Error fetching ${product.asin}:`, error);
+            return { asin: product.asin, data: null };
+          }
+        });
+
+        const keepaResults = await Promise.all(keepaPromises);
+
+        // Merge Keepa data into lowestPriceMap
+        for (const { asin, data } of keepaResults) {
+          if (data && data.history.length > 0) {
+            const prices = data.history.map(h => h.price);
+            const currentPrice = enrichedProducts.find(p => p.asin === asin)?.price || 0;
+
+            // Calculate stats from Keepa history
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+            const isLowest = currentPrice <= min * 1.02; // Within 2% of lowest
+            const percentBelowAvg = avg > 0 ? Math.round(((avg - currentPrice) / avg) * 100) : 0;
+
+            // Calculate 7-day price drop
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const pricesFrom7DaysAgo = data.history.filter(h => h.date <= sevenDaysAgo);
+            let priceDrop7Days: number | undefined;
+            if (pricesFrom7DaysAgo.length > 0) {
+              const oldPrice = pricesFrom7DaysAgo[pricesFrom7DaysAgo.length - 1].price;
+              if (oldPrice > currentPrice) {
+                priceDrop7Days = Math.round(((oldPrice - currentPrice) / oldPrice) * 100);
+              }
+            }
+
+            // Sample prices for sparkline (max 15 points)
+            let priceHistory: number[] = prices;
+            if (prices.length > 15) {
+              const step = Math.floor(prices.length / 15);
+              priceHistory = [];
+              for (let i = 0; i < prices.length; i += step) {
+                priceHistory.push(prices[i]);
+                if (priceHistory.length >= 15) break;
+              }
+              // Always include last price
+              if (priceHistory[priceHistory.length - 1] !== prices[prices.length - 1]) {
+                priceHistory.push(prices[prices.length - 1]);
+              }
+            }
+
+            lowestPriceMap.set(asin, {
+              isLowest,
+              lowestPrice: min,
+              percentBelowAvg: Math.max(0, percentBelowAvg),
+              priceHistory: priceHistory.length >= 3 ? priceHistory : undefined,
+              priceDrop7Days: priceDrop7Days && priceDrop7Days > 0 ? priceDrop7Days : undefined,
+            });
+
+            console.log(`[Keepa] ${asin}: ${data.history.length} data points, avg=${avg.toFixed(2)}, min=${min}, percentBelowAvg=${percentBelowAvg}%`);
+          }
+        }
+      }
+    }
+
     // Add conversion badges to each product (including lowest price info)
     enrichedProducts = enrichedProducts.map(product => {
       const priceStats = lowestPriceMap.get(product.asin);
+
+      // DEBUG: Log Keepa data for each product
+      console.log(`[Keepa Debug] ${product.asin} - ${product.title.slice(0, 40)}...`);
+      console.log(`  └─ Price: ${product.price} | priceStats:`, priceStats ? {
+        isLowest: priceStats.isLowest,
+        lowestPrice: priceStats.lowestPrice,
+        percentBelowAvg: priceStats.percentBelowAvg,
+        priceDrop7Days: priceStats.priceDrop7Days,
+        historyPoints: priceStats.priceHistory?.length || 0,
+      } : 'NO DATA');
+
       return {
         ...product,
         badges: addConversionBadges(product, priceStats),
-        // Add price context for UI
+        // Add price context for UI (including sparkline data and 7-day drop)
         priceContext: priceStats ? {
           isLowestIn30Days: priceStats.isLowest,
           percentBelowAvg: priceStats.percentBelowAvg,
+          priceHistory: priceStats.priceHistory,
+          priceDrop7Days: priceStats.priceDrop7Days,
         } : undefined,
       };
     });
