@@ -27,7 +27,24 @@ interface Props {
       thumbnail: string;
       embedUrl: string;
       isShort: boolean;
+      isPremiumChannel: boolean; // True if from a known quality tech review channel
+      isHidden?: boolean; // Admin can hide specific videos
     } | null;
+    // Extended MCP fields
+    salesVolume?: string | null;
+    isBestSeller?: boolean;
+    isAmazonChoice?: boolean;
+    couponText?: string | null;
+    productBadge?: string | null;
+    isPrime?: boolean;
+    badges?: string[];
+    // Keepa price context
+    priceContext?: {
+      isLowestIn30Days: boolean;
+      percentBelowAvg: number;
+      priceHistory?: number[]; // Last 30 days prices for sparkline
+      priceDrop7Days?: number; // % price drop in last 7 days
+    };
   };
   lang: Lang;
   index: number;
@@ -65,11 +82,26 @@ const discount = product.originalPrice
   ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
   : 0;
 
+// Keepa price context
+const priceContext = product.priceContext;
+const percentBelowAvg = priceContext?.percentBelowAvg || 0;
+const isLowestIn30Days = priceContext?.isLowestIn30Days || false;
+const priceDrop7Days = priceContext?.priceDrop7Days || 0;
+const priceHistory = priceContext?.priceHistory || [];
+const hasPriceDrop = priceDrop7Days >= 15; // 15%+ drop in 7 days
+const hasGoodDeal = percentBelowAvg >= 10; // 10%+ below average
+
 // Get all images for carousel (fallback to featured image)
 const productImages = product.images && product.images.length > 0
   ? product.images
   : [product.featuredImage?.url].filter(Boolean) as string[];
 const hasMultipleImages = productImages.length > 1;
+
+// Video display logic - SIMPLIFIED:
+// Video is always shown as the last slide in the carousel (if available and not hidden)
+// No distinction between premium/non-premium - all videos are treated equally
+const hasVideo = product.youtubeVideo && !product.youtubeVideo.isHidden;
+const videoData = hasVideo ? product.youtubeVideo : null;
 
 // Truncate description for "see more" functionality
 const MAX_DESC_LENGTH = 20;
@@ -92,56 +124,9 @@ const truncatedDescription = shouldTruncate
     <div class="bg-glow"></div>
   </div>
 
-  <!-- Product Video/Image/3D Model -->
+  <!-- Product Image Carousel (with optional video as last slide) -->
   <div class="product-container">
-    {product.youtubeVideo ? (
-      <!-- YouTube Video - Thumbnail + Play Button (loads on click) -->
-      <div
-        class="product-video-container"
-        data-video-player
-        data-video-id={product.youtubeVideo.videoId}
-        data-embed-url={product.youtubeVideo.embedUrl}
-      >
-        <!-- Thumbnail -->
-        <img
-          src={product.youtubeVideo.thumbnail}
-          alt={product.youtubeVideo.title}
-          loading={index < 2 ? 'eager' : 'lazy'}
-          class="video-thumbnail"
-        />
-
-        <!-- Play Button -->
-        <button
-          class="video-play-btn"
-          data-play-btn
-          aria-label={lang === 'es' ? 'Reproducir video' : 'Play video'}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-        </button>
-
-        <!-- Channel Badge -->
-        {product.youtubeVideo.channelTitle && (
-          <div class="video-channel-badge">
-            <svg viewBox="0 0 24 24" fill="#ff0000" width="14" height="14" aria-hidden="true">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-              <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
-            </svg>
-            <span>{product.youtubeVideo.channelTitle}</span>
-          </div>
-        )}
-
-        <!-- Video iframe (loaded on click) -->
-        <iframe
-          class="video-iframe"
-          title={product.youtubeVideo.title}
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-        ></iframe>
-      </div>
-    ) : product.model3dUrl ? (
+    {product.model3dUrl ? (
       <!-- 3D Model available - use model-viewer -->
       <div class="product-3d-model">
         <ProductModel3D
@@ -150,61 +135,135 @@ const truncatedDescription = shouldTruncate
           alt={product.featuredImage?.alt || product.title}
         />
       </div>
-    ) : hasMultipleImages ? (
-      <!-- Image carousel when multiple images available -->
+    ) : (hasMultipleImages || hasVideo) ? (
+      <!-- Image carousel (with video as last slide if available) -->
       <div
         class="product-carousel"
         data-carousel
+        data-has-video={hasVideo ? 'true' : 'false'}
         role="region"
         aria-roledescription={lang === 'es' ? 'carrusel' : 'carousel'}
-        aria-label={`${product.title} - ${lang === 'es' ? 'Galería de imágenes' : 'Image gallery'}`}
+        aria-label={`${product.title} - ${lang === 'es' ? 'Galería' : 'Gallery'}`}
       >
-        <!-- Image count badge -->
+        <!-- Slide count badge -->
         <div class="carousel-count" data-carousel-count>
-          <span data-current-index>1</span>/{productImages.length}
+          <span data-current-index>1</span>/{productImages.length + (hasVideo ? 1 : 0)}
         </div>
 
         <!-- Live region for carousel announcements -->
         <div class="sr-only" role="status" aria-live="polite" data-carousel-status></div>
 
         <div class="carousel-track" data-carousel-track aria-atomic="false">
+          {/* Image slides */}
           {productImages.map((imgUrl, imgIndex) => (
             <div
-              class="carousel-slide"
+              class="carousel-slide carousel-slide--image"
               data-carousel-slide
+              data-slide-type="image"
               role="group"
               aria-roledescription={lang === 'es' ? 'diapositiva' : 'slide'}
-              aria-label={`${imgIndex + 1} ${lang === 'es' ? 'de' : 'of'} ${productImages.length}`}
+              aria-label={`${imgIndex + 1} ${lang === 'es' ? 'de' : 'of'} ${productImages.length + (hasVideo ? 1 : 0)}`}
               aria-hidden={imgIndex !== 0 ? 'true' : 'false'}
             >
               <img
                 src={imgUrl}
-                alt={`${product.title} - ${lang === 'es' ? 'Imagen' : 'Image'} ${imgIndex + 1} ${lang === 'es' ? 'de' : 'of'} ${productImages.length}`}
+                alt={`${product.title} - ${lang === 'es' ? 'Imagen' : 'Image'} ${imgIndex + 1}`}
                 loading={index < 2 && imgIndex === 0 ? 'eager' : 'lazy'}
                 decoding="async"
                 class="carousel-image"
               />
             </div>
           ))}
+          {/* Video slide (last) */}
+          {hasVideo && videoData && (
+            <div
+              class:list={[
+                'carousel-slide',
+                'carousel-slide--video',
+                { 'is-short': videoData.isShort }
+              ]}
+              data-carousel-slide
+              data-slide-type="video"
+              data-video-player
+              data-video-id={videoData.videoId}
+              data-embed-url={videoData.embedUrl}
+              data-is-short={videoData.isShort ? 'true' : 'false'}
+              role="group"
+              aria-roledescription={lang === 'es' ? 'diapositiva' : 'slide'}
+              aria-label={`${lang === 'es' ? 'Video' : 'Video'}: ${videoData.channelTitle}`}
+              aria-hidden="true"
+            >
+              {/* Video thumbnail */}
+              <img
+                src={videoData.thumbnail}
+                alt={videoData.title}
+                loading="lazy"
+                class="video-thumbnail"
+              />
+              {/* Play button */}
+              <button
+                class="video-play-btn"
+                data-play-btn
+                aria-label={lang === 'es' ? 'Reproducir video' : 'Play video'}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </button>
+              {/* Channel badge */}
+              {videoData.channelTitle && (
+                <div class="video-channel-badge">
+                  <svg viewBox="0 0 24 24" fill="#ff0000" width="14" height="14" aria-hidden="true">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                    <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
+                  </svg>
+                  <span>{videoData.channelTitle}</span>
+                </div>
+              )}
+              {/* Video iframe (loaded on play) */}
+              <iframe
+                class="video-iframe"
+                title={videoData.title}
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          )}
         </div>
-        <!-- Carousel indicators -->
-        <div class="carousel-indicators" role="tablist" aria-label={lang === 'es' ? 'Indicadores de imagen' : 'Image indicators'}>
+
+        <!-- Carousel indicators with video icon -->
+        <div class="carousel-indicators" role="tablist" aria-label={lang === 'es' ? 'Indicadores' : 'Indicators'}>
           {productImages.map((_, imgIndex) => (
             <button
               class:list={['carousel-dot', { active: imgIndex === 0 }]}
               data-carousel-dot={imgIndex}
               role="tab"
               aria-selected={imgIndex === 0 ? 'true' : 'false'}
-              aria-label={`${lang === 'es' ? 'Ir a imagen' : 'Go to image'} ${imgIndex + 1} ${lang === 'es' ? 'de' : 'of'} ${productImages.length}`}
+              aria-label={`${lang === 'es' ? 'Imagen' : 'Image'} ${imgIndex + 1}`}
               aria-controls={`carousel-slide-${index}-${imgIndex}`}
             />
           ))}
+          {hasVideo && (
+            <button
+              class="carousel-dot carousel-dot--video"
+              data-carousel-dot={productImages.length}
+              role="tab"
+              aria-selected="false"
+              aria-label={lang === 'es' ? 'Ver video' : 'Watch video'}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10" aria-hidden="true">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
+          )}
         </div>
+
         <!-- Navigation arrows -->
         <button
           class="carousel-nav carousel-prev"
           data-carousel-prev
-          aria-label={lang === 'es' ? 'Imagen anterior' : 'Previous image'}
+          aria-label={lang === 'es' ? 'Anterior' : 'Previous'}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
             <path d="M15 18l-6-6 6-6"/>
@@ -213,7 +272,7 @@ const truncatedDescription = shouldTruncate
         <button
           class="carousel-nav carousel-next"
           data-carousel-next
-          aria-label={lang === 'es' ? 'Imagen siguiente' : 'Next image'}
+          aria-label={lang === 'es' ? 'Siguiente' : 'Next'}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
             <path d="M9 18l6-6-6-6"/>
@@ -257,58 +316,131 @@ const truncatedDescription = shouldTruncate
   <!-- Product Info - Compact Panel -->
   <div class="product-info">
     <div class="info-content">
-      <!-- Top row: Brand + Rating -->
+      <!-- Top row: Brand + Key badge only -->
       <div class="info-top-row">
         <span class="brand-badge">{product.brand}</span>
-        {product.rating && (
-          <div class="rating-compact">
-            <svg viewBox="0 0 24 24" fill="#FF9900" width="14" height="14">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        {product.isAmazonChoice && (
+          <span class="mcp-badge amazon-choice">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
             </svg>
-            <span>{product.rating.toFixed(1)}</span>
-          </div>
+            Choice
+          </span>
+        )}
+        {product.isBestSeller && !product.isAmazonChoice && (
+          <span class="mcp-badge best-seller">#1 Best</span>
         )}
       </div>
 
       <!-- Title - 2 lines max -->
       <h2 class="product-title">{product.title}</h2>
 
-      <!-- Price section - Prominent -->
-      <div class="price-row">
-        <div class="price-info">
-          <span class="current-price">{formattedPrice}</span>
-          {formattedOriginalPrice && (
-            <span class="original-price">{formattedOriginalPrice}</span>
+      <!-- Rating + reviews in one clean row -->
+      {product.rating && (
+        <div class="rating-row">
+          <div class="stars-mini">
+            <svg viewBox="0 0 24 24" fill="#FF9900" width="13" height="13">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="rating-value">{product.rating.toFixed(1)}</span>
+          </div>
+          {product.reviewCount && (
+            <span class="review-count">({product.reviewCount.toLocaleString()})</span>
+          )}
+          {product.salesVolume && (
+            <span class="sales-tag">{product.salesVolume}</span>
           )}
         </div>
+      )}
+
+      <!-- Price section - clean and prominent -->
+      <div class="price-section">
+        <span class="current-price">{formattedPrice}</span>
+        {formattedOriginalPrice && (
+          <span class="original-price">{formattedOriginalPrice}</span>
+        )}
         {discount > 0 && (
-          <span class="discount-badge">-{discount}%</span>
+          <span class="discount-tag">-{discount}%</span>
         )}
       </div>
+
+      <!-- Deal indicator - single consolidated line -->
+      {(isLowestIn30Days || hasPriceDrop || hasGoodDeal || product.couponText) && (
+        <div class="deal-line">
+          {isLowestIn30Days ? (
+            <span class="deal-tag lowest">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11">
+                <path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6h-6z"/>
+              </svg>
+              {lang === 'es' ? 'Mínimo 30d' : 'Lowest 30d'}
+            </span>
+          ) : hasPriceDrop ? (
+            <span class="deal-tag drop">↓{Math.round(priceDrop7Days)}% {lang === 'es' ? 'esta semana' : 'this week'}</span>
+          ) : hasGoodDeal ? (
+            <span class="deal-tag below">{Math.round(percentBelowAvg)}% {lang === 'es' ? 'bajo avg' : 'below avg'}</span>
+          ) : null}
+          {product.couponText && (
+            <span class="coupon-tag">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10">
+                <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42z"/>
+              </svg>
+              {product.couponText}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   </div>
 
-  <!-- Floating CTA Button - Always Visible -->
+  <!-- Floating CTA Buttons - Always Visible -->
   <div class="floating-cta">
-    <a
-      href={product.affiliateUrl}
-      target="_blank"
-      rel="noopener noreferrer nofollow"
-      class="buy-button-floating"
-      data-product-id={product.productId}
-      data-tracking="feed-cta-floating"
-    >
-      <div class="buy-button-content">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" class="cart-icon">
-          <path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+    <div class="cta-buttons-row">
+      <!-- Add to Cart Button -->
+      <button
+        type="button"
+        class="add-to-cart-btn"
+        data-add-to-cart
+        data-asin={product.asin}
+        data-product-id={product.productId}
+        data-title={product.title}
+        data-brand={product.brand}
+        data-image={product.featuredImage?.url || ''}
+        data-price={product.price}
+        data-currency={product.currency}
+        data-affiliate-url={product.affiliateUrl}
+        aria-label={lang === 'es' ? 'Agregar al carrito' : 'Add to cart'}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
         </svg>
-        <span class="buy-text">{lang === 'es' ? 'Comprar en Amazon' : 'Buy on Amazon'}</span>
-        <span class="buy-price">{formattedPrice}</span>
-      </div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="20" height="20" class="arrow-icon">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-    </a>
+        <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12" class="plus-icon">
+          <path d="M12 4v16m-8-8h16"/>
+        </svg>
+      </button>
+
+      <!-- Buy on Amazon Button -->
+      <a
+        href={product.affiliateUrl}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        class="buy-button-floating"
+        data-product-id={product.productId}
+        data-tracking="feed-cta-floating"
+      >
+        <div class="buy-button-content">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" class="amazon-icon">
+            <path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+          </svg>
+          <span class="buy-text">{lang === 'es' ? 'Comprar en Amazon' : 'Buy on Amazon'}</span>
+          <span class="buy-price">{formattedPrice}</span>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="20" height="20" class="arrow-icon">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
 
     <!-- Scroll indicator (only on first slide) - Below Amazon button -->
     {index === 0 && (
@@ -377,13 +509,16 @@ const truncatedDescription = shouldTruncate
   .product-container {
     position: relative;
     z-index: 1;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 1rem;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 80px);
+    max-width: 100vw;
+    padding: 0.75rem;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 70px);
+    overflow: hidden;
+    min-height: 0; /* Allow flex shrinking */
   }
 
   /* 3D Model container (when using model-viewer) */
@@ -397,13 +532,23 @@ const truncatedDescription = shouldTruncate
   /* YouTube Video container - BRUTALIST STYLE */
   .product-video-container {
     position: relative;
-    width: 100%;
-    max-width: 320px;
+    width: clamp(240px, 85vw, 320px);
+    height: auto;
     aspect-ratio: 16/9;
     background: var(--color-brutal-black, #1A1A1A);
-    border: 4px solid var(--color-brutal-black, #1A1A1A);
-    box-shadow: 10px 10px 0 var(--color-brutal-black, #1A1A1A);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 8px 8px 0 var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
+    flex-shrink: 1;
+    max-height: none; /* Let aspect-ratio control height */
+  }
+
+  /* YouTube Shorts - Vertical format (9:16) */
+  .product-video-container.is-short {
+    aspect-ratio: 9/16;
+    width: clamp(140px, 45vw, 200px);
+    height: auto;
+    max-height: 45vh;
   }
 
   .video-thumbnail {
@@ -516,7 +661,13 @@ const truncatedDescription = shouldTruncate
 
   @media (min-width: 480px) {
     .product-video-container {
-      max-width: 380px;
+      width: clamp(300px, 75vw, 400px);
+      border-width: 4px;
+      box-shadow: 10px 10px 0 var(--color-brutal-black, #1A1A1A);
+    }
+    .product-video-container.is-short {
+      width: clamp(160px, 40vw, 220px);
+      max-height: 50vh;
     }
     .video-play-btn {
       width: 80px;
@@ -530,9 +681,13 @@ const truncatedDescription = shouldTruncate
 
   @media (min-width: 768px) {
     .product-video-container {
-      max-width: 440px;
+      width: clamp(360px, 60vw, 480px);
       border-width: 5px;
       box-shadow: 12px 12px 0 var(--color-brutal-black, #1A1A1A);
+    }
+    .product-video-container.is-short {
+      width: clamp(200px, 35vw, 280px);
+      max-height: 55vh;
     }
     .video-play-btn {
       width: 88px;
@@ -549,7 +704,11 @@ const truncatedDescription = shouldTruncate
 
   @media (min-width: 1024px) {
     .product-video-container {
-      max-width: 500px;
+      width: clamp(420px, 50vw, 560px);
+    }
+    .product-video-container.is-short {
+      width: clamp(240px, 30vw, 320px);
+      max-height: 65vh;
     }
     .video-play-btn {
       width: 96px;
@@ -559,6 +718,125 @@ const truncatedDescription = shouldTruncate
       width: 44px;
       height: 44px;
     }
+  }
+
+  /* Optional Video Button - for non-premium channel videos */
+  .optional-video-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #FF0000;
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    color: white;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .optional-video-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    background: #CC0000;
+  }
+
+  .optional-video-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .optional-video-btn:focus-visible {
+    outline: 3px solid var(--color-brutal-yellow, #FFE14D);
+    outline-offset: 2px;
+  }
+
+  .optional-video-btn svg {
+    flex-shrink: 0;
+  }
+
+  /* Video Modal - for optional video playback */
+  .video-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .video-modal-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .video-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 16/9;
+    background: var(--color-brutal-black, #1A1A1A);
+    border: 5px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 12px 12px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .video-modal-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .video-modal-close {
+    position: absolute;
+    top: -50px;
+    right: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .video-modal-close:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .video-modal-channel {
+    position: absolute;
+    bottom: -40px;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 
   /* Single Product Image - BRUTALIST FRAME */
@@ -702,6 +980,123 @@ const truncatedDescription = shouldTruncate
     background: var(--color-brutal-orange, #FF6B35);
   }
 
+  /* Video indicator dot */
+  .carousel-dot--video {
+    width: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ff0000;
+    border-color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .carousel-dot--video svg {
+    fill: white;
+  }
+
+  .carousel-dot--video.active {
+    background: #cc0000;
+  }
+
+  .carousel-dot--video:hover:not(.active) {
+    background: #ff3333;
+  }
+
+  /* Video slide within carousel */
+  .carousel-slide--video {
+    position: relative;
+    background: var(--color-brutal-black, #1A1A1A);
+    padding: 0.5rem;
+  }
+
+  .carousel-slide--video .video-thumbnail {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s ease;
+  }
+
+  .carousel-slide--video .video-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: transform 0.15s cubic-bezier(0.68, -0.6, 0.32, 1.6), box-shadow 0.15s ease;
+    z-index: 5;
+  }
+
+  .carousel-slide--video .video-play-btn svg {
+    width: 28px;
+    height: 28px;
+    margin-left: 3px;
+  }
+
+  .carousel-slide--video .video-play-btn:hover {
+    transform: translate(-50%, -50%) translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .carousel-slide--video .video-channel-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .carousel-slide--video .video-channel-badge span {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .carousel-slide--video .video-iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .carousel-slide--video.is-playing .video-thumbnail,
+  .carousel-slide--video.is-playing .video-play-btn,
+  .carousel-slide--video.is-playing .video-channel-badge {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .carousel-slide--video.is-playing .video-iframe {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   /* Image count badge */
   .carousel-count {
     position: absolute;
@@ -782,9 +1177,9 @@ const truncatedDescription = shouldTruncate
     position: relative;
     z-index: 2;
     width: 100%;
-    padding: 1rem 1rem 0.75rem;
-    padding-right: 4.5rem; /* Space for sidebar actions */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%);
+    padding: 0.75rem 0.875rem 0.5rem;
+    padding-right: 4rem; /* Space for sidebar actions */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.75) 70%, transparent 100%);
   }
 
   .info-content {
@@ -824,64 +1219,192 @@ const truncatedDescription = shouldTruncate
     color: white;
   }
 
+  /* MCP Badges - Best Seller, Amazon's Choice, Prime */
+  .mcp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1875rem 0.5rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.5625rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .mcp-badge.best-seller {
+    background: #FF6B35;
+    color: white;
+  }
+
+  .mcp-badge.amazon-choice {
+    background: #232F3E;
+    color: #FF9900;
+  }
+
+  .mcp-badge.prime {
+    background: #00A8E1;
+    color: white;
+  }
+
+  .mcp-badge.price-drop {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #DC2626;
+    color: white;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .mcp-badge.lowest-price {
+    background: #059669;
+    color: white;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A); }
+    50% { box-shadow: 2px 2px 8px rgba(220, 38, 38, 0.6), 2px 2px 0 var(--color-brutal-black, #1A1A1A); }
+  }
+
+  /* Product title */
   .product-title {
     font-family: var(--font-display, 'Space Grotesk', sans-serif);
-    font-size: clamp(1rem, 4vw, 1.25rem);
+    font-size: clamp(0.9rem, 3.5vw, 1.1rem);
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.25;
     color: white;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.375rem;
     text-transform: uppercase;
     letter-spacing: -0.01em;
-    /* Limit to 2 lines */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .price-row {
+  /* Rating row - clean horizontal layout */
+  .rating-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.85);
   }
 
-  .price-info {
+  .stars-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  .rating-value {
+    font-weight: 700;
+    color: #FF9900;
+  }
+
+  .review-count {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .sales-tag {
+    padding: 0.125rem 0.375rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Price section - prominent and clean */
+  .price-section {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.375rem;
   }
 
   .current-price {
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 1.375rem;
+    font-size: 1.25rem;
     font-weight: 800;
-    color: white;
     background: var(--color-brutal-yellow, #FFE14D);
     color: var(--color-brutal-black, #1A1A1A);
-    padding: 0.25rem 0.625rem;
+    padding: 0.2rem 0.5rem;
     border: 2px solid var(--color-brutal-black, #1A1A1A);
-    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
   .original-price {
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.5);
     text-decoration: line-through;
     text-decoration-thickness: 2px;
   }
 
-  .discount-badge {
-    padding: 0.25rem 0.5rem;
+  .discount-tag {
+    padding: 0.15rem 0.375rem;
     background: var(--color-brutal-orange, #FF6B35);
     border: 2px solid var(--color-brutal-black, #1A1A1A);
     box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
     color: white;
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 900;
+  }
+
+  /* Deal line - consolidated deal indicators */
+  .deal-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .deal-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.375rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    border-radius: 2px;
+  }
+
+  .deal-tag.lowest {
+    background: #059669;
+    color: white;
+  }
+
+  .deal-tag.drop {
+    background: #DC2626;
+    color: white;
+  }
+
+  .deal-tag.below {
+    background: rgba(5, 150, 105, 0.2);
+    color: #34D399;
+  }
+
+  .coupon-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.375rem;
+    background: #00A661;
+    color: white;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    border-radius: 2px;
+  }
+
+  .coupon-tag svg {
+    flex-shrink: 0;
   }
 
   /* FLOATING CTA - Always visible at bottom */
@@ -891,19 +1414,87 @@ const truncatedDescription = shouldTruncate
     left: 0;
     right: 0;
     z-index: 100;
-    padding: 0.75rem 1rem;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem); /* Space for bottom nav */
+    padding: 0.625rem 0.875rem;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem); /* Space for bottom nav */
     background: linear-gradient(to top,
       rgba(0, 0, 0, 0.95) 0%,
-      rgba(0, 0, 0, 0.8) 50%,
+      rgba(0, 0, 0, 0.85) 50%,
       transparent 100%);
+  }
+
+  .cta-buttons-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  /* Add to Cart Button - Brutalist Style */
+  .add-to-cart-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    flex-shrink: 0;
+    background: var(--color-cream, #FFFEF9);
+    color: var(--color-brutal-black, #1A1A1A);
+    border: 4px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .add-to-cart-btn:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .add-to-cart-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .add-to-cart-btn .plus-icon {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: var(--color-brutal-orange, #FF6B35);
+    border-radius: 50%;
+    padding: 2px;
+    stroke: white;
+    stroke-width: 3;
+  }
+
+  /* Success state for cart button */
+  .add-to-cart-btn.added {
+    background: #22c55e;
+    color: white;
+  }
+
+  .add-to-cart-btn.added .plus-icon {
+    display: none;
+  }
+
+  .add-to-cart-btn.added::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
   }
 
   .buy-button-floating {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    flex: 1;
     padding: 0.875rem 1rem;
     background: #FF9900;
     color: var(--color-brutal-black, #1A1A1A);
@@ -1089,6 +1680,252 @@ const truncatedDescription = shouldTruncate
       max-height: 480px;
     }
   }
+
+  /* === EXTRA SMALL SCREENS (iPhone SE, etc.) - 320px width === */
+  @media (max-width: 340px) {
+    /* Reduce product container padding */
+    .product-container {
+      padding: 0.75rem;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 65px);
+    }
+
+    /* Smaller product image/carousel */
+    .product-3d,
+    .product-carousel {
+      max-width: 220px;
+      max-height: 220px;
+    }
+
+    .product-shadow {
+      bottom: -8px;
+      right: -8px;
+    }
+
+    .product-image-wrapper {
+      border-width: 3px;
+      padding: 0.75rem;
+    }
+
+    .product-carousel {
+      border-width: 3px;
+      box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .carousel-slide {
+      padding: 1rem;
+    }
+
+    /* Smaller video container */
+    .product-video-container {
+      width: clamp(200px, 80vw, 260px);
+      border-width: 2px;
+      box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .product-video-container.is-short {
+      width: clamp(110px, 40vw, 150px);
+      max-height: 40vh;
+    }
+
+    .video-play-btn {
+      width: 56px;
+      height: 56px;
+      border-width: 3px;
+      box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .video-play-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .video-channel-badge {
+      padding: 4px 8px;
+      font-size: 0.5625rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .video-channel-badge span {
+      max-width: 70px;
+    }
+
+    /* Compact product info */
+    .product-info {
+      padding: 0.75rem 0.75rem 0.5rem;
+      padding-right: 3.5rem;
+    }
+
+    .info-top-row {
+      margin-bottom: 0.375rem;
+      gap: 0.5rem;
+    }
+
+    .brand-badge {
+      padding: 0.1875rem 0.5rem;
+      font-size: 0.5625rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .rating-compact {
+      font-size: 0.6875rem;
+    }
+
+    .rating-compact svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .product-title {
+      font-size: 0.875rem;
+      margin-bottom: 0.375rem;
+      line-height: 1.25;
+    }
+
+    .price-row {
+      gap: 0.5rem;
+    }
+
+    .price-info {
+      gap: 0.375rem;
+    }
+
+    .current-price {
+      font-size: 1.125rem;
+      padding: 0.1875rem 0.5rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .original-price {
+      font-size: 0.75rem;
+    }
+
+    .discount-badge {
+      padding: 0.1875rem 0.375rem;
+      font-size: 0.625rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    /* Compact floating CTA */
+    .floating-cta {
+      padding: 0.5rem 0.625rem;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+    }
+
+    .cta-buttons-row {
+      gap: 0.5rem;
+    }
+
+    .add-to-cart-btn {
+      width: 44px;
+      border-width: 3px;
+      box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .add-to-cart-btn svg:first-child {
+      width: 18px;
+      height: 18px;
+    }
+
+    .add-to-cart-btn .plus-icon {
+      width: 10px;
+      height: 10px;
+      bottom: 4px;
+      right: 4px;
+    }
+
+    .buy-button-floating {
+      padding: 0.625rem 0.75rem;
+      border-width: 3px;
+      box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .buy-button-floating:hover {
+      box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .buy-button-content {
+      gap: 0.5rem;
+    }
+
+    .amazon-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .buy-text {
+      font-size: 0.6875rem;
+    }
+
+    .buy-button-floating .arrow-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Smaller carousel nav buttons */
+    .carousel-nav {
+      width: 32px;
+      height: 32px;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .carousel-nav svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .carousel-prev {
+      left: 6px;
+    }
+
+    .carousel-next {
+      right: 6px;
+    }
+
+    .carousel-indicators {
+      padding: 4px 8px;
+      gap: 6px;
+    }
+
+    .carousel-dot {
+      width: 8px;
+      height: 8px;
+    }
+
+    .carousel-count {
+      padding: 3px 6px;
+      font-size: 0.5625rem;
+    }
+
+    /* Smaller scroll indicator */
+    .scroll-indicator {
+      margin-top: 0.75rem;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.5625rem;
+    }
+
+    .scroll-indicator svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Optional video button */
+    .optional-video-btn {
+      padding: 6px 10px;
+      border-width: 2px;
+      box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+      font-size: 0.625rem;
+    }
+
+    .optional-video-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
 </style>
 
 <script>
@@ -1126,6 +1963,18 @@ const truncatedDescription = shouldTruncate
 
         // Don't do anything if we're already at the target slide
         if (previousIndex === currentIndex && index !== currentIndex) return;
+
+        // Pause any playing video in the previous slide
+        if (previousIndex !== currentIndex) {
+          const prevSlide = slides[previousIndex] as HTMLElement;
+          if (prevSlide?.classList.contains('carousel-slide--video') && prevSlide.classList.contains('is-playing')) {
+            const iframe = prevSlide.querySelector('.video-iframe') as HTMLIFrameElement;
+            if (iframe) {
+              iframe.src = '';
+              prevSlide.classList.remove('is-playing');
+            }
+          }
+        }
 
         track.style.transform = `translateX(-${currentIndex * 100}%)`;
 
@@ -1293,19 +2142,436 @@ const truncatedDescription = shouldTruncate
     });
   }
 
+  // Optional video modal functionality
+  let videoModal: HTMLElement | null = null;
+
+  function createVideoModal() {
+    if (videoModal) return videoModal;
+
+    const modal = document.createElement('div');
+    modal.className = 'video-modal-overlay';
+    modal.innerHTML = `
+      <div class="video-modal-content">
+        <button class="video-modal-close" aria-label="Close video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        <iframe class="video-modal-iframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <div class="video-modal-channel">
+          <svg viewBox="0 0 24 24" fill="#ff0000" width="16" height="16">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+            <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
+          </svg>
+          <span class="channel-name"></span>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    videoModal = modal;
+
+    // Close button handler
+    const closeBtn = modal.querySelector('.video-modal-close');
+    closeBtn?.addEventListener('click', closeVideoModal);
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeVideoModal();
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeVideoModal();
+      }
+    });
+
+    return modal;
+  }
+
+  function openVideoModal(embedUrl: string, channelTitle: string) {
+    const modal = createVideoModal();
+    const iframe = modal.querySelector('.video-modal-iframe') as HTMLIFrameElement;
+    const channelSpan = modal.querySelector('.channel-name');
+
+    if (iframe) {
+      // Add autoplay to the URL
+      const autoplayUrl = embedUrl.includes('?')
+        ? `${embedUrl}&autoplay=1`
+        : `${embedUrl}?autoplay=1`;
+      iframe.src = autoplayUrl;
+    }
+
+    if (channelSpan) {
+      channelSpan.textContent = channelTitle;
+    }
+
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoModal() {
+    if (!videoModal) return;
+
+    const iframe = videoModal.querySelector('.video-modal-iframe') as HTMLIFrameElement;
+    if (iframe) {
+      iframe.src = ''; // Stop the video
+    }
+
+    videoModal.classList.remove('is-open');
+    document.body.style.overflow = '';
+  }
+
+  function initOptionalVideoButtons() {
+    document.querySelectorAll('[data-optional-video-btn]').forEach((btn) => {
+      const button = btn as HTMLElement;
+
+      // Skip if already initialized
+      if (button.dataset.optionalVideoInitialized) return;
+      button.dataset.optionalVideoInitialized = 'true';
+
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const embedUrl = button.dataset.embedUrl;
+        const channelTitle = button.dataset.channelTitle || '';
+
+        if (embedUrl) {
+          openVideoModal(embedUrl, channelTitle);
+        }
+      });
+    });
+  }
+
+  // Toast notification system
+  let toastContainer: HTMLElement | null = null;
+  let toastTimeout: number | null = null;
+
+  function createToastContainer() {
+    if (toastContainer) return toastContainer;
+
+    const container = document.createElement('div');
+    container.id = 'cart-toast-container';
+    container.innerHTML = `
+      <style>
+        #cart-toast-container {
+          position: fixed;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
+          left: 50%;
+          transform: translateX(-50%) translateY(100px);
+          z-index: 9999;
+          opacity: 0;
+          transition: transform 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6), opacity 0.3s ease;
+          pointer-events: none;
+        }
+        #cart-toast-container.visible {
+          transform: translateX(-50%) translateY(0);
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .cart-toast {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          background: var(--color-brutal-black, #1A1A1A);
+          border: 3px solid var(--color-brutal-yellow, #FFE14D);
+          box-shadow: 6px 6px 0 var(--color-brutal-yellow, #FFE14D);
+          max-width: 340px;
+        }
+        .toast-image {
+          width: 48px;
+          height: 48px;
+          object-fit: contain;
+          background: white;
+          border: 2px solid var(--color-brutal-black, #1A1A1A);
+          flex-shrink: 0;
+        }
+        .toast-content {
+          flex: 1;
+          min-width: 0;
+        }
+        .toast-title {
+          font-family: var(--font-display, 'Space Grotesk', sans-serif);
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: white;
+          margin: 0 0 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
+        }
+        .toast-message {
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.6875rem;
+          color: var(--color-brutal-yellow, #FFE14D);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin: 0;
+        }
+        .toast-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 12px;
+          background: var(--color-brutal-yellow, #FFE14D);
+          border: 2px solid var(--color-brutal-black, #1A1A1A);
+          color: var(--color-brutal-black, #1A1A1A);
+          font-family: var(--font-mono, 'JetBrains Mono', monospace);
+          font-size: 0.625rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .toast-action:hover {
+          background: var(--color-brutal-orange, #FF6B35);
+        }
+        @media (max-width: 380px) {
+          #cart-toast-container {
+            left: 8px;
+            right: 8px;
+            transform: translateX(0) translateY(100px);
+          }
+          #cart-toast-container.visible {
+            transform: translateX(0) translateY(0);
+          }
+          .cart-toast {
+            padding: 10px 12px;
+            gap: 10px;
+          }
+          .toast-image {
+            width: 40px;
+            height: 40px;
+          }
+          .toast-title {
+            font-size: 0.75rem;
+            max-width: 120px;
+          }
+          .toast-action {
+            padding: 6px 10px;
+            font-size: 0.5625rem;
+          }
+        }
+      </style>
+      <div class="cart-toast">
+        <img class="toast-image" src="" alt="" />
+        <div class="toast-content">
+          <p class="toast-title"></p>
+          <p class="toast-message"></p>
+        </div>
+        <button type="button" class="toast-action"></button>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+    toastContainer = container;
+
+    // View cart action
+    const actionBtn = container.querySelector('.toast-action');
+    actionBtn?.addEventListener('click', () => {
+      hideToast();
+      window.dispatchEvent(new CustomEvent('cart:open'));
+    });
+
+    return container;
+  }
+
+  function showToast(product: { title: string; image: string }, lang: string = 'es') {
+    const container = createToastContainer();
+    const imgEl = container.querySelector('.toast-image') as HTMLImageElement;
+    const titleEl = container.querySelector('.toast-title');
+    const messageEl = container.querySelector('.toast-message');
+    const actionEl = container.querySelector('.toast-action');
+
+    if (imgEl) {
+      imgEl.src = product.image || '';
+      imgEl.alt = product.title;
+    }
+    if (titleEl) {
+      titleEl.textContent = product.title;
+    }
+    if (messageEl) {
+      messageEl.textContent = lang === 'es' ? 'Agregado al carrito' : 'Added to cart';
+    }
+    if (actionEl) {
+      actionEl.textContent = lang === 'es' ? 'Ver carrito' : 'View cart';
+    }
+
+    // Clear existing timeout
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+    }
+
+    // Show toast
+    requestAnimationFrame(() => {
+      container.classList.add('visible');
+    });
+
+    // Auto-hide after 3 seconds
+    toastTimeout = window.setTimeout(() => {
+      hideToast();
+    }, 3000);
+  }
+
+  function hideToast() {
+    if (toastContainer) {
+      toastContainer.classList.remove('visible');
+    }
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+      toastTimeout = null;
+    }
+  }
+
+  // Add to Cart button functionality
+  function initAddToCartButtons() {
+    const currentLang = document.documentElement.lang || 'es';
+
+    document.querySelectorAll('[data-add-to-cart]').forEach((btn) => {
+      const button = btn as HTMLElement;
+
+      // Skip if already initialized
+      if (button.dataset.addToCartInitialized) return;
+      button.dataset.addToCartInitialized = 'true';
+
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        // Check if cart API is available
+        if (!(window as any).cart) {
+          console.warn('Cart API not available');
+          return;
+        }
+
+        // Get product data from data attributes
+        const product = {
+          asin: button.dataset.asin || '',
+          productId: button.dataset.productId || '',
+          title: button.dataset.title || '',
+          brand: button.dataset.brand || '',
+          image: button.dataset.image || '',
+          price: parseFloat(button.dataset.price || '0'),
+          currency: button.dataset.currency || 'USD',
+          affiliateUrl: button.dataset.affiliateUrl || '',
+        };
+
+        // Add to cart
+        (window as any).cart.add(product);
+
+        // Show toast notification
+        showToast({ title: product.title, image: product.image }, currentLang);
+
+        // Visual feedback - show "added" state
+        button.classList.add('added');
+
+        // Remove the "added" state after animation
+        setTimeout(() => {
+          button.classList.remove('added');
+        }, 1500);
+      });
+    });
+  }
+
+  // Initialize price sparklines
+  function initSparklines() {
+    document.querySelectorAll('.price-sparkline').forEach((container) => {
+      const sparklineEl = container as HTMLElement;
+
+      // Skip if already initialized
+      if (sparklineEl.dataset.sparklineInit) return;
+      sparklineEl.dataset.sparklineInit = 'true';
+
+      const pricesStr = sparklineEl.dataset.prices;
+      if (!pricesStr) return;
+
+      try {
+        const prices = JSON.parse(pricesStr) as number[];
+        if (prices.length < 2) return;
+
+        const svg = sparklineEl.querySelector('.sparkline-svg');
+        if (!svg) return;
+
+        // Calculate min/max for normalization
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const range = max - min || 1;
+
+        // Generate path points
+        const width = 60;
+        const height = 20;
+        const padding = 2;
+        const effectiveHeight = height - padding * 2;
+        const effectiveWidth = width - padding * 2;
+
+        const points = prices.map((price, i) => {
+          const x = padding + (i / (prices.length - 1)) * effectiveWidth;
+          const y = padding + effectiveHeight - ((price - min) / range) * effectiveHeight;
+          return { x, y };
+        });
+
+        // Create line path
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+        // Create area path (line + close to bottom)
+        const areaPath = linePath +
+          ` L ${points[points.length - 1].x.toFixed(1)} ${height - padding}` +
+          ` L ${padding} ${height - padding} Z`;
+
+        // Add paths to SVG
+        svg.innerHTML = `
+          <path class="sparkline-area" d="${areaPath}" />
+          <path d="${linePath}" />
+        `;
+
+        // Color the line based on trend (last vs first price)
+        const trend = prices[prices.length - 1] < prices[0] ? 'down' : 'up';
+        const lineEl = svg.querySelector('path:not(.sparkline-area)') as SVGPathElement;
+        const areaEl = svg.querySelector('.sparkline-area') as SVGPathElement;
+
+        if (trend === 'down') {
+          // Price went down - green (good for buyer)
+          lineEl?.setAttribute('stroke', '#34D399');
+          areaEl?.setAttribute('fill', 'rgba(52, 211, 153, 0.2)');
+        } else {
+          // Price went up - red (not ideal)
+          lineEl?.setAttribute('stroke', '#F87171');
+          areaEl?.setAttribute('fill', 'rgba(248, 113, 113, 0.15)');
+        }
+      } catch (e) {
+        console.error('Error initializing sparkline:', e);
+      }
+    });
+  }
+
   // Run on load and after Astro page transitions
   initProductSlide();
   initSeeMore();
   initVideoPlayers();
+  initOptionalVideoButtons();
+  initAddToCartButtons();
+  initSparklines();
   document.addEventListener('astro:after-swap', () => {
     initProductSlide();
     initSeeMore();
     initVideoPlayers();
+    initOptionalVideoButtons();
+    initAddToCartButtons();
+    initSparklines();
   });
 
   // Also re-init when new slides are dynamically added to the feed
   const feedObserver = new MutationObserver(() => {
     initVideoPlayers();
+    initOptionalVideoButtons();
+    initAddToCartButtons();
+    initSparklines();
   });
 
   const feedContainer = document.getElementById('reel-slides');
