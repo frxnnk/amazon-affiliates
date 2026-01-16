@@ -1,4 +1,4 @@
-import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, ProductViews, ProductLikes, eq, desc, and, like, or, gte, lte, asc } from 'astro:db';
+import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, ProductViews, ProductLikes, ProductReviews, ReviewHelpfulVotes, AmazonReviews, eq, desc, and, like, or, gte, lte, asc, sql } from 'astro:db';
 
 // Tier thresholds
 const TIER_THRESHOLDS = {
@@ -562,6 +562,13 @@ export interface ProductInput {
   model?: string;
   description: string;
   shortDescription?: string;
+  // Text variants for different contexts
+  displayTitle?: string;      // Clean UI title (max 60 chars)
+  seoTitle?: string;          // Meta title (max 70 chars)
+  shortTitle?: string;        // Badges/compact (max 30 chars)
+  metaDescription?: string;   // SEO meta (max 160 chars)
+  cardDescription?: string;   // ProductCard (max 200 chars)
+  fullDescription?: string;   // Full markdown content
   category?: string;
   subcategory?: string;
   tags?: string[];
@@ -746,6 +753,13 @@ export async function createProduct(data: ProductInput) {
     model: data.model,
     description: data.description,
     shortDescription: data.shortDescription,
+    // Text variants
+    displayTitle: data.displayTitle,
+    seoTitle: data.seoTitle,
+    shortTitle: data.shortTitle,
+    metaDescription: data.metaDescription,
+    cardDescription: data.cardDescription,
+    fullDescription: data.fullDescription,
     category: data.category,
     subcategory: data.subcategory,
     tags: data.tags || [],
@@ -1327,18 +1341,32 @@ export async function cleanupPriceHistory(daysToKeep: number = 90) {
 }
 
 /**
+ * Price stats returned by checkLowestPrices
+ */
+export interface PriceStats {
+  isLowest: boolean;
+  lowestPrice: number;
+  percentBelowAvg: number;
+  priceHistory?: number[];  // Last 30 days prices for sparkline
+  priceDrop7Days?: number;  // % price drop in last 7 days
+}
+
+/**
  * Check if current prices are the lowest in 30 days (batch operation)
- * Returns a map of ASIN to { isLowest, lowestPrice, percentBelowAvg }
+ * Returns a map of ASIN to { isLowest, lowestPrice, percentBelowAvg, priceHistory, priceDrop7Days }
  */
 export async function checkLowestPrices(
   products: Array<{ asin: string; currentPrice: number }>,
   marketplace: string = 'com'
-): Promise<Map<string, { isLowest: boolean; lowestPrice: number; percentBelowAvg: number }>> {
-  const results = new Map<string, { isLowest: boolean; lowestPrice: number; percentBelowAvg: number }>();
+): Promise<Map<string, PriceStats>> {
+  const results = new Map<string, PriceStats>();
 
   // Get all price history for these ASINs in last 30 days
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
+
+  const startDate7Days = new Date();
+  startDate7Days.setDate(startDate7Days.getDate() - 7);
 
   const allHistory = await db.select()
     .from(PriceHistory)
@@ -1346,14 +1374,15 @@ export async function checkLowestPrices(
       eq(PriceHistory.marketplace, marketplace),
       gte(PriceHistory.recordedAt, startDate)
     ))
+    .orderBy(asc(PriceHistory.recordedAt))
     .all();
 
-  // Group by ASIN
-  const historyByAsin = new Map<string, number[]>();
+  // Group by ASIN with timestamps
+  const historyByAsin = new Map<string, Array<{ price: number; date: Date }>>();
   allHistory.forEach(h => {
-    const prices = historyByAsin.get(h.asin) || [];
-    prices.push(h.price);
-    historyByAsin.set(h.asin, prices);
+    const entries = historyByAsin.get(h.asin) || [];
+    entries.push({ price: h.price, date: h.recordedAt });
+    historyByAsin.set(h.asin, entries);
   });
 
   // Check each product
@@ -1362,19 +1391,59 @@ export async function checkLowestPrices(
 
     if (!history || history.length === 0) {
       // No history - can't determine if lowest
-      results.set(product.asin, { isLowest: false, lowestPrice: product.currentPrice, percentBelowAvg: 0 });
+      results.set(product.asin, {
+        isLowest: false,
+        lowestPrice: product.currentPrice,
+        percentBelowAvg: 0,
+        priceHistory: undefined,
+        priceDrop7Days: undefined
+      });
       continue;
     }
 
-    const lowestHistorical = Math.min(...history);
-    const avgPrice = history.reduce((a, b) => a + b, 0) / history.length;
+    const prices = history.map(h => h.price);
+    const lowestHistorical = Math.min(...prices);
+    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
     const isLowest = product.currentPrice <= lowestHistorical;
     const percentBelowAvg = avgPrice > 0 ? Math.round(((avgPrice - product.currentPrice) / avgPrice) * 100) : 0;
+
+    // Calculate 7-day price drop
+    let priceDrop7Days: number | undefined = undefined;
+    const history7DaysAgo = history.filter(h => h.date <= startDate7Days);
+    if (history7DaysAgo.length > 0) {
+      // Get the oldest price from ~7 days ago
+      const oldestPrice7Days = history7DaysAgo[history7DaysAgo.length - 1].price;
+      if (oldestPrice7Days > product.currentPrice) {
+        priceDrop7Days = Math.round(((oldestPrice7Days - product.currentPrice) / oldestPrice7Days) * 100);
+      }
+    }
+
+    // Prepare sparkline data (sample up to 15 points for smoother display)
+    let priceHistory: number[] | undefined = undefined;
+    if (prices.length >= 3) {
+      if (prices.length <= 15) {
+        priceHistory = prices;
+      } else {
+        // Sample evenly from the array
+        const step = Math.floor(prices.length / 15);
+        priceHistory = [];
+        for (let i = 0; i < prices.length; i += step) {
+          priceHistory.push(prices[i]);
+          if (priceHistory.length >= 15) break;
+        }
+        // Always include the last (current) price
+        if (priceHistory[priceHistory.length - 1] !== prices[prices.length - 1]) {
+          priceHistory.push(prices[prices.length - 1]);
+        }
+      }
+    }
 
     results.set(product.asin, {
       isLowest,
       lowestPrice: Math.min(lowestHistorical, product.currentPrice),
       percentBelowAvg: Math.max(0, percentBelowAvg), // Only positive values
+      priceHistory,
+      priceDrop7Days: priceDrop7Days && priceDrop7Days > 0 ? priceDrop7Days : undefined,
     });
   }
 
@@ -1535,4 +1604,605 @@ export async function expireCuratedDeals() {
 export async function isCuratedDeal(asin: string, marketplace: string = 'com'): Promise<boolean> {
   const deal = await getCuratedDealByAsin(asin, marketplace);
   return deal !== undefined && deal.isActive === true;
+}
+
+// ==================== REVIEW FUNCTIONS ====================
+
+export interface ReviewInput {
+  userId: string;
+  asin: string;
+  productId?: string;
+  rating: number; // 1-5
+  title?: string;
+  content: string;
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  distribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
+  verifiedPurchaseCount: number;
+}
+
+// Get reviews for a product
+export async function getProductReviews(
+  asin: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+    sortBy?: 'recent' | 'helpful' | 'highest' | 'lowest';
+    filterStars?: number;
+    verifiedOnly?: boolean;
+    approvedOnly?: boolean;
+  }
+) {
+  const limit = options?.limit || 20;
+  const offset = options?.offset || 0;
+
+  // Build conditions
+  const conditions = [
+    eq(ProductReviews.asin, asin),
+    eq(ProductReviews.isVisible, true),
+  ];
+
+  if (options?.approvedOnly !== false) {
+    conditions.push(eq(ProductReviews.isApproved, true));
+  }
+
+  if (options?.filterStars) {
+    conditions.push(eq(ProductReviews.rating, options.filterStars));
+  }
+
+  if (options?.verifiedOnly) {
+    conditions.push(eq(ProductReviews.isVerifiedPurchase, true));
+  }
+
+  let query = db.select().from(ProductReviews).where(and(...conditions));
+
+  // Apply sorting
+  switch (options?.sortBy) {
+    case 'helpful':
+      query = query.orderBy(desc(ProductReviews.helpfulCount), desc(ProductReviews.createdAt)) as typeof query;
+      break;
+    case 'highest':
+      query = query.orderBy(desc(ProductReviews.rating), desc(ProductReviews.createdAt)) as typeof query;
+      break;
+    case 'lowest':
+      query = query.orderBy(asc(ProductReviews.rating), desc(ProductReviews.createdAt)) as typeof query;
+      break;
+    case 'recent':
+    default:
+      query = query.orderBy(desc(ProductReviews.createdAt)) as typeof query;
+      break;
+  }
+
+  query = query.limit(limit).offset(offset) as typeof query;
+
+  return query.all();
+}
+
+// Get review stats for a product
+export async function getReviewStats(asin: string): Promise<ReviewStats> {
+  const reviews = await db.select()
+    .from(ProductReviews)
+    .where(and(
+      eq(ProductReviews.asin, asin),
+      eq(ProductReviews.isVisible, true),
+      eq(ProductReviews.isApproved, true)
+    ))
+    .all();
+
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let totalRating = 0;
+  let verifiedCount = 0;
+
+  for (const review of reviews) {
+    const rating = Math.min(5, Math.max(1, Math.round(review.rating)));
+    distribution[rating as keyof typeof distribution]++;
+    totalRating += review.rating;
+    if (review.isVerifiedPurchase) verifiedCount++;
+  }
+
+  return {
+    averageRating: reviews.length > 0 ? totalRating / reviews.length : 0,
+    totalReviews: reviews.length,
+    distribution,
+    verifiedPurchaseCount: verifiedCount,
+  };
+}
+
+// Create a new review
+export async function createReview(data: ReviewInput) {
+  // Check if user already reviewed this product
+  const existing = await getUserReview(data.userId, data.asin);
+  if (existing) {
+    throw new Error('User has already reviewed this product');
+  }
+
+  // Check for verified purchase
+  let isVerifiedPurchase = false;
+  let purchaseClaimId: number | undefined;
+
+  const verifiedClaim = await db.select()
+    .from(PurchaseClaims)
+    .where(and(
+      eq(PurchaseClaims.userId, data.userId),
+      eq(PurchaseClaims.status, 'approved')
+    ))
+    .all();
+
+  // Try to match by productId or a simple ASIN match in productSlug
+  for (const claim of verifiedClaim) {
+    if (data.productId && claim.productSlug === data.productId) {
+      isVerifiedPurchase = true;
+      purchaseClaimId = claim.id;
+      break;
+    }
+  }
+
+  const now = new Date();
+
+  await db.insert(ProductReviews).values({
+    userId: data.userId,
+    asin: data.asin,
+    productId: data.productId,
+    rating: Math.min(5, Math.max(1, data.rating)),
+    title: data.title?.slice(0, 100),
+    content: data.content,
+    isVerifiedPurchase,
+    purchaseClaimId,
+    isVisible: true,
+    isApproved: false, // Requires moderation
+    helpfulCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return getUserReview(data.userId, data.asin);
+}
+
+// Update a review
+export async function updateReview(
+  reviewId: number,
+  userId: string,
+  data: { rating?: number; title?: string; content?: string }
+) {
+  const review = await db.select()
+    .from(ProductReviews)
+    .where(and(
+      eq(ProductReviews.id, reviewId),
+      eq(ProductReviews.userId, userId)
+    ))
+    .get();
+
+  if (!review) {
+    throw new Error('Review not found or not owned by user');
+  }
+
+  const updateData: Record<string, any> = {
+    updatedAt: new Date(),
+    isApproved: false, // Re-require moderation after edit
+  };
+
+  if (data.rating !== undefined) {
+    updateData.rating = Math.min(5, Math.max(1, data.rating));
+  }
+  if (data.title !== undefined) {
+    updateData.title = data.title.slice(0, 100);
+  }
+  if (data.content !== undefined) {
+    updateData.content = data.content;
+  }
+
+  await db.update(ProductReviews)
+    .set(updateData)
+    .where(eq(ProductReviews.id, reviewId));
+
+  return db.select().from(ProductReviews).where(eq(ProductReviews.id, reviewId)).get();
+}
+
+// Delete a review
+export async function deleteReview(reviewId: number, userId: string) {
+  const review = await db.select()
+    .from(ProductReviews)
+    .where(and(
+      eq(ProductReviews.id, reviewId),
+      eq(ProductReviews.userId, userId)
+    ))
+    .get();
+
+  if (!review) {
+    throw new Error('Review not found or not owned by user');
+  }
+
+  // Delete helpful votes first
+  await db.delete(ReviewHelpfulVotes).where(eq(ReviewHelpfulVotes.reviewId, reviewId));
+
+  // Delete the review
+  await db.delete(ProductReviews).where(eq(ProductReviews.id, reviewId));
+
+  return review;
+}
+
+// Check if user has reviewed a product
+export async function hasUserReviewed(userId: string, asin: string): Promise<boolean> {
+  const review = await getUserReview(userId, asin);
+  return review !== undefined;
+}
+
+// Get user's review for a product
+export async function getUserReview(userId: string, asin: string) {
+  return db.select()
+    .from(ProductReviews)
+    .where(and(
+      eq(ProductReviews.userId, userId),
+      eq(ProductReviews.asin, asin)
+    ))
+    .get();
+}
+
+// Vote on review helpfulness
+export async function voteReviewHelpful(reviewId: number, userId: string, isHelpful: boolean) {
+  // Check if vote already exists
+  const existing = await db.select()
+    .from(ReviewHelpfulVotes)
+    .where(and(
+      eq(ReviewHelpfulVotes.reviewId, reviewId),
+      eq(ReviewHelpfulVotes.userId, userId)
+    ))
+    .get();
+
+  if (existing) {
+    // Update existing vote
+    await db.update(ReviewHelpfulVotes)
+      .set({ isHelpful, createdAt: new Date() })
+      .where(eq(ReviewHelpfulVotes.id, existing.id));
+  } else {
+    // Create new vote
+    await db.insert(ReviewHelpfulVotes).values({
+      reviewId,
+      userId,
+      isHelpful,
+      createdAt: new Date(),
+    });
+  }
+
+  // Update cached count
+  await updateReviewHelpfulCount(reviewId);
+
+  return getUserReviewVote(reviewId, userId);
+}
+
+// Get user's vote for a review
+export async function getUserReviewVote(reviewId: number, userId: string) {
+  return db.select()
+    .from(ReviewHelpfulVotes)
+    .where(and(
+      eq(ReviewHelpfulVotes.reviewId, reviewId),
+      eq(ReviewHelpfulVotes.userId, userId)
+    ))
+    .get();
+}
+
+// Update cached helpful count for a review
+async function updateReviewHelpfulCount(reviewId: number) {
+  const votes = await db.select()
+    .from(ReviewHelpfulVotes)
+    .where(and(
+      eq(ReviewHelpfulVotes.reviewId, reviewId),
+      eq(ReviewHelpfulVotes.isHelpful, true)
+    ))
+    .all();
+
+  await db.update(ProductReviews)
+    .set({ helpfulCount: votes.length })
+    .where(eq(ProductReviews.id, reviewId));
+}
+
+// Get review by ID
+export async function getReviewById(reviewId: number) {
+  return db.select()
+    .from(ProductReviews)
+    .where(eq(ProductReviews.id, reviewId))
+    .get();
+}
+
+// ==================== ADMIN REVIEW FUNCTIONS ====================
+
+// Get pending reviews for moderation
+export async function getPendingReviews(limit = 50) {
+  return db.select()
+    .from(ProductReviews)
+    .where(and(
+      eq(ProductReviews.isVisible, true),
+      eq(ProductReviews.isApproved, false)
+    ))
+    .orderBy(asc(ProductReviews.createdAt))
+    .limit(limit)
+    .all();
+}
+
+// Get all reviews for admin (with filters)
+export async function getAdminReviews(options?: {
+  status?: 'pending' | 'approved' | 'rejected';
+  limit?: number;
+  offset?: number;
+}) {
+  const conditions = [];
+
+  if (options?.status === 'pending') {
+    conditions.push(eq(ProductReviews.isApproved, false));
+    conditions.push(eq(ProductReviews.isVisible, true));
+  } else if (options?.status === 'approved') {
+    conditions.push(eq(ProductReviews.isApproved, true));
+  } else if (options?.status === 'rejected') {
+    conditions.push(eq(ProductReviews.isVisible, false));
+  }
+
+  let query = db.select().from(ProductReviews);
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
+  }
+
+  query = query.orderBy(desc(ProductReviews.createdAt)) as typeof query;
+
+  if (options?.limit) {
+    query = query.limit(options.limit) as typeof query;
+  }
+  if (options?.offset) {
+    query = query.offset(options.offset) as typeof query;
+  }
+
+  return query.all();
+}
+
+// Moderate a review (approve/reject)
+export async function moderateReview(
+  reviewId: number,
+  adminUserId: string,
+  action: 'approve' | 'reject',
+  note?: string
+) {
+  const review = await getReviewById(reviewId);
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  const now = new Date();
+
+  await db.update(ProductReviews)
+    .set({
+      isApproved: action === 'approve',
+      isVisible: action === 'approve', // Hide rejected reviews
+      moderatedBy: adminUserId,
+      moderatedAt: now,
+      moderationNote: note,
+      updatedAt: now,
+    })
+    .where(eq(ProductReviews.id, reviewId));
+
+  return getReviewById(reviewId);
+}
+
+// Admin delete review
+export async function adminDeleteReview(reviewId: number) {
+  const review = await getReviewById(reviewId);
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  // Delete helpful votes first
+  await db.delete(ReviewHelpfulVotes).where(eq(ReviewHelpfulVotes.reviewId, reviewId));
+
+  // Delete the review
+  await db.delete(ProductReviews).where(eq(ProductReviews.id, reviewId));
+
+  return review;
+}
+
+// ==========================================
+// AMAZON REVIEWS (Imported from RapidAPI)
+// ==========================================
+
+export interface AmazonReviewInput {
+  asin: string;
+  productId?: string;
+  externalId: string;
+  title?: string;
+  content: string;
+  rating: number;
+  reviewerName?: string;
+  reviewerUrl?: string;
+  isVerifiedPurchase?: boolean;
+  helpfulCount?: number;
+  reviewDate?: string;
+  images?: string[];
+  source?: string;
+  marketplace?: string;
+}
+
+/**
+ * Save Amazon reviews to database (upsert - skip existing)
+ */
+export async function saveAmazonReviews(reviews: AmazonReviewInput[]): Promise<number> {
+  let savedCount = 0;
+
+  for (const review of reviews) {
+    try {
+      // Check if review already exists
+      const existing = await db.select()
+        .from(AmazonReviews)
+        .where(eq(AmazonReviews.externalId, review.externalId))
+        .get();
+
+      if (!existing) {
+        await db.insert(AmazonReviews).values({
+          asin: review.asin,
+          productId: review.productId,
+          externalId: review.externalId,
+          title: review.title,
+          content: review.content,
+          rating: review.rating,
+          reviewerName: review.reviewerName,
+          reviewerUrl: review.reviewerUrl,
+          isVerifiedPurchase: review.isVerifiedPurchase ?? false,
+          helpfulCount: review.helpfulCount ?? 0,
+          reviewDate: review.reviewDate,
+          images: review.images,
+          source: review.source ?? 'rapidapi',
+          marketplace: review.marketplace ?? 'com',
+          fetchedAt: new Date(),
+        });
+        savedCount++;
+      }
+    } catch (error) {
+      // Skip duplicate entries silently
+      console.error('Error saving Amazon review:', error);
+    }
+  }
+
+  return savedCount;
+}
+
+/**
+ * Get Amazon reviews for a product
+ */
+export async function getAmazonReviews(
+  asin: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    sortBy?: 'recent' | 'helpful' | 'highest' | 'lowest';
+    minRating?: number;
+    verifiedOnly?: boolean;
+  } = {}
+): Promise<{
+  reviews: any[];
+  total: number;
+  stats: {
+    averageRating: number;
+    totalReviews: number;
+    ratingBreakdown: Record<number, number>;
+    verifiedCount: number;
+  };
+}> {
+  const { limit = 10, offset = 0, sortBy = 'helpful', minRating, verifiedOnly } = options;
+
+  // Build conditions
+  const conditions = [eq(AmazonReviews.asin, asin)];
+
+  if (minRating) {
+    conditions.push(gte(AmazonReviews.rating, minRating));
+  }
+
+  if (verifiedOnly) {
+    conditions.push(eq(AmazonReviews.isVerifiedPurchase, true));
+  }
+
+  // Get total count
+  const countResult = await db.select({ count: sql<number>`count(*)` })
+    .from(AmazonReviews)
+    .where(and(...conditions))
+    .get();
+
+  const total = countResult?.count ?? 0;
+
+  // Determine sort order
+  let orderBy;
+  switch (sortBy) {
+    case 'recent':
+      orderBy = desc(AmazonReviews.fetchedAt);
+      break;
+    case 'helpful':
+      orderBy = desc(AmazonReviews.helpfulCount);
+      break;
+    case 'highest':
+      orderBy = desc(AmazonReviews.rating);
+      break;
+    case 'lowest':
+      orderBy = asc(AmazonReviews.rating);
+      break;
+    default:
+      orderBy = desc(AmazonReviews.helpfulCount);
+  }
+
+  // Get reviews
+  const reviews = await db.select()
+    .from(AmazonReviews)
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(limit)
+    .offset(offset)
+    .all();
+
+  // Calculate stats
+  const allReviews = await db.select()
+    .from(AmazonReviews)
+    .where(eq(AmazonReviews.asin, asin))
+    .all();
+
+  const ratingBreakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let totalRating = 0;
+  let verifiedCount = 0;
+
+  for (const review of allReviews) {
+    const rating = Math.round(review.rating);
+    if (rating >= 1 && rating <= 5) {
+      ratingBreakdown[rating]++;
+    }
+    totalRating += review.rating;
+    if (review.isVerifiedPurchase) {
+      verifiedCount++;
+    }
+  }
+
+  const averageRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
+
+  return {
+    reviews,
+    total,
+    stats: {
+      averageRating: Math.round(averageRating * 10) / 10,
+      totalReviews: allReviews.length,
+      ratingBreakdown,
+      verifiedCount,
+    },
+  };
+}
+
+/**
+ * Check if we have cached Amazon reviews for a product
+ */
+export async function hasAmazonReviews(asin: string): Promise<boolean> {
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(AmazonReviews)
+    .where(eq(AmazonReviews.asin, asin))
+    .get();
+
+  return (result?.count ?? 0) > 0;
+}
+
+/**
+ * Get the last fetch time for Amazon reviews
+ */
+export async function getAmazonReviewsFetchTime(asin: string): Promise<Date | null> {
+  const result = await db.select({ fetchedAt: AmazonReviews.fetchedAt })
+    .from(AmazonReviews)
+    .where(eq(AmazonReviews.asin, asin))
+    .orderBy(desc(AmazonReviews.fetchedAt))
+    .limit(1)
+    .get();
+
+  return result?.fetchedAt ?? null;
+}
+
+/**
+ * Delete old Amazon reviews (for cache refresh)
+ */
+export async function deleteAmazonReviews(asin: string): Promise<number> {
+  const result = await db.delete(AmazonReviews)
+    .where(eq(AmazonReviews.asin, asin));
+
+  return result.rowsAffected ?? 0;
 }

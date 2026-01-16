@@ -307,6 +307,72 @@ const t = getTranslation(lang);
       min-height: 48px;
     }
   }
+
+  /* Extra small screens (iPhone SE - 320px) */
+  @media (max-width: 340px) {
+    .slide-actions {
+      right: 0.25rem;
+      gap: 0.5rem;
+    }
+
+    .action-label,
+    .action-count {
+      display: none;
+    }
+
+    .action-btn {
+      min-width: 36px;
+      min-height: 36px;
+      padding: 0.25rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .action-btn:hover {
+      box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .action-btn:active {
+      box-shadow: 1px 1px 0 var(--color-brutal-black, #1A1A1A);
+    }
+
+    .action-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .action-amazon {
+      min-width: 40px;
+      min-height: 40px;
+      box-shadow:
+        2px 2px 0 var(--color-brutal-black, #1A1A1A),
+        0 0 12px rgba(255, 153, 0, 0.3);
+    }
+
+    .action-amazon:hover {
+      box-shadow:
+        3px 3px 0 #FF9900,
+        0 0 20px rgba(255, 153, 0, 0.5);
+    }
+
+    .amazon-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    @keyframes amazon-pulse {
+      0%, 100% {
+        box-shadow:
+          2px 2px 0 var(--color-brutal-black, #1A1A1A),
+          0 0 12px rgba(255, 153, 0, 0.3);
+      }
+      50% {
+        box-shadow:
+          2px 2px 0 var(--color-brutal-black, #1A1A1A),
+          0 0 18px rgba(255, 153, 0, 0.5);
+      }
+    }
+  }
 </style>
 
 <script>

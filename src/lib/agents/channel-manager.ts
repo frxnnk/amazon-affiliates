@@ -1,8 +1,10 @@
 /**
  * Channel Manager Agent
  *
- * Publishes content to social media channels (Telegram, Twitter, Discord).
+ * Publishes content to Telegram channel.
  * Processes items from PublishQueue and PriceAlerts.
+ *
+ * MVP: Telegram only (Twitter/Discord disabled)
  */
 
 import { db, PublishQueue, PriceAlerts, SocialAccounts } from 'astro:db';
@@ -10,12 +12,13 @@ import { eq, and, lte, or, isNull } from 'astro:db';
 import { BaseAgent } from './base-agent';
 import type { AgentContext, ChannelManagerConfig, PublishItem, PublishResult } from './types';
 import { publishProduct, isTelegramConfigured, type ProductMessage } from '@lib/telegram-bot';
-import { postTweet, formatTweet, isTwitterConfigured } from '@lib/social/twitter-client';
-import { sendProductDeal, isDiscordConfigured } from '@lib/social/discord-client';
-import { recordUsage, canMakeCall } from '@lib/quota';
+// MVP: Twitter and Discord disabled
+// import { postTweet, formatTweet, isTwitterConfigured } from '@lib/social/twitter-client';
+// import { sendProductDeal, isDiscordConfigured } from '@lib/social/discord-client';
+import { trackApiCall } from '@lib/api-tracker';
 
 const DEFAULT_CONFIG: ChannelManagerConfig = {
-  enabledChannels: ['telegram', 'twitter', 'discord'],
+  enabledChannels: ['telegram'], // MVP: Telegram only
   maxPostsPerRun: 10,
   delayBetweenPosts: 2000, // 2 seconds
   language: 'es',
@@ -82,22 +85,24 @@ export class ChannelManagerAgent extends BaseAgent {
   private async getAvailableChannels(enabledChannels: ChannelType[]): Promise<ChannelType[]> {
     const available: ChannelType[] = [];
 
+    // MVP: Only Telegram supported
     if (enabledChannels.includes('telegram') && isTelegramConfigured()) {
       available.push('telegram');
     }
 
-    if (enabledChannels.includes('twitter') && isTwitterConfigured()) {
-      // Check Twitter quota
-      if (await canMakeCall('twitter')) {
-        available.push('twitter');
-      } else {
-        this.addWarning('Twitter quota exhausted');
-      }
-    }
+    // MVP: Twitter disabled
+    // if (enabledChannels.includes('twitter') && isTwitterConfigured()) {
+    //   if (await canMakeCall('twitter')) {
+    //     available.push('twitter');
+    //   } else {
+    //     this.addWarning('Twitter quota exhausted');
+    //   }
+    // }
 
-    if (enabledChannels.includes('discord') && isDiscordConfigured()) {
-      available.push('discord');
-    }
+    // MVP: Discord disabled
+    // if (enabledChannels.includes('discord') && isDiscordConfigured()) {
+    //   available.push('discord');
+    // }
 
     return available;
   }
@@ -160,13 +165,38 @@ export class ChannelManagerAgent extends BaseAgent {
       results[channel] = result;
 
       if (result.success) {
-        // Track quota for rate-limited channels
-        if (channel === 'twitter') {
-          await recordUsage('twitter', 1, { asin: item.asin });
-        }
+        // MVP: Twitter quota tracking disabled
+        // if (channel === 'twitter') {
+        //   await recordUsage('twitter', 1, { asin: item.asin });
+        // }
+
+        // Track API call for cost dashboard
+        await trackApiCall({
+          apiName: channel,
+          endpoint: 'publish',
+          agentType: this.type,
+          context: { asin: item.asin },
+          success: true,
+        });
+
+        // Emit event for real-time dashboard
+        await this.emitEvent('item_processed', `Published to ${channel}: ${item.asin}`, {
+          asin: item.asin,
+          channel,
+        });
 
         // Update social account stats
         await this.updateSocialAccountStats(channel);
+      } else {
+        // Track failed call
+        await trackApiCall({
+          apiName: channel,
+          endpoint: 'publish',
+          agentType: this.type,
+          context: { asin: item.asin },
+          success: false,
+          errorMessage: result.error,
+        });
       }
 
       // Small delay between channels
@@ -213,10 +243,15 @@ export class ChannelManagerAgent extends BaseAgent {
       switch (channel) {
         case 'telegram':
           return await this.publishToTelegram(content, language);
+        // MVP: Twitter and Discord disabled
         case 'twitter':
-          return await this.publishToTwitter(content);
         case 'discord':
-          return await this.publishToDiscord(content);
+          return {
+            success: false,
+            platform: channel,
+            error: `Channel ${channel} disabled in MVP`,
+            timestamp: new Date(),
+          };
         default:
           return {
             success: false,
@@ -248,6 +283,8 @@ export class ChannelManagerAgent extends BaseAgent {
       affiliateUrl: content.affiliateUrl,
       imageUrl: content.imageUrl,
       rating: content.rating,
+      totalReviews: content.totalReviews,
+      discount: content.discount,
     };
 
     const result = await publishProduct(product, language as 'es' | 'en');
@@ -261,52 +298,53 @@ export class ChannelManagerAgent extends BaseAgent {
     };
   }
 
-  private async publishToTwitter(content: PublishItem['contentSnapshot']): Promise<PublishResult> {
-    const tweet = formatTweet({
-      title: content.title,
-      price: content.price,
-      originalPrice: content.originalPrice,
-      currency: content.currency,
-      affiliateUrl: content.affiliateUrl,
-      discount: content.discount,
-      alertType: content.alertType,
-    });
+  // MVP: Twitter disabled
+  // private async publishToTwitter(content: PublishItem['contentSnapshot']): Promise<PublishResult> {
+  //   const tweet = formatTweet({
+  //     title: content.title,
+  //     price: content.price,
+  //     originalPrice: content.originalPrice,
+  //     currency: content.currency,
+  //     affiliateUrl: content.affiliateUrl,
+  //     discount: content.discount,
+  //     alertType: content.alertType,
+  //   });
+  //
+  //   const result = await postTweet(tweet);
+  //   this.trackApiCall();
+  //
+  //   return {
+  //     success: result.success,
+  //     platform: 'twitter',
+  //     messageId: result.tweetId,
+  //     error: result.error,
+  //     timestamp: new Date(),
+  //   };
+  // }
 
-    const result = await postTweet(tweet);
-
-    this.trackApiCall();
-
-    return {
-      success: result.success,
-      platform: 'twitter',
-      messageId: result.tweetId,
-      error: result.error,
-      timestamp: new Date(),
-    };
-  }
-
-  private async publishToDiscord(content: PublishItem['contentSnapshot']): Promise<PublishResult> {
-    const result = await sendProductDeal({
-      title: content.title,
-      brand: content.brand,
-      price: content.price,
-      originalPrice: content.originalPrice,
-      currency: content.currency,
-      affiliateUrl: content.affiliateUrl,
-      imageUrl: content.imageUrl,
-      rating: content.rating,
-      totalReviews: content.totalReviews,
-      discount: content.discount,
-      alertType: content.alertType,
-    });
-
-    return {
-      success: result.success,
-      platform: 'discord',
-      error: result.error,
-      timestamp: new Date(),
-    };
-  }
+  // MVP: Discord disabled
+  // private async publishToDiscord(content: PublishItem['contentSnapshot']): Promise<PublishResult> {
+  //   const result = await sendProductDeal({
+  //     title: content.title,
+  //     brand: content.brand,
+  //     price: content.price,
+  //     originalPrice: content.originalPrice,
+  //     currency: content.currency,
+  //     affiliateUrl: content.affiliateUrl,
+  //     imageUrl: content.imageUrl,
+  //     rating: content.rating,
+  //     totalReviews: content.totalReviews,
+  //     discount: content.discount,
+  //     alertType: content.alertType,
+  //   });
+  //
+  //   return {
+  //     success: result.success,
+  //     platform: 'discord',
+  //     error: result.error,
+  //     timestamp: new Date(),
+  //   };
+  // }
 
   private async processPriceAlerts(
     availableChannels: ChannelType[],

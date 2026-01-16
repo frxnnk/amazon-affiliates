@@ -23,7 +23,7 @@
   },
   "seo": {
     "titleTemplate": "%s | RewardHive",
-    "defaultImage": "/images/og/default.jpg"
+    "defaultImage": "/images/og/default.png"
   },
   "social": {
     "twitter": "@rewardhive",

@@ -2,133 +2,546 @@
 export const prerender = false;
 
 import AdminLayout from '@components/admin/AdminLayout.astro';
+import siteConfig from '@data/site-config.json';
+
+const affiliateTag = siteConfig.amazon.associates.en.tag;
+const affiliateTagEs = siteConfig.amazon.associates.es.tag;
 ---
 
 <AdminLayout title="Importar Producto">
+  <div class="import-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1>Importar Producto</h1>
+        <p>Extrae datos de Amazon automaticamente o ingresa manualmente</p>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/products" class="btn-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Volver
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="import-grid">
+      <!-- Left Column: Input -->
+      <div class="input-column">
+        <!-- URL/ASIN Input Card -->
+        <div class="card input-card">
+          <div class="card-header">
+            <div class="card-icon amazon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726a17.617 17.617 0 01-4.803.623c-2.418 0-4.727-.45-6.932-1.352-2.19-.9-4.097-2.092-5.752-3.54zM10.165 15.3c-.15-.18-.227-.39-.227-.63 0-.232.068-.42.205-.566.136-.15.306-.225.51-.225.232 0 .44.09.624.27.186.18.278.39.278.63 0 .18-.06.338-.18.47-.118.13-.265.22-.44.27l-.77.17v1.31c0 .2-.07.375-.21.52-.14.147-.31.22-.51.22-.2 0-.37-.073-.51-.22-.14-.145-.21-.32-.21-.52v-1.7zm3.28 1.7c0 .2-.07.375-.21.52-.14.147-.31.22-.51.22-.2 0-.37-.073-.51-.22-.14-.145-.21-.32-.21-.52V15c0-.2.07-.375.21-.52.14-.147.31-.22.51-.22.2 0 .37.073.51.22.14.145.21.32.21.52v2z"/>
+              </svg>
+            </div>
+            <div>
+              <h2>Buscar Producto</h2>
+              <p>Ingresa URL de Amazon, ASIN o enlace de SiteStripe</p>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="amazonUrl"
+                class="main-input"
+                placeholder="amazon.com/dp/B0XXX o ASIN..."
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="button" id="clearInput" class="clear-btn" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <button type="button" id="parseBtn" class="btn-extract">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <span>Buscar</span>
+            </button>
+          </div>
+
+          <!-- Quick Tips -->
+          <div class="tips-inline">
+            <span class="tip-item">
+              <kbd>B0XXXXXXXXX</kbd> ASIN
+            </span>
+            <span class="tip-item">
+              <kbd>amazon.com/dp/...</kbd> URL
+            </span>
+            <span class="tip-item">
+              <kbd>amzn.to/...</kbd> Short
+            </span>
+          </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Product Preview Card (shows after extraction) -->
+        <div id="productPreview" class="card product-preview-card" style="display: none;">
+          <div class="preview-header">
+            <span class="preview-badge">Vista Previa</span>
+            <span class="preview-source" id="dataSource">-</span>
+          </div>
+
+          <div class="preview-content">
+            <!-- Product Image -->
+            <div class="preview-image-container">
+              <img id="previewImage" src="" alt="Product" class="preview-image" />
+              <div class="image-placeholder" id="imagePlaceholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span>Sin imagen</span>
+              </div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="preview-info">
+              <h3 id="previewTitle" class="preview-title">-</h3>
+              <p id="previewBrand" class="preview-brand">-</p>
+
+              <div class="preview-meta">
+                <div class="meta-item">
+                  <span class="meta-label">ASIN</span>
+                  <code id="previewAsin">-</code>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Precio</span>
+                  <span id="previewPrice" class="price-value">-</span>
+                </div>
+                <div class="meta-item" id="originalPriceItem" style="display: none;">
+                  <span class="meta-label">Original</span>
+                  <span id="previewOriginalPrice" class="price-original">-</span>
+                </div>
+                <div class="meta-item" id="discountItem" style="display: none;">
+                  <span class="meta-label">Descuento</span>
+                  <span id="previewDiscount" class="discount-badge">-</span>
+                </div>
+              </div>
+
+              <!-- Keepa Price History -->
+              <div id="keepaSection" class="keepa-section" style="display: none;">
+                <div class="keepa-header">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  <span>Historial de Precios (Keepa)</span>
+                </div>
+                <div id="keepaChart" class="keepa-chart">
+                  <img id="keepaImage" src="" alt="Keepa Price History" />
+                </div>
+                <div class="keepa-stats">
+                  <div class="keepa-stat">
+                    <span class="stat-label">Promedio 90d</span>
+                    <span id="keepaAvg" class="stat-value">-</span>
+                  </div>
+                  <div class="keepa-stat">
+                    <span class="stat-label">Minimo</span>
+                    <span id="keepaMin" class="stat-value good">-</span>
+                  </div>
+                  <div class="keepa-stat">
+                    <span class="stat-label">Maximo</span>
+                    <span id="keepaMax" class="stat-value">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Affiliate Link Generator -->
+          <div class="affiliate-section">
+            <div class="affiliate-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+              <span>Enlace de Afiliado</span>
+            </div>
+
+            <div class="affiliate-links">
+              <div class="link-row">
+                <div class="link-marketplace">
+                  <img src="https://flagcdn.com/w20/us.png" alt="US" />
+                  <span>.com</span>
+                </div>
+                <input type="text" id="affiliateLinkUs" class="link-input" readonly />
+                <button type="button" class="btn-copy" data-target="affiliateLinkUs" title="Copiar enlace">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="link-row">
+                <div class="link-marketplace">
+                  <img src="https://flagcdn.com/w20/es.png" alt="ES" />
+                  <span>.es</span>
+                </div>
+                <input type="text" id="affiliateLinkEs" class="link-input" readonly />
+                <button type="button" class="btn-copy" data-target="affiliateLinkEs" title="Copiar enlace">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="affiliate-actions">
+              <button type="button" id="openAmazonBtn" class="btn-amazon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Abrir en Amazon
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Form -->
+      <div class="form-column">
+        <div class="card form-card" id="formCard">
+          <div class="card-header">
+            <div class="card-icon form">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </div>
+            <div>
+              <h2>Datos del Producto</h2>
+              <p>Completa o edita la informacion</p>
+            </div>
+          </div>
+
+          <form id="productForm" class="product-form">
+            <input type="hidden" id="formAsin" name="asin" />
+            <input type="hidden" id="formAffiliateUrl" name="affiliateUrl" />
+            <input type="hidden" id="formLang" name="lang" value="en" />
+
+            <div class="form-section">
+              <h3 class="section-title">Informacion Basica</h3>
+
+              <div class="form-group">
+                <label for="formTitle">Titulo <span class="required">*</span></label>
+                <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="formBrand">Marca <span class="required">*</span></label>
+                  <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Ej: Samsung" />
+                </div>
+                <div class="form-group">
+                  <label for="formModel">Modelo</label>
+                  <input type="text" id="formModel" name="model" class="form-input" placeholder="Ej: Galaxy S24" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Precios</h3>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="formPrice">Precio Actual <span class="required">*</span></label>
+                  <div class="input-with-prefix">
+                    <span class="input-prefix">$</span>
+                    <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="formOriginalPrice">Precio Original</label>
+                  <div class="input-with-prefix">
+                    <span class="input-prefix">$</span>
+                    <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="Si tiene descuento" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Clasificacion</h3>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="formCategory">Categoria</label>
+                  <select id="formCategory" name="category" class="form-select">
+                    <option value="electronics">Electronica</option>
+                    <option value="computers">Computadoras</option>
+                    <option value="smartphones">Smartphones</option>
+                    <option value="audio">Audio</option>
+                    <option value="tv">TV & Video</option>
+                    <option value="gaming">Gaming</option>
+                    <option value="home">Hogar</option>
+                    <option value="kitchen">Cocina</option>
+                    <option value="sports">Deportes</option>
+                    <option value="fashion">Moda</option>
+                    <option value="beauty">Belleza</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="formStatus">Estado</label>
+                  <select id="formStatus" name="status" class="form-select">
+                    <option value="draft">Borrador</option>
+                    <option value="published">Publicado</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">Contenido</h3>
+
+              <div class="form-group">
+                <label for="formShortDesc">Descripcion Corta</label>
+                <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Breve descripcion del producto (1-2 oraciones)"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="formImage">URL de Imagen</label>
+                <input type="url" id="formImage" name="featuredImage" class="form-input" placeholder="https://m.media-amazon.com/images/..." />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" id="submitBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Crear Producto
+              </button>
+              <button type="button" id="resetBtn" class="btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                Limpiar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <style>
-    .import-page {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-md);
+    .import-container {
+      max-width: 1400px;
+      margin: 0 auto;
     }
 
-    /* Import Card */
-    .import-card {
+    /* Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+      flex-wrap: wrap;
+    }
+
+    .header-content h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .header-content p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius);
-      padding: var(--space-md);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      text-decoration: none;
+      transition: all var(--duration) var(--ease);
     }
 
-    @media (min-width: 769px) {
-      .import-card {
-        padding: var(--space-lg);
+    .btn-back:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .btn-back svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Grid Layout */
+    .import-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+
+    @media (min-width: 1024px) {
+      .import-grid {
+        grid-template-columns: 1fr 1fr;
       }
     }
 
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
     .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
       margin-bottom: var(--space-lg);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .card-icon.amazon {
+      background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
+      color: #000;
+    }
+
+    .card-icon.form {
+      background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+      color: #fff;
     }
 
     .card-header h2 {
       font-size: 1rem;
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    @media (min-width: 480px) {
-      .card-header h2 {
-        font-size: 1.125rem;
-      }
+      margin-bottom: 2px;
     }
 
     .card-header p {
       font-size: 0.8125rem;
       color: var(--text-muted);
-      line-height: 1.5;
     }
 
-    /* URL Input */
-    .url-input-group {
+    /* Input Card */
+    .input-group {
       display: flex;
-      flex-direction: column;
       gap: var(--space-sm);
       margin-bottom: var(--space-md);
     }
 
-    @media (min-width: 480px) {
-      .url-input-group {
-        flex-direction: row;
-        gap: var(--space-md);
-      }
-    }
-
-    .url-input-wrapper {
+    .input-wrapper {
       flex: 1;
       position: relative;
     }
 
-    .url-input {
+    .main-input {
       width: 100%;
       background: var(--bg-base);
-      border: 1px solid var(--border-default);
+      border: 2px solid var(--border-default);
       border-radius: var(--radius-sm);
-      padding: 14px 16px;
-      padding-left: 44px;
+      padding: 14px 40px 14px 16px;
       color: var(--text-primary);
-      font-size: 0.875rem;
+      font-size: 0.9375rem;
       font-family: 'JetBrains Mono', monospace;
       transition: all var(--duration) var(--ease);
     }
 
-    .url-input:focus {
+    .main-input:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+      border-color: #ff9900;
+      box-shadow: 0 0 0 4px rgba(255, 153, 0, 0.15);
     }
 
-    .url-input::placeholder {
-      color: var(--text-muted);
+    .main-input::placeholder {
       font-family: 'Manrope', sans-serif;
-      font-size: 0.8125rem;
+      color: var(--text-muted);
     }
 
-    .url-icon {
+    .clear-btn {
       position: absolute;
-      left: 14px;
+      right: 10px;
       top: 50%;
       transform: translateY(-50%);
-      width: 18px;
-      height: 18px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-hover);
+      border: none;
+      border-radius: 50%;
       color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .clear-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .clear-btn svg {
+      width: 14px;
+      height: 14px;
     }
 
     .btn-extract {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
+      gap: 8px;
+      padding: 14px 24px;
       background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
       color: #000;
       border: none;
       border-radius: var(--radius-sm);
-      padding: 14px 24px;
-      font-size: 0.875rem;
+      font-size: 0.9375rem;
       font-weight: 600;
       cursor: pointer;
       transition: all var(--duration) var(--ease);
       white-space: nowrap;
-      min-height: 48px;
     }
 
     .btn-extract:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(255, 153, 0, 0.4);
+      box-shadow: 0 4px 20px rgba(255, 153, 0, 0.4);
     }
 
     .btn-extract:disabled {
-      opacity: 0.6;
+      opacity: 0.7;
       cursor: not-allowed;
     }
 
@@ -138,49 +551,28 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
     }
 
     /* Tips */
-    .tips-box {
-      background: rgba(99, 102, 241, 0.08);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-      border-radius: var(--radius-sm);
-      padding: var(--space-md);
-    }
-
-    .tips-header {
+    .tips-inline {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: var(--space-sm);
-      color: #818cf8;
+    }
+
+    .tip-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 0.75rem;
-      font-weight: 600;
-      margin-bottom: var(--space-sm);
+      color: var(--text-muted);
     }
 
-    .tips-header svg {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-    }
-
-    .tips-list {
-      margin: 0;
-      padding-left: 1.125rem;
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      line-height: 1.7;
-    }
-
-    .tips-list li {
-      margin-bottom: 2px;
-    }
-
-    .tips-list code {
+    .tip-item kbd {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.6875rem;
       background: var(--bg-base);
-      padding: 2px 6px;
+      padding: 3px 8px;
       border-radius: 4px;
-      color: #818cf8;
-      word-break: break-all;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
     }
 
     /* Status Message */
@@ -189,14 +581,14 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
       border-radius: var(--radius-sm);
       margin-bottom: var(--space-md);
       display: none;
+      align-items: center;
+      gap: var(--space-sm);
       font-size: 0.8125rem;
       font-weight: 500;
     }
 
     .status-message.error {
       display: flex;
-      align-items: center;
-      gap: var(--space-sm);
       background: var(--error-muted);
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: var(--error);
@@ -204,107 +596,396 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
 
     .status-message.success {
       display: flex;
-      align-items: center;
-      gap: var(--space-sm);
       background: var(--success-muted);
       border: 1px solid rgba(34, 197, 94, 0.3);
       color: var(--success);
     }
 
-    /* Extracted Data Section */
-    .extracted-section {
-      display: none;
+    .status-message.loading {
+      display: flex;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #818cf8;
+    }
+
+    .status-message svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* Product Preview Card */
+    .product-preview-card {
       animation: slideUp 300ms var(--ease);
     }
 
-    .extracted-section.visible {
-      display: block;
-    }
-
     @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(16px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    .section-label {
+    .preview-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .preview-badge {
       font-size: 0.6875rem;
       font-weight: 600;
-      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: var(--space-md);
+      color: #818cf8;
+      background: rgba(99, 102, 241, 0.1);
+      padding: 4px 10px;
+      border-radius: 20px;
     }
 
-    .section-label svg {
-      width: 14px;
-      height: 14px;
+    .preview-source {
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
 
-    /* Data Preview */
-    .data-preview {
+    .preview-content {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--space-sm);
+      grid-template-columns: 140px 1fr;
+      gap: var(--space-md);
       margin-bottom: var(--space-lg);
     }
 
-    @media (min-width: 480px) {
-      .data-preview {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-md);
+    @media (max-width: 480px) {
+      .preview-content {
+        grid-template-columns: 1fr;
       }
     }
 
-    .data-item {
+    .preview-image-container {
+      position: relative;
+      aspect-ratio: 1;
       background: var(--bg-base);
       border-radius: var(--radius-sm);
-      padding: var(--space-md);
+      overflow: hidden;
     }
 
-    .data-item.full-width {
-      grid-column: 1 / -1;
+    .preview-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
-    .data-label {
-      font-size: 0.625rem;
-      font-weight: 600;
+    .image-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
     }
 
-    .data-value {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      word-break: break-all;
+    .image-placeholder svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.5;
     }
 
-    .data-value.mono {
-      font-family: 'JetBrains Mono', monospace;
+    .image-placeholder span {
       font-size: 0.75rem;
     }
 
-    .data-value.small {
-      font-size: 0.6875rem;
+    .preview-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .preview-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .preview-brand {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .preview-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      margin-top: auto;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: var(--bg-base);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    .meta-label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .meta-item code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+    }
+
+    .price-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--success);
+    }
+
+    .price-original {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .discount-badge {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #ef4444;
+    }
+
+    /* Keepa Section */
+    .keepa-section {
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+    }
+
+    .keepa-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .keepa-header svg {
+      width: 16px;
+      height: 16px;
+      color: #22c55e;
+    }
+
+    .keepa-chart {
+      background: #fff;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: var(--space-sm);
+    }
+
+    .keepa-chart img {
+      width: 100%;
+      height: auto;
+    }
+
+    .keepa-stats {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .keepa-stat {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-sm);
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .stat-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .stat-value.good {
+      color: var(--success);
+    }
+
+    /* Affiliate Section */
+    .affiliate-section {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: var(--space-lg);
+    }
+
+    .affiliate-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-md);
+    }
+
+    .affiliate-header svg {
+      width: 18px;
+      height: 18px;
+      color: #ff9900;
+    }
+
+    .affiliate-links {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .link-marketplace {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 60px;
+      font-size: 0.75rem;
+      font-weight: 500;
       color: var(--text-secondary);
     }
 
-    /* Form */
+    .link-marketplace img {
+      width: 16px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .link-input {
+      flex: 1;
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .btn-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .btn-copy:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .btn-copy.copied {
+      background: var(--success);
+      color: #fff;
+      border-color: var(--success);
+    }
+
+    .btn-copy svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .affiliate-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .btn-amazon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .btn-amazon:hover {
+      background: #ff9900;
+      color: #000;
+      border-color: #ff9900;
+    }
+
+    .btn-amazon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Form Card */
+    .form-card {
+      position: sticky;
+      top: var(--space-md);
+    }
+
     .product-form {
       display: flex;
       flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
       gap: var(--space-md);
+    }
+
+    .section-title {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .form-row {
@@ -314,7 +995,7 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
     }
 
     @media (min-width: 480px) {
-      .form-row.two-col {
+      .form-row {
         grid-template-columns: repeat(2, 1fr);
       }
     }
@@ -326,7 +1007,7 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
     }
 
     .form-group label {
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 500;
       color: var(--text-secondary);
     }
@@ -346,15 +1027,14 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
       font-size: 0.875rem;
       font-family: inherit;
       transition: all var(--duration) var(--ease);
-      min-height: 46px;
     }
 
     .form-input:focus,
     .form-select:focus,
     .form-textarea:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
     }
 
     .form-select {
@@ -367,56 +1047,60 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
     }
 
     .form-textarea {
-      min-height: 100px;
+      min-height: 80px;
       resize: vertical;
       line-height: 1.5;
+    }
+
+    .input-with-prefix {
+      position: relative;
+    }
+
+    .input-prefix {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .input-with-prefix .form-input {
+      padding-left: 28px;
     }
 
     /* Form Actions */
     .form-actions {
       display: flex;
-      flex-direction: column;
       gap: var(--space-sm);
       padding-top: var(--space-md);
       border-top: 1px solid var(--border-subtle);
     }
 
-    @media (min-width: 480px) {
-      .form-actions {
-        flex-direction: row;
-        gap: var(--space-md);
-      }
-    }
-
-    .btn {
+    .btn-primary,
+    .btn-secondary {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: var(--space-sm);
+      gap: 8px;
       padding: 12px 20px;
       border-radius: var(--radius-sm);
       font-size: 0.875rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       transition: all var(--duration) var(--ease);
       border: none;
-      text-decoration: none;
-      min-height: 46px;
-    }
-
-    .btn svg {
-      width: 18px;
-      height: 18px;
     }
 
     .btn-primary {
-      background: var(--accent);
-      color: #000;
+      flex: 1;
+      background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+      color: #fff;
     }
 
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
     }
 
     .btn-primary:disabled {
@@ -426,227 +1110,190 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
 
     .btn-secondary {
       background: var(--bg-hover);
-      color: var(--text-primary);
+      color: var(--text-secondary);
       border: 1px solid var(--border-subtle);
     }
 
     .btn-secondary:hover {
       background: var(--bg-elevated);
-      border-color: var(--border-default);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-    }
-
-    .btn-ghost:hover {
       color: var(--text-primary);
-      background: var(--bg-hover);
+    }
+
+    .btn-primary svg,
+    .btn-secondary svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Animations */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
     }
   </style>
 
-  <div class="import-page">
-    <!-- URL Input Card -->
-    <div class="import-card">
-      <div class="card-header">
-        <h2>Importar desde Amazon</h2>
-        <p>Pega un link de Amazon o SiteStripe para extraer automaticamente la informacion del producto</p>
-      </div>
-
-      <div id="statusMessage" class="status-message"></div>
-
-      <div class="url-input-group">
-        <div class="url-input-wrapper">
-          <svg class="url-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-          </svg>
-          <input
-            type="text"
-            id="amazonUrl"
-            class="url-input"
-            placeholder="amazon.com/dp/B0XXX o ASIN..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </div>
-        <button type="button" id="parseBtn" class="btn-extract">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          Extraer
-        </button>
-      </div>
-
-      <div class="tips-box">
-        <div class="tips-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
-          Formatos soportados
-        </div>
-        <ul class="tips-list">
-          <li>Link de SiteStripe (con tu tag incluido)</li>
-          <li>URL completa: <code>amazon.com/Producto/dp/B0XXX</code></li>
-          <li>URL corta: <code>amazon.com/dp/B0XXX</code></li>
-          <li>ASIN directo: <code>B0XXXXXXXXX</code></li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Extracted Data Section -->
-    <div id="extractedSection" class="extracted-section">
-      <div class="import-card">
-        <div class="section-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          Datos extraidos
-        </div>
-
-        <div class="data-preview">
-          <div class="data-item">
-            <div class="data-label">ASIN</div>
-            <div class="data-value mono" id="previewAsin">-</div>
-          </div>
-          <div class="data-item">
-            <div class="data-label">Marketplace</div>
-            <div class="data-value" id="previewMarketplace">-</div>
-          </div>
-          <div class="data-item full-width">
-            <div class="data-label">URL Afiliado</div>
-            <div class="data-value small mono" id="previewUrl">-</div>
-          </div>
-          <div class="data-item full-width" id="suggestedTitleItem" style="display: none;">
-            <div class="data-label">Titulo sugerido</div>
-            <div class="data-value" id="previewTitle">-</div>
-          </div>
-        </div>
-
-        <form id="productForm" class="product-form">
-          <input type="hidden" id="formAsin" name="asin" />
-          <input type="hidden" id="formAffiliateUrl" name="affiliateUrl" />
-          <input type="hidden" id="formLang" name="lang" value="es" />
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Titulo <span class="required">*</span></label>
-              <input type="text" id="formTitle" name="title" class="form-input" required placeholder="Nombre del producto" />
-            </div>
-          </div>
-
-          <div class="form-row two-col">
-            <div class="form-group">
-              <label>Marca <span class="required">*</span></label>
-              <input type="text" id="formBrand" name="brand" class="form-input" required placeholder="Ej: Samsung, Sony" />
-            </div>
-            <div class="form-group">
-              <label>Modelo</label>
-              <input type="text" id="formModel" name="model" class="form-input" placeholder="Ej: Galaxy S24" />
-            </div>
-          </div>
-
-          <div class="form-row two-col">
-            <div class="form-group">
-              <label>Precio <span class="required">*</span></label>
-              <input type="number" id="formPrice" name="price" class="form-input" step="0.01" required placeholder="0.00" />
-            </div>
-            <div class="form-group">
-              <label>Precio Original</label>
-              <input type="number" id="formOriginalPrice" name="originalPrice" class="form-input" step="0.01" placeholder="Si descuento" />
-            </div>
-          </div>
-
-          <div class="form-row two-col">
-            <div class="form-group">
-              <label>Categoria</label>
-              <select id="formCategory" name="category" class="form-select">
-                <option value="electronics">Electronica</option>
-                <option value="computers">Computadoras</option>
-                <option value="smartphones">Smartphones</option>
-                <option value="audio">Audio</option>
-                <option value="tv">TV & Video</option>
-                <option value="gaming">Gaming</option>
-                <option value="home">Hogar</option>
-                <option value="kitchen">Cocina</option>
-                <option value="sports">Deportes</option>
-                <option value="fashion">Moda</option>
-                <option value="beauty">Belleza</option>
-                <option value="other">Otro</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Estado</label>
-              <select id="formStatus" name="status" class="form-select">
-                <option value="draft">Borrador</option>
-                <option value="published">Publicado</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Descripcion Corta</label>
-              <textarea id="formShortDesc" name="shortDescription" class="form-textarea" placeholder="Breve descripcion (1-2 oraciones)"></textarea>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>URL de Imagen</label>
-              <input type="url" id="formImage" name="featuredImage" class="form-input" placeholder="https://..." />
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Crear
-            </button>
-            <button type="button" id="resetBtn" class="btn btn-secondary">
-              Limpiar
-            </button>
-            <a href="/admin/products/new" class="btn btn-ghost">
-              Formulario completo
-            </a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const amazonUrlInput = document.getElementById('amazonUrl') as HTMLInputElement;
-    const parseBtn = document.getElementById('parseBtn') as HTMLButtonElement;
-    const extractedSection = document.getElementById('extractedSection')!;
-    const statusMessage = document.getElementById('statusMessage')!;
-    const productForm = document.getElementById('productForm') as HTMLFormElement;
-    const resetBtn = document.getElementById('resetBtn')!;
+  <script define:vars={{ affiliateTag, affiliateTagEs }}>
+    // Elements
+    const amazonUrlInput = document.getElementById('amazonUrl');
+    const parseBtn = document.getElementById('parseBtn');
+    const clearInput = document.getElementById('clearInput');
+    const statusMessage = document.getElementById('statusMessage');
+    const productPreview = document.getElementById('productPreview');
+    const productForm = document.getElementById('productForm');
+    const resetBtn = document.getElementById('resetBtn');
+    const submitBtn = document.getElementById('submitBtn');
 
     // Preview elements
-    const previewAsin = document.getElementById('previewAsin')!;
-    const previewMarketplace = document.getElementById('previewMarketplace')!;
-    const previewUrl = document.getElementById('previewUrl')!;
-    const previewTitle = document.getElementById('previewTitle')!;
-    const suggestedTitleItem = document.getElementById('suggestedTitleItem')!;
+    const previewImage = document.getElementById('previewImage');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewBrand = document.getElementById('previewBrand');
+    const previewAsin = document.getElementById('previewAsin');
+    const previewPrice = document.getElementById('previewPrice');
+    const previewOriginalPrice = document.getElementById('previewOriginalPrice');
+    const originalPriceItem = document.getElementById('originalPriceItem');
+    const previewDiscount = document.getElementById('previewDiscount');
+    const discountItem = document.getElementById('discountItem');
+    const dataSource = document.getElementById('dataSource');
+
+    // Affiliate link elements
+    const affiliateLinkUs = document.getElementById('affiliateLinkUs');
+    const affiliateLinkEs = document.getElementById('affiliateLinkEs');
+    const openAmazonBtn = document.getElementById('openAmazonBtn');
+
+    // Keepa elements
+    const keepaSection = document.getElementById('keepaSection');
+    const keepaImage = document.getElementById('keepaImage');
 
     // Form elements
-    const formAsin = document.getElementById('formAsin') as HTMLInputElement;
-    const formAffiliateUrl = document.getElementById('formAffiliateUrl') as HTMLInputElement;
-    const formLang = document.getElementById('formLang') as HTMLInputElement;
-    const formTitle = document.getElementById('formTitle') as HTMLInputElement;
+    const formAsin = document.getElementById('formAsin');
+    const formAffiliateUrl = document.getElementById('formAffiliateUrl');
+    const formLang = document.getElementById('formLang');
+    const formTitle = document.getElementById('formTitle');
+    const formBrand = document.getElementById('formBrand');
+    const formModel = document.getElementById('formModel');
+    const formPrice = document.getElementById('formPrice');
+    const formOriginalPrice = document.getElementById('formOriginalPrice');
+    const formShortDesc = document.getElementById('formShortDesc');
+    const formImage = document.getElementById('formImage');
+    const formCategory = document.getElementById('formCategory');
 
-    function showStatus(message: string, type: 'error' | 'success') {
+    // State
+    let currentAsin = '';
+
+    // Show/hide clear button
+    amazonUrlInput.addEventListener('input', () => {
+      clearInput.style.display = amazonUrlInput.value ? 'flex' : 'none';
+    });
+
+    clearInput.addEventListener('click', () => {
+      amazonUrlInput.value = '';
+      clearInput.style.display = 'none';
+      amazonUrlInput.focus();
+    });
+
+    // Generate affiliate URLs
+    function generateAffiliateUrls(asin) {
+      const usUrl = `https://www.amazon.com/dp/${asin}?tag=${affiliateTag}&linkCode=ogi&th=1&psc=1`;
+      const esUrl = `https://www.amazon.es/dp/${asin}?tag=${affiliateTagEs}&linkCode=ogi&th=1&psc=1`;
+      return { usUrl, esUrl };
+    }
+
+    // Show Keepa chart and fetch stats from API
+    async function showKeepaChart(asin, marketplace = 'com') {
+      // Keepa free graph image
+      // domain: 1=US, 2=UK, 3=DE, 4=FR, 9=ES, 11=MX
+      const domainMap = { 'com': 1, 'es': 9, 'co.uk': 2, 'de': 3, 'fr': 4, 'mx': 11 };
+      const domain = domainMap[marketplace] || 1;
+      const keepaUrl = `https://graph.keepa.com/pricehistory.png?asin=${asin}&domain=${domain}&amazon=1&new=1&salesrank=0&range=90&width=500&height=200`;
+
+      const keepaChart = document.getElementById('keepaChart');
+      const keepaAvg = document.getElementById('keepaAvg');
+      const keepaMin = document.getElementById('keepaMin');
+      const keepaMax = document.getElementById('keepaMax');
+
+      // Show loading state for stats
+      keepaAvg.textContent = '...';
+      keepaMin.textContent = '...';
+      keepaMax.textContent = '...';
+
+      // Set image directly with inline error handling
+      keepaChart.innerHTML = `
+        <img
+          src="${keepaUrl}"
+          alt="Keepa Price History"
+          style="width: 100%; height: auto; border-radius: var(--radius-sm);"
+          onerror="this.parentElement.innerHTML='<div style=\\'display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 150px; background: var(--bg-base); border-radius: var(--radius-sm); color: var(--text-muted);\\' ><svg width=\\'32\\' height=\\'32\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\' opacity=\\'0.5\\'><circle cx=\\'12\\' cy=\\'12\\' r=\\'10\\'/><path d=\\'M12 6v6l4 2\\'/></svg><span style=\\'font-size: 0.75rem;\\'>Sin historial disponible</span></div>'"
+        />
+      `;
+
+      keepaSection.style.display = 'block';
+
+      // Fetch stats from Keepa API
+      try {
+        const response = await fetch(`/api/admin/keepa-stats?asin=${asin}&marketplace=${marketplace}`, {
+          credentials: 'include',
+        });
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const { avg90Day, min90Day, max90Day } = result.data;
+          keepaAvg.textContent = avg90Day ? `$${avg90Day.toFixed(2)}` : 'N/A';
+          keepaMin.textContent = min90Day ? `$${min90Day.toFixed(2)}` : 'N/A';
+          keepaMax.textContent = max90Day ? `$${max90Day.toFixed(2)}` : 'N/A';
+        } else {
+          keepaAvg.textContent = 'N/A';
+          keepaMin.textContent = 'N/A';
+          keepaMax.textContent = 'N/A';
+        }
+      } catch (error) {
+        console.error('Error fetching Keepa stats:', error);
+        keepaAvg.textContent = 'N/A';
+        keepaMin.textContent = 'N/A';
+        keepaMax.textContent = 'N/A';
+      }
+    }
+
+    // Copy to clipboard
+    function setupCopyButtons() {
+      document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const targetId = btn.dataset.target;
+          const input = document.getElementById(targetId);
+
+          try {
+            await navigator.clipboard.writeText(input.value);
+            btn.classList.add('copied');
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+            setTimeout(() => {
+              btn.classList.remove('copied');
+              btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+            }, 2000);
+          } catch (err) {
+            console.error('Failed to copy:', err);
+          }
+        });
+      });
+    }
+
+    setupCopyButtons();
+
+    // Status message helpers
+    function showStatus(message, type) {
+      const icons = {
+        error: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+        success: '<polyline points="20 6 9 17 4 12"/>',
+        loading: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>'
+      };
+
       statusMessage.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          ${type === 'success'
-            ? '<polyline points="20 6 9 17 4 12"/>'
-            : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="${type === 'loading' ? 'animate-spin' : ''}">
+          ${icons[type]}
         </svg>
         ${message}
       `;
@@ -657,10 +1304,81 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
       statusMessage.className = 'status-message';
     }
 
+    // Fill preview with data
+    function fillPreview(data, source) {
+      currentAsin = data.asin;
+      dataSource.textContent = `via ${source}`;
+
+      // Image
+      if (data.featuredImageUrl) {
+        previewImage.src = data.featuredImageUrl;
+        previewImage.style.display = 'block';
+        imagePlaceholder.style.display = 'none';
+      } else {
+        previewImage.style.display = 'none';
+        imagePlaceholder.style.display = 'flex';
+      }
+
+      // Info
+      previewTitle.textContent = data.title || '-';
+      previewBrand.textContent = data.brand || '-';
+      previewAsin.textContent = data.asin;
+
+      // Price
+      if (data.price) {
+        previewPrice.textContent = `$${parseFloat(data.price).toFixed(2)}`;
+      } else {
+        previewPrice.textContent = '-';
+      }
+
+      // Original price & discount
+      if (data.originalPrice && data.originalPrice > data.price) {
+        previewOriginalPrice.textContent = `$${parseFloat(data.originalPrice).toFixed(2)}`;
+        originalPriceItem.style.display = 'flex';
+
+        const discount = Math.round((1 - data.price / data.originalPrice) * 100);
+        previewDiscount.textContent = `-${discount}%`;
+        discountItem.style.display = 'flex';
+      } else {
+        originalPriceItem.style.display = 'none';
+        discountItem.style.display = 'none';
+      }
+
+      // Affiliate links
+      const { usUrl, esUrl } = generateAffiliateUrls(data.asin);
+      affiliateLinkUs.value = usUrl;
+      affiliateLinkEs.value = esUrl;
+
+      // Open Amazon button
+      openAmazonBtn.onclick = () => window.open(usUrl, '_blank');
+
+      // Keepa chart
+      showKeepaChart(data.asin, data.marketplace || 'com');
+
+      // Show preview
+      productPreview.style.display = 'block';
+
+      // Fill form
+      formAsin.value = data.asin;
+      formAffiliateUrl.value = usUrl;
+      formLang.value = data.lang || 'en';
+      if (data.title) formTitle.value = data.title;
+      if (data.brand) formBrand.value = data.brand;
+      if (data.model) formModel.value = data.model;
+      if (data.price) formPrice.value = data.price;
+      if (data.originalPrice) formOriginalPrice.value = data.originalPrice;
+      if (data.shortDescription) formShortDesc.value = data.shortDescription;
+      if (data.featuredImageUrl) formImage.value = data.featuredImageUrl;
+      if (data.category && formCategory.querySelector(`option[value="${data.category}"]`)) {
+        formCategory.value = data.category;
+      }
+    }
+
+    // Parse Amazon URL
     async function parseAmazonUrl() {
       const input = amazonUrlInput.value.trim();
       if (!input) {
-        showStatus('Por favor ingresa una URL de Amazon o un ASIN', 'error');
+        showStatus('Ingresa una URL de Amazon o un ASIN', 'error');
         return;
       }
 
@@ -670,124 +1388,97 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
         <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
         </svg>
-        Extrayendo...
+        <span>Buscando...</span>
       `;
 
       try {
         const isAsin = /^[A-Z0-9]{10}$/i.test(input);
+        const requestBody = isAsin ? { asin: input } : { url: input };
 
-        // First, try PA-API for full product data
-        let paapiData = null;
+        // Try PA-API first
         try {
           const paapiResponse = await fetch('/api/admin/fetch-product-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+            body: JSON.stringify(requestBody),
           });
 
           if (paapiResponse.ok) {
-            const paapiResult = await paapiResponse.json();
-            if (paapiResult.success) {
-              paapiData = paapiResult.data;
+            const result = await paapiResponse.json();
+            if (result.success && result.data) {
+              fillPreview(result.data, 'PA-API');
+              showStatus('Datos extraidos correctamente', 'success');
+              return;
             }
           }
         } catch (e) {
-          // PA-API not available, continue with basic parsing
-          console.log('PA-API not available, using basic parsing');
+          console.log('PA-API not available');
         }
 
-        // If PA-API worked, use that data
-        if (paapiData) {
-          previewAsin.textContent = paapiData.asin;
-          previewMarketplace.textContent = `amazon.com`;
-          previewUrl.textContent = paapiData.affiliateUrl;
+        // Try RapidAPI
+        try {
+          const rapidResponse = await fetch('/api/admin/fetch-product-rapidapi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(requestBody),
+          });
 
-          if (paapiData.title) {
-            previewTitle.textContent = paapiData.title;
-            suggestedTitleItem.style.display = 'block';
-            formTitle.value = paapiData.title;
+          if (rapidResponse.ok) {
+            const result = await rapidResponse.json();
+            if (result.success && result.data) {
+              fillPreview(result.data, 'RapidAPI');
+              showStatus('Datos extraidos correctamente', 'success');
+              return;
+            }
           }
-
-          // Fill all form fields from PA-API
-          formAsin.value = paapiData.asin;
-          formAffiliateUrl.value = paapiData.affiliateUrl;
-          formLang.value = 'en';
-
-          const formBrand = document.getElementById('formBrand') as HTMLInputElement;
-          const formPrice = document.getElementById('formPrice') as HTMLInputElement;
-          const formOriginalPrice = document.getElementById('formOriginalPrice') as HTMLInputElement;
-          const formShortDesc = document.getElementById('formShortDesc') as HTMLTextAreaElement;
-          const formImage = document.getElementById('formImage') as HTMLInputElement;
-
-          if (paapiData.brand) formBrand.value = paapiData.brand;
-          if (paapiData.price) formPrice.value = paapiData.price.toString();
-          if (paapiData.originalPrice) formOriginalPrice.value = paapiData.originalPrice.toString();
-          if (paapiData.shortDescription) formShortDesc.value = paapiData.shortDescription;
-          if (paapiData.featuredImageUrl) formImage.value = paapiData.featuredImageUrl;
-
-          extractedSection.classList.add('visible');
-          showStatus('Datos completos extraidos via PA-API', 'success');
-          extractedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
+        } catch (e) {
+          console.log('RapidAPI not available');
         }
 
-        // Fallback to basic URL parsing
+        // Fallback to basic parsing
         const response = await fetch('/api/admin/parse-amazon-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(isAsin ? { asin: input } : { url: input }),
+          body: JSON.stringify(requestBody),
         });
 
         const result = await response.json();
 
         if (!response.ok) {
-          showStatus(result.error || 'Error al procesar la URL', 'error');
+          showStatus(result.error || 'Error al procesar', 'error');
           return;
         }
 
-        const data = result.data;
+        // Map basic parse data
+        const data = {
+          asin: result.data.asin,
+          title: result.data.suggestedTitle || '',
+          marketplace: result.data.marketplace,
+          lang: result.data.lang,
+          affiliateUrl: result.data.affiliateUrl
+        };
 
-        // Update preview
-        previewAsin.textContent = data.asin;
-        previewMarketplace.textContent = `amazon.${data.marketplace}`;
-        previewUrl.textContent = data.affiliateUrl;
-
-        if (data.suggestedTitle) {
-          previewTitle.textContent = data.suggestedTitle;
-          suggestedTitleItem.style.display = 'block';
-          formTitle.value = data.suggestedTitle;
-        } else {
-          suggestedTitleItem.style.display = 'none';
-        }
-
-        // Update hidden form fields
-        formAsin.value = data.asin;
-        formAffiliateUrl.value = data.affiliateUrl;
-        formLang.value = data.lang;
-
-        // Show extracted data section
-        extractedSection.classList.add('visible');
-        showStatus('Datos basicos extraidos (configura PA-API para datos completos)', 'success');
-
-        // Scroll to form
-        extractedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        fillPreview(data, 'URL Parser');
+        showStatus('Solo datos basicos. Configura PA-API o RapidAPI para datos completos.', 'success');
 
       } catch (error) {
-        showStatus('Error de conexion. Intenta de nuevo.', 'error');
+        showStatus('Error de conexion', 'error');
         console.error(error);
       } finally {
         parseBtn.disabled = false;
         parseBtn.innerHTML = `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          Extraer
+          <span>Buscar</span>
         `;
       }
     }
 
+    // Event listeners
     parseBtn.addEventListener('click', parseAmazonUrl);
     amazonUrlInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -796,11 +1487,22 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
       }
     });
 
+    // Reset
+    resetBtn.addEventListener('click', () => {
+      amazonUrlInput.value = '';
+      clearInput.style.display = 'none';
+      productForm.reset();
+      productPreview.style.display = 'none';
+      keepaSection.style.display = 'none';
+      hideStatus();
+      currentAsin = '';
+    });
+
+    // Form submit
     productForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideStatus();
 
-      const submitBtn = productForm.querySelector('button[type="submit"]') as HTMLButtonElement;
       submitBtn.disabled = true;
       submitBtn.innerHTML = `
         <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -810,11 +1512,12 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
       `;
 
       const formData = new FormData(productForm);
-      const data: Record<string, any> = {};
+      const data = {};
       formData.forEach((value, key) => {
-        data[key] = value;
+        if (value) data[key] = value;
       });
 
+      // Map image field
       if (data.featuredImage) {
         data.featuredImageUrl = data.featuredImage;
         data.featuredImageAlt = data.title;
@@ -832,46 +1535,28 @@ import AdminLayout from '@components/admin/AdminLayout.astro';
         const result = await response.json();
 
         if (!response.ok) {
-          showStatus(result.error || 'Error al crear el producto', 'error');
+          showStatus(result.error || 'Error al crear producto', 'error');
           return;
         }
 
-        showStatus(`Producto "${data.title}" creado exitosamente!`, 'success');
+        showStatus(`Producto creado: ${data.title}`, 'success');
 
         setTimeout(() => {
           window.location.href = '/admin/products';
         }, 1500);
 
       } catch (error) {
-        showStatus('Error de conexion. Intenta de nuevo.', 'error');
+        showStatus('Error de conexion', 'error');
         console.error(error);
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
           Crear Producto
         `;
       }
     });
-
-    resetBtn.addEventListener('click', () => {
-      amazonUrlInput.value = '';
-      productForm.reset();
-      extractedSection.classList.remove('visible');
-      hideStatus();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
   </script>
-
-  <style>
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-  </style>
 </AdminLayout>

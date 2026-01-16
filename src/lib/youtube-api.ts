@@ -18,6 +18,8 @@ export interface YouTubeVideo {
   thumbnailHigh?: string;
   publishedAt: string;
   isShort: boolean;
+  isPremiumChannel: boolean; // True if from a known quality tech review channel
+  isHidden?: boolean; // Admin can hide specific videos from appearing
 }
 
 export interface YouTubeSearchResult {
@@ -203,6 +205,8 @@ export async function searchProductVideo(
 
       const snippet = best.item.snippet;
       const isShort = isLikelyShort(snippet.title, snippet.description || '');
+      const channelLower = snippet.channelTitle?.toLowerCase() || '';
+      const isPremiumChannel = TRUSTED_CHANNELS.some(tc => channelLower.includes(tc));
 
       const video: YouTubeVideo = {
         videoId: best.item.id.videoId,
@@ -212,6 +216,7 @@ export async function searchProductVideo(
         thumbnailHigh: snippet.thumbnails?.high?.url,
         publishedAt: snippet.publishedAt,
         isShort,
+        isPremiumChannel,
       };
 
       console.log(`[YouTube API] Found via '${strategy.name}': ${video.videoId} (score: ${best.score})`);
@@ -365,18 +370,21 @@ function isLikelyShort(title: string, description: string): boolean {
  * @param options - Embed options
  */
 export function getVideoEmbedUrl(
-  videoId: string, 
+  videoId: string,
   options: {
     autoplay?: boolean;
     mute?: boolean;
     loop?: boolean;
     controls?: boolean;
+    captions?: boolean; // Enable closed captions by default
   } = {}
 ): string {
   const params = new URLSearchParams({
     rel: '0', // Don't show related videos from other channels
     modestbranding: '1', // Minimal YouTube branding
     playsinline: '1', // Play inline on mobile
+    cc_load_policy: '1', // Enable closed captions by default
+    cc_lang_pref: 'es', // Prefer Spanish captions
   });
 
   if (options.autoplay) {

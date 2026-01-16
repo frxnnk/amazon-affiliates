@@ -388,6 +388,8 @@ export async function searchProductVideoPiped(
       }
 
       const isShort = item.isShort || (item.duration && item.duration < 62);
+      const channelLower = (item.uploaderName || '').toLowerCase();
+      const isPremiumChannel = TRUSTED_CHANNELS.some(tc => channelLower.includes(tc));
 
       const video: YouTubeVideo = {
         videoId,
@@ -397,6 +399,7 @@ export async function searchProductVideoPiped(
         thumbnailHigh: item.thumbnail || undefined,
         publishedAt: item.uploaded ? new Date(item.uploaded).toISOString() : new Date().toISOString(),
         isShort,
+        isPremiumChannel,
       };
 
       console.log(`[Piped] Found: ${video.videoId} (score: ${best.score}, instance: ${instance})`);

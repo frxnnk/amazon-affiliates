@@ -7,6 +7,7 @@
  */
 
 import { recordPrice, getPriceStats, getPriceHistory as getDbPriceHistory, type PriceHistoryInput } from './db';
+import { trackApiCall } from './api-tracker';
 
 // Keepa API configuration (optional)
 const KEEPA_API_BASE = 'https://api.keepa.com';
@@ -85,16 +86,30 @@ async function fetchFromKeepa(asin: string, marketplace: string = 'com'): Promis
 
   const domainId = KEEPA_DOMAINS[marketplace] || 1;
 
+  const startTime = Date.now();
+  let success = false;
+
   try {
     const url = `${KEEPA_API_BASE}/product?key=${config.apiKey}&domain=${domainId}&asin=${asin}&history=1`;
     const response = await fetch(url);
+    const responseTimeMs = Date.now() - startTime;
 
     if (!response.ok) {
       console.error('Keepa API error:', response.status);
+      await trackApiCall({
+        apiName: 'keepa',
+        endpoint: 'product',
+        context: { asin, marketplace },
+        statusCode: response.status,
+        success: false,
+        errorMessage: `HTTP ${response.status}`,
+        responseTimeMs,
+      });
       return null;
     }
 
     const data = await response.json();
+    success = true;
 
     if (!data.products || data.products.length === 0) {
       return null;
@@ -128,9 +143,26 @@ async function fetchFromKeepa(asin: string, marketplace: string = 'com'): Promis
       });
     }
 
+    // Track successful API call
+    await trackApiCall({
+      apiName: 'keepa',
+      endpoint: 'product',
+      context: { asin, marketplace, dataPoints: priceHistory.length },
+      success: true,
+      responseTimeMs: Date.now() - startTime,
+    });
+
     return priceHistory;
   } catch (error) {
     console.error('Error fetching from Keepa:', error);
+    await trackApiCall({
+      apiName: 'keepa',
+      endpoint: 'product',
+      context: { asin, marketplace },
+      success: false,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      responseTimeMs: Date.now() - startTime,
+    });
     return null;
   }
 }
@@ -269,6 +301,120 @@ export function analyzePriceHistory(history: PriceHistoryData, currentPrice: num
     savingsVsMin: Math.round(savingsVsMin * 100) / 100,
     recommendation,
   };
+}
+
+/**
+ * Get Keepa statistics directly from API
+ * Returns price stats: avg, min, max for 90 days
+ */
+export async function getKeepaStats(asin: string, marketplace: string = 'com'): Promise<{
+  success: boolean;
+  data?: {
+    avg90Day: number | null;
+    min90Day: number | null;
+    max90Day: number | null;
+    currentPrice: number | null;
+    dataPoints: number;
+  };
+  error?: string;
+}> {
+  const config = getKeepaConfig();
+  if (!config) {
+    return { success: false, error: 'Keepa API not configured' };
+  }
+
+  const domainId = KEEPA_DOMAINS[marketplace] || 1;
+  const startTime = Date.now();
+
+  try {
+    // Request with stats=1 to get statistics
+    const url = `${KEEPA_API_BASE}/product?key=${config.apiKey}&domain=${domainId}&asin=${asin}&history=1&stats=90`;
+    const response = await fetch(url);
+    const responseTimeMs = Date.now() - startTime;
+
+    if (!response.ok) {
+      await trackApiCall({
+        apiName: 'keepa',
+        endpoint: 'product-stats',
+        context: { asin, marketplace },
+        statusCode: response.status,
+        success: false,
+        errorMessage: `HTTP ${response.status}`,
+        responseTimeMs,
+      });
+      return { success: false, error: `Keepa API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+
+    if (!data.products || data.products.length === 0) {
+      return { success: false, error: 'Product not found in Keepa' };
+    }
+
+    const product = data.products[0];
+    const stats = product.stats;
+
+    // Keepa stats format: stats.avg[priceType][period]
+    // Price types: 0=Amazon, 1=New 3rd party, 2=Used, etc.
+    // Prices are in cents (-1 means no data)
+
+    let avg90Day: number | null = null;
+    let min90Day: number | null = null;
+    let max90Day: number | null = null;
+    let currentPrice: number | null = null;
+
+    if (stats) {
+      // Get Amazon price stats (index 0)
+      if (stats.avg && stats.avg[0] && stats.avg[0][0] > 0) {
+        avg90Day = stats.avg[0][0] / 100;
+      }
+      if (stats.min && stats.min[0] && stats.min[0][0] > 0) {
+        min90Day = stats.min[0][0] / 100;
+      }
+      if (stats.max && stats.max[0] && stats.max[0][0] > 0) {
+        max90Day = stats.max[0][0] / 100;
+      }
+      if (stats.current && stats.current[0] > 0) {
+        currentPrice = stats.current[0] / 100;
+      }
+    }
+
+    // Count data points from CSV
+    let dataPoints = 0;
+    if (product.csv && product.csv[0]) {
+      dataPoints = Math.floor(product.csv[0].length / 2);
+    }
+
+    await trackApiCall({
+      apiName: 'keepa',
+      endpoint: 'product-stats',
+      context: { asin, marketplace, hasStats: !!stats },
+      success: true,
+      responseTimeMs,
+    });
+
+    return {
+      success: true,
+      data: {
+        avg90Day,
+        min90Day,
+        max90Day,
+        currentPrice,
+        dataPoints,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    await trackApiCall({
+      apiName: 'keepa',
+      endpoint: 'product-stats',
+      context: { asin, marketplace },
+      success: false,
+      errorMessage: message,
+      responseTimeMs: Date.now() - startTime,
+    });
+    return { success: false, error: message };
+  }
 }
 
 /**

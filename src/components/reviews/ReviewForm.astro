@@ -1,0 +1,495 @@
+---
+/**
+ * ReviewForm Component
+ * Form to create or edit a product review
+ */
+
+import StarRating from './StarRating.astro';
+import { type Lang } from '@i18n/utils';
+import { TEXT_LIMITS } from '@lib/text-constants';
+
+interface ExistingReview {
+  id: number;
+  rating: number;
+  title?: string;
+  content: string;
+}
+
+interface Props {
+  asin: string;
+  productId?: string;
+  lang: Lang;
+  existingReview?: ExistingReview;
+  isAuthenticated?: boolean;
+}
+
+const { asin, productId, lang, existingReview, isAuthenticated = false } = Astro.props;
+
+const isEditing = !!existingReview;
+
+const labels = {
+  en: {
+    writeReview: 'Write a Review',
+    editReview: 'Edit Your Review',
+    rating: 'Your Rating',
+    ratingRequired: 'Please select a rating',
+    titleLabel: 'Title (optional)',
+    titlePlaceholder: 'Summarize your experience',
+    contentLabel: 'Your Review',
+    contentPlaceholder: 'Tell others what you think about this product. What did you like? What could be better?',
+    contentMinLength: `Minimum ${TEXT_LIMITS.REVIEW_CONTENT_MIN} characters`,
+    submit: 'Submit Review',
+    update: 'Update Review',
+    cancel: 'Cancel',
+    loginRequired: 'Please log in to write a review',
+    login: 'Log In',
+    submitting: 'Submitting...',
+    success: 'Review submitted! It will be visible after moderation.',
+    error: 'Failed to submit review. Please try again.'
+  },
+  es: {
+    writeReview: 'Escribir una Opinion',
+    editReview: 'Editar tu Opinion',
+    rating: 'Tu Valoracion',
+    ratingRequired: 'Por favor selecciona una valoracion',
+    titleLabel: 'Titulo (opcional)',
+    titlePlaceholder: 'Resume tu experiencia',
+    contentLabel: 'Tu Opinion',
+    contentPlaceholder: 'Cuenta a otros que piensas de este producto. Que te gusto? Que podria mejorar?',
+    contentMinLength: `Minimo ${TEXT_LIMITS.REVIEW_CONTENT_MIN} caracteres`,
+    submit: 'Enviar Opinion',
+    update: 'Actualizar Opinion',
+    cancel: 'Cancelar',
+    loginRequired: 'Inicia sesion para escribir una opinion',
+    login: 'Iniciar Sesion',
+    submitting: 'Enviando...',
+    success: 'Opinion enviada! Sera visible despues de moderacion.',
+    error: 'Error al enviar la opinion. Intenta de nuevo.'
+  }
+};
+
+const t = labels[lang] || labels.en;
+---
+
+<div class="review-form-container" data-review-form>
+  {!isAuthenticated ? (
+    <div class="login-prompt">
+      <p>{t.loginRequired}</p>
+      <a href={`/${lang}/login`} class="btn-login">
+        {t.login}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  ) : (
+    <form
+      class="review-form"
+      data-asin={asin}
+      data-product-id={productId}
+      data-review-id={existingReview?.id}
+      data-lang={lang}
+    >
+      <h3 class="form-title">{isEditing ? t.editReview : t.writeReview}</h3>
+
+      <!-- Rating -->
+      <div class="form-group">
+        <label class="form-label">{t.rating} *</label>
+        <StarRating
+          rating={existingReview?.rating || 0}
+          readonly={false}
+          size="lg"
+          name="rating"
+          lang={lang}
+        />
+        <span class="error-message" data-error="rating">{t.ratingRequired}</span>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label for="review-title" class="form-label">{t.titleLabel}</label>
+        <input
+          type="text"
+          id="review-title"
+          name="title"
+          class="form-input"
+          placeholder={t.titlePlaceholder}
+          maxlength={TEXT_LIMITS.REVIEW_TITLE_MAX}
+          value={existingReview?.title || ''}
+        />
+        <span class="char-count">
+          <span data-char-count="title">{existingReview?.title?.length || 0}</span>/{TEXT_LIMITS.REVIEW_TITLE_MAX}
+        </span>
+      </div>
+
+      <!-- Content -->
+      <div class="form-group">
+        <label for="review-content" class="form-label">{t.contentLabel} *</label>
+        <textarea
+          id="review-content"
+          name="content"
+          class="form-textarea"
+          placeholder={t.contentPlaceholder}
+          minlength={TEXT_LIMITS.REVIEW_CONTENT_MIN}
+          maxlength={TEXT_LIMITS.REVIEW_CONTENT_MAX}
+          rows={5}
+          required
+        >{existingReview?.content || ''}</textarea>
+        <div class="textarea-meta">
+          <span class="hint">{t.contentMinLength}</span>
+          <span class="char-count">
+            <span data-char-count="content">{existingReview?.content?.length || 0}</span>/{TEXT_LIMITS.REVIEW_CONTENT_MAX}
+          </span>
+        </div>
+        <span class="error-message" data-error="content"></span>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        {isEditing && (
+          <button type="button" class="btn-cancel" data-cancel-edit>
+            {t.cancel}
+          </button>
+        )}
+        <button type="submit" class="btn-submit">
+          <span class="btn-text">{isEditing ? t.update : t.submit}</span>
+          <span class="btn-loading">{t.submitting}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" class="btn-arrow">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Success/Error Messages -->
+      <div class="form-message success" data-message="success">{t.success}</div>
+      <div class="form-message error" data-message="error">{t.error}</div>
+    </form>
+  )}
+</div>
+
+<style>
+  .review-form-container {
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    padding: 1.5rem;
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .login-prompt {
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .login-prompt p {
+    margin-bottom: 1rem;
+    font-size: 0.9375rem;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-login {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-login:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .form-title {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    display: block;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .form-input,
+  .form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--color-white, #FFFFFF);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-size: 0.9375rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    transition: all 100ms ease-out;
+  }
+
+  .form-input:focus,
+  .form-textarea:focus {
+    outline: none;
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  .char-count {
+    display: block;
+    text-align: right;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
+    margin-top: 0.25rem;
+  }
+
+  .textarea-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25rem;
+  }
+
+  .hint {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
+  }
+
+  .error-message {
+    display: none;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    color: var(--color-brutal-orange, #FF6B35);
+    margin-top: 0.25rem;
+  }
+
+  .error-message.show {
+    display: block;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn-cancel {
+    padding: 0.75rem 1.25rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-cancel:hover {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+  }
+
+  .btn-submit {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-brutal-orange, #FF6B35);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    color: var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .btn-submit:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .btn-loading {
+    display: none;
+  }
+
+  .btn-submit.loading .btn-text,
+  .btn-submit.loading .btn-arrow {
+    display: none;
+  }
+
+  .btn-submit.loading .btn-loading {
+    display: inline;
+  }
+
+  .form-message {
+    display: none;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.8125rem;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+  }
+
+  .form-message.show {
+    display: block;
+  }
+
+  .form-message.success {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .form-message.error {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+</style>
+
+<script>
+  import { TEXT_LIMITS } from '@lib/text-constants';
+
+  function initReviewForms() {
+    document.querySelectorAll('.review-form').forEach((form) => {
+      const htmlForm = form as HTMLFormElement;
+      const asin = htmlForm.dataset.asin;
+      const productId = htmlForm.dataset.productId;
+      const reviewId = htmlForm.dataset.reviewId;
+      const lang = htmlForm.dataset.lang || 'en';
+      const isEditing = !!reviewId;
+
+      const titleInput = htmlForm.querySelector('[name="title"]') as HTMLInputElement;
+      const contentTextarea = htmlForm.querySelector('[name="content"]') as HTMLTextAreaElement;
+      const ratingInput = htmlForm.querySelector('[name="rating"]') as HTMLInputElement;
+      const submitBtn = htmlForm.querySelector('.btn-submit') as HTMLButtonElement;
+
+      // Character count updates
+      function updateCharCount(input: HTMLInputElement | HTMLTextAreaElement, countId: string) {
+        const countEl = htmlForm.querySelector(`[data-char-count="${countId}"]`);
+        if (countEl) {
+          countEl.textContent = input.value.length.toString();
+        }
+      }
+
+      titleInput?.addEventListener('input', () => updateCharCount(titleInput, 'title'));
+      contentTextarea?.addEventListener('input', () => updateCharCount(contentTextarea, 'content'));
+
+      // Form submission
+      htmlForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Clear previous errors
+        htmlForm.querySelectorAll('.error-message').forEach((el) => el.classList.remove('show'));
+        htmlForm.querySelectorAll('.form-message').forEach((el) => el.classList.remove('show'));
+
+        // Validate rating
+        const rating = parseInt(ratingInput?.value || '0');
+        if (!rating || rating < 1 || rating > 5) {
+          const ratingError = htmlForm.querySelector('[data-error="rating"]');
+          ratingError?.classList.add('show');
+          return;
+        }
+
+        // Validate content
+        const content = contentTextarea?.value?.trim() || '';
+        if (content.length < TEXT_LIMITS.REVIEW_CONTENT_MIN) {
+          const contentError = htmlForm.querySelector('[data-error="content"]');
+          if (contentError) {
+            contentError.textContent = lang === 'es'
+              ? `La opinion debe tener al menos ${TEXT_LIMITS.REVIEW_CONTENT_MIN} caracteres`
+              : `Review must be at least ${TEXT_LIMITS.REVIEW_CONTENT_MIN} characters`;
+            contentError.classList.add('show');
+          }
+          return;
+        }
+
+        // Submit
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+
+        try {
+          const url = isEditing ? `/api/user/review?id=${reviewId}` : '/api/user/review';
+          const method = isEditing ? 'PUT' : 'POST';
+
+          const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              asin,
+              productId,
+              rating,
+              title: titleInput?.value?.trim() || undefined,
+              content
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            const successMsg = htmlForm.querySelector('[data-message="success"]');
+            successMsg?.classList.add('show');
+
+            // Reload after delay
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            const errorMsg = htmlForm.querySelector('[data-message="error"]');
+            if (errorMsg) {
+              errorMsg.textContent = data.error || (lang === 'es' ? 'Error al enviar' : 'Failed to submit');
+              errorMsg.classList.add('show');
+            }
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+          }
+        } catch (error) {
+          console.error('Submit error:', error);
+          const errorMsg = htmlForm.querySelector('[data-message="error"]');
+          errorMsg?.classList.add('show');
+          submitBtn.classList.remove('loading');
+          submitBtn.disabled = false;
+        }
+      });
+
+      // Cancel button
+      const cancelBtn = htmlForm.querySelector('[data-cancel-edit]');
+      cancelBtn?.addEventListener('click', () => {
+        window.location.reload();
+      });
+    });
+  }
+
+  initReviewForms();
+  document.addEventListener('astro:after-swap', initReviewForms);
+</script>

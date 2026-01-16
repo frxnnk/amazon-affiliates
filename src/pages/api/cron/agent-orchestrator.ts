@@ -4,7 +4,9 @@
  * POST /api/cron/agent-orchestrator
  *
  * Main entry point for the multi-agent system.
- * Orchestrates all agents (Deal Hunter, Content Creator, Price Monitor, Channel Manager).
+ * Orchestrates agents: Deal Hunter → Content Creator → Channel Manager (Telegram)
+ *
+ * MVP: Direct orchestrator execution only (scheduler disabled)
  *
  * Called by:
  * - Vercel Cron (scheduled)
@@ -15,6 +17,8 @@
 
 import type { APIRoute } from 'astro';
 import { initializeOrchestrator, type OrchestratorResult } from '@lib/agents';
+// MVP: Scheduler disabled
+// import { getScheduler, initializeDefaultShifts } from '@lib/agents/scheduler';
 
 export const prerender = false;
 
@@ -51,7 +55,12 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Parse request body for optional configuration
-    let body: { dryRun?: boolean; agents?: string[]; maxItems?: number } = {};
+    let body: {
+      dryRun?: boolean;
+      agents?: string[];
+      maxItems?: number;
+      force?: boolean;
+    } = {};
     try {
       const text = await request.text();
       if (text) {
@@ -66,17 +75,21 @@ export const POST: APIRoute = async ({ request }) => {
       dryRun: body.dryRun || false,
       agents: body.agents || 'all',
       maxItems: body.maxItems || 10,
+      force: body.force || false,
     });
 
-    // Initialize orchestrator with all agents
+    // MVP: Direct orchestrator execution only
     const orchestrator = await initializeOrchestrator();
 
-    // Run all agents
+    // Run agents in sequence: deal_hunter → content_creator → channel_manager
     const result: OrchestratorResult = await orchestrator.runAll({
       dryRun: body.dryRun || false,
       maxItemsPerAgent: body.maxItems || 10,
-      agents: body.agents as ('deal_hunter' | 'content_creator' | 'price_monitor' | 'channel_manager')[] | undefined,
+      agents: body.agents as
+        | ('deal_hunter' | 'content_creator' | 'price_monitor' | 'channel_manager')[]
+        | undefined,
       triggeredBy: cronHeader ? 'cron' : 'manual',
+      force: body.force || false,
     });
 
     const duration = Date.now() - startTime;
@@ -112,7 +125,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.log(`[Cron] Agents run: ${result.agentsRun}, Skipped: ${result.agentsSkipped}`);
 
     return new Response(JSON.stringify(response), {
-      status: result.success ? 200 : 500,
+      status: response.success ? 200 : 500,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {

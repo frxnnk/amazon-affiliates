@@ -32,6 +32,7 @@ tmpclaude-*-cwd
 
 # Claude Code local settings
 .claude/settings.local.json
+.mcp.json
 
 # macOS-specific files
 .DS_Store

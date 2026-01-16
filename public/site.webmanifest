@@ -1,0 +1,26 @@
+{
+  "name": "RewardHive",
+  "short_name": "RewardHive",
+  "description": "Curated products and verified deals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFBEB",
+  "theme_color": "#F59E0B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/favicon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/favicon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

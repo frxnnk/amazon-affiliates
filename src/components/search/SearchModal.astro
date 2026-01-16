@@ -68,7 +68,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
 
     <div id="search-results" class="search-results" role="region" aria-label={lang === 'es' ? 'Resultados de búsqueda' : 'Search results'}>
       <div class="search-empty" id="search-empty">
-        <p>{lang === 'es' ? 'Escribe para buscar productos' : 'Type to search products'}</p>
+        <p>{lang === 'es' ? 'Escribe para buscar productos o pega un link de Amazon' : 'Type to search products or paste an Amazon link'}</p>
       </div>
       <div class="search-loading hidden" id="search-loading" aria-hidden="true">
         <div class="spinner" aria-hidden="true"></div>
@@ -76,6 +76,49 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
       </div>
       <div class="search-no-results hidden" id="search-no-results">
         <p>{noResultsText}</p>
+      </div>
+      <!-- Amazon Link Generator Result -->
+      <div class="amazon-link-result hidden" id="amazon-link-result">
+        <div class="amazon-link-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          <h3>{lang === 'es' ? 'Link de Referido Generado' : 'Affiliate Link Generated'}</h3>
+        </div>
+        <div class="amazon-link-info">
+          <span class="amazon-link-label">ASIN:</span>
+          <code class="amazon-link-asin" id="amazon-link-asin"></code>
+        </div>
+        <div class="amazon-link-box">
+          <input type="text" id="amazon-link-url" class="amazon-link-input" readonly />
+          <button type="button" id="amazon-link-copy" class="amazon-link-copy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            {lang === 'es' ? 'Copiar' : 'Copy'}
+          </button>
+        </div>
+        <div class="amazon-link-actions">
+          <a href="#" id="amazon-link-open" class="amazon-link-open" target="_blank" rel="nofollow noopener sponsored">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            {lang === 'es' ? 'Abrir en Amazon' : 'Open on Amazon'}
+          </a>
+          <button type="button" id="amazon-link-cart" class="amazon-link-cart">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            {lang === 'es' ? 'Agregar al carrito' : 'Add to cart'}
+          </button>
+        </div>
+        <p class="amazon-link-disclaimer">{lang === 'es' ? 'Este link incluye nuestro tag de afiliado. ¡Gracias por apoyarnos!' : 'This link includes our affiliate tag. Thanks for supporting us!'}</p>
       </div>
       <div id="search-results-list" class="search-results-list" role="list"></div>
     </div>
@@ -245,6 +288,173 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     display: none;
   }
 
+  /* Amazon Link Generator Styles */
+  .amazon-link-result {
+    padding: 1.5rem;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border-bottom: 3px solid var(--color-brutal-black, #1A1A1A);
+  }
+
+  .amazon-link-result.hidden {
+    display: none;
+  }
+
+  .amazon-link-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .amazon-link-header svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .amazon-link-header h3 {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .amazon-link-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .amazon-link-label {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+
+  .amazon-link-asin {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.875rem;
+    font-weight: 700;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-yellow, #FFE14D);
+    padding: 0.25rem 0.5rem;
+  }
+
+  .amazon-link-box {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .amazon-link-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.75rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    outline: none;
+  }
+
+  .amazon-link-copy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .amazon-link-copy:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .amazon-link-copy svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .amazon-link-copy[data-copied="true"] {
+    background: #22c55e;
+  }
+
+  .amazon-link-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .amazon-link-open,
+  .amazon-link-cart {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .amazon-link-open {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-black, #1A1A1A);
+    text-decoration: none;
+  }
+
+  .amazon-link-open:hover {
+    background: var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .amazon-link-cart {
+    background: var(--color-cream, #FFFEF9);
+    color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .amazon-link-cart:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .amazon-link-open svg,
+  .amazon-link-cart svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .amazon-link-disclaimer {
+    font-size: 0.6875rem;
+    color: var(--color-brutal-black, #1A1A1A);
+    opacity: 0.6;
+    margin: 0;
+    text-align: center;
+  }
+
   /* Result item styles - will be added dynamically */
   :global(.search-result-item) {
     display: flex;
@@ -327,7 +537,8 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   let previousActiveElement: HTMLElement | null = null;
 
   const modal = document.getElementById('search-modal');
-  const trigger = document.getElementById('search-trigger');
+  const triggerDesktop = document.getElementById('search-trigger-desktop');
+  const triggerMobile = document.getElementById('search-trigger-mobile');
   const closeBtn = document.getElementById('search-close');
   const input = document.getElementById('search-input') as HTMLInputElement;
   const resultsContainer = document.getElementById('search-results-list');
@@ -337,11 +548,108 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   const statusRegion = document.getElementById('search-status');
   const searchContainer = modal?.querySelector('.search-container');
 
+  // Amazon link generator elements
+  const amazonLinkResult = document.getElementById('amazon-link-result');
+  const amazonLinkAsin = document.getElementById('amazon-link-asin');
+  const amazonLinkUrl = document.getElementById('amazon-link-url') as HTMLInputElement;
+  const amazonLinkCopy = document.getElementById('amazon-link-copy');
+  const amazonLinkOpen = document.getElementById('amazon-link-open') as HTMLAnchorElement;
+  const amazonLinkCart = document.getElementById('amazon-link-cart');
+
+  // Affiliate tag configuration
+  const AFFILIATE_TAG = 'bestdeal0ee40-20';
+
   // Announce to screen readers
   function announce(message: string) {
     if (statusRegion) {
       statusRegion.textContent = message;
     }
+  }
+
+  // Amazon URL detection and parsing
+  function isAmazonUrl(text: string): boolean {
+    const amazonPattern = /amazon\.(com|es|co\.uk|de|fr|it|ca|com\.mx|com\.br|co\.jp|in|com\.au)/i;
+    return amazonPattern.test(text);
+  }
+
+  function extractAsinFromUrl(url: string): string | null {
+    // Multiple patterns to match ASIN in Amazon URLs
+    const patterns = [
+      /\/dp\/([A-Z0-9]{10})/i,
+      /\/gp\/product\/([A-Z0-9]{10})/i,
+      /\/gp\/aw\/d\/([A-Z0-9]{10})/i,
+      /\/product\/([A-Z0-9]{10})/i,
+      /\/ASIN\/([A-Z0-9]{10})/i,
+      /\/?([A-Z0-9]{10})(?:\/|\?|$)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        // Validate it looks like an ASIN (starts with B0 typically or is alphanumeric)
+        const potentialAsin = match[1].toUpperCase();
+        if (/^[A-Z0-9]{10}$/.test(potentialAsin)) {
+          return potentialAsin;
+        }
+      }
+    }
+    return null;
+  }
+
+  function getMarketplaceFromUrl(url: string): string {
+    const marketplaceMap: { [key: string]: string } = {
+      'amazon.com': 'amazon.com',
+      'amazon.es': 'amazon.es',
+      'amazon.co.uk': 'amazon.co.uk',
+      'amazon.de': 'amazon.de',
+      'amazon.fr': 'amazon.fr',
+      'amazon.it': 'amazon.it',
+      'amazon.ca': 'amazon.ca',
+      'amazon.com.mx': 'amazon.com.mx',
+      'amazon.com.br': 'amazon.com.br',
+      'amazon.co.jp': 'amazon.co.jp',
+      'amazon.in': 'amazon.in',
+      'amazon.com.au': 'amazon.com.au',
+    };
+
+    for (const [pattern, marketplace] of Object.entries(marketplaceMap)) {
+      if (url.includes(pattern)) {
+        return marketplace;
+      }
+    }
+    return 'amazon.com';
+  }
+
+  function generateAffiliateUrl(asin: string, marketplace: string): string {
+    return `https://www.${marketplace}/dp/${asin}?tag=${AFFILIATE_TAG}&linkCode=ogi&th=1&psc=1`;
+  }
+
+  function showAmazonLinkResult(asin: string, affiliateUrl: string) {
+    // Hide other states
+    emptyState?.classList.add('hidden');
+    loadingState?.classList.add('hidden');
+    noResultsState?.classList.add('hidden');
+    if (resultsContainer) resultsContainer.innerHTML = '';
+
+    // Show amazon link result
+    amazonLinkResult?.classList.remove('hidden');
+
+    // Populate data
+    if (amazonLinkAsin) amazonLinkAsin.textContent = asin;
+    if (amazonLinkUrl) amazonLinkUrl.value = affiliateUrl;
+    if (amazonLinkOpen) amazonLinkOpen.href = affiliateUrl;
+
+    // Store ASIN for cart functionality
+    if (amazonLinkCart) {
+      amazonLinkCart.dataset.asin = asin;
+      amazonLinkCart.dataset.affiliateUrl = affiliateUrl;
+    }
+
+    announce(currentLang === 'es' ? 'Link de referido generado' : 'Affiliate link generated');
+  }
+
+  function hideAmazonLinkResult() {
+    amazonLinkResult?.classList.add('hidden');
   }
 
   // Get focusable elements within container
@@ -443,10 +751,25 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   function performSearch(query: string) {
     if (!query.trim()) {
       showState('empty');
+      hideAmazonLinkResult();
       if (resultsContainer) resultsContainer.innerHTML = '';
       announce('');
       return;
     }
+
+    // Check if the query is an Amazon URL
+    if (isAmazonUrl(query)) {
+      const asin = extractAsinFromUrl(query);
+      if (asin) {
+        const marketplace = getMarketplaceFromUrl(query);
+        const affiliateUrl = generateAffiliateUrl(asin, marketplace);
+        showAmazonLinkResult(asin, affiliateUrl);
+        return;
+      }
+    }
+
+    // Hide amazon link result if doing normal search
+    hideAmazonLinkResult();
 
     if (!fuse) {
       showState('loading');
@@ -499,7 +822,8 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   }
 
   // Event listeners
-  trigger?.addEventListener('click', openModal);
+  triggerDesktop?.addEventListener('click', openModal);
+  triggerMobile?.addEventListener('click', openModal);
   closeBtn?.addEventListener('click', closeModal);
 
   modal?.querySelector('.search-backdrop')?.addEventListener('click', closeModal);
@@ -527,6 +851,62 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     const link = (e.target as HTMLElement).closest('a');
     if (link) {
       closeModal();
+    }
+  });
+
+  // Amazon link copy button
+  amazonLinkCopy?.addEventListener('click', async () => {
+    if (!amazonLinkUrl?.value) return;
+
+    try {
+      await navigator.clipboard.writeText(amazonLinkUrl.value);
+      amazonLinkCopy.dataset.copied = 'true';
+      const originalText = amazonLinkCopy.innerHTML;
+      amazonLinkCopy.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        ${currentLang === 'es' ? 'Copiado!' : 'Copied!'}
+      `;
+
+      setTimeout(() => {
+        amazonLinkCopy.dataset.copied = 'false';
+        amazonLinkCopy.innerHTML = originalText;
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  });
+
+  // Amazon link add to cart button
+  amazonLinkCart?.addEventListener('click', () => {
+    const asin = amazonLinkCart.dataset.asin;
+    const affiliateUrl = amazonLinkCart.dataset.affiliateUrl;
+
+    if (asin && affiliateUrl && (window as any).cart?.add) {
+      (window as any).cart.add({
+        asin,
+        productId: `amazon-${asin}`,
+        title: `Amazon Product ${asin}`,
+        brand: 'Amazon',
+        image: '',
+        price: 0,
+        currency: 'USD',
+        affiliateUrl
+      });
+
+      // Visual feedback
+      const originalText = amazonLinkCart.innerHTML;
+      amazonLinkCart.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        ${currentLang === 'es' ? 'Agregado!' : 'Added!'}
+      `;
+
+      setTimeout(() => {
+        amazonLinkCart.innerHTML = originalText;
+      }, 2000);
     }
   });
 </script>

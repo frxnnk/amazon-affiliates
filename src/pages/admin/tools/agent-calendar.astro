@@ -1,0 +1,2859 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+---
+
+<AdminLayout title="Calendario de Agentes">
+  <div class="calendar-page">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="page-title">Calendario de Agentes</h1>
+          <p class="page-subtitle">Planifica tareas, turnos y monitorea el cumplimiento</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/tools/agents" class="btn btn-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+          </svg>
+          <span class="btn-text">Ver Agentes</span>
+        </a>
+        <div class="view-toggle">
+          <button class="view-btn active" data-view="3day">3 Días</button>
+          <button class="view-btn" data-view="week">Semana</button>
+        </div>
+        <button class="btn btn-ai" id="aiPlanBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span class="btn-text">Planificar con IA</span>
+        </button>
+        <button class="btn btn-secondary" id="addScheduleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span class="btn-text">Nuevo Horario</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="calendar-layout">
+      <!-- Calendar Section -->
+      <div class="calendar-section">
+        <!-- Date Navigation -->
+        <div class="date-nav">
+          <button class="nav-btn" id="prevBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <button class="nav-btn today-btn" id="todayBtn">Hoy</button>
+          <button class="nav-btn" id="nextBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+          <span class="date-range" id="dateRange">Cargando...</span>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-container">
+          <div class="calendar-grid" id="calendarGrid">
+            <!-- Time column -->
+            <div class="time-column">
+              {[...Array(24)].map((_, i) => (
+                <div class="time-slot">
+                  <span class="time-label">{i.toString().padStart(2, '0')}:00</span>
+                </div>
+              ))}
+            </div>
+            <!-- Day columns will be inserted here by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Compliance Dashboard -->
+        <div class="sidebar-card compliance-card">
+          <h3 class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            Cumplimiento
+          </h3>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-circle" id="onTimeCircle">
+                <svg viewBox="0 0 36 36">
+                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="circle-progress" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <span class="metric-value" id="onTimeValue">--%</span>
+              </div>
+              <span class="metric-label">Puntualidad</span>
+            </div>
+            <div class="metric">
+              <div class="metric-circle" id="successCircle">
+                <svg viewBox="0 0 36 36">
+                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="circle-progress success" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <span class="metric-value" id="successValue">--%</span>
+              </div>
+              <span class="metric-label">Éxito</span>
+            </div>
+          </div>
+          <div class="streak-display">
+            <span class="streak-icon">🔥</span>
+            <span class="streak-value" id="streakValue">0</span>
+            <span class="streak-label">días de racha</span>
+          </div>
+        </div>
+
+        <!-- Active Shift -->
+        <div class="sidebar-card shift-card">
+          <h3 class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Turno Activo
+          </h3>
+          <div class="active-shift" id="activeShift">
+            <span class="shift-name">Sin turno</span>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="sidebar-card alerts-card">
+          <h3 class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            Alertas
+            <span class="alert-badge" id="alertBadge">0</span>
+          </h3>
+          <div class="alerts-list" id="alertsList">
+            <p class="no-alerts">Sin alertas recientes</p>
+          </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="sidebar-card tasks-card">
+          <h3 class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            Tareas de Hoy
+          </h3>
+          <div class="tasks-list" id="tasksList">
+            <p class="no-tasks">Cargando tareas...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Drawer Backdrop (blocks interactions when open) -->
+    <div class="ai-drawer-backdrop" id="aiDrawerBackdrop"></div>
+
+    <!-- AI Planning Drawer (side panel) -->
+    <div class="ai-drawer" id="aiDrawer">
+      <!-- Drawer Header -->
+      <div class="ai-drawer-header">
+        <div class="ai-drawer-title">
+          <div class="ai-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span>Asistente IA</span>
+        </div>
+        <button class="ai-drawer-close" id="closeAiDrawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Drawer Content -->
+      <div class="ai-drawer-content">
+        <!-- Step 1: Configuration -->
+        <div class="ai-step" id="aiStep1">
+          <div class="ai-welcome">
+            <div class="ai-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+              </svg>
+            </div>
+            <p>¡Hola! Puedo ayudarte a crear un plan optimizado para tus agentes.</p>
+          </div>
+
+          <div class="ai-config-section">
+            <label class="ai-label">¿Cuántos días quieres planificar?</label>
+            <div class="ai-chips">
+              <button type="button" class="ai-chip active" data-days="3">3 días</button>
+              <button type="button" class="ai-chip" data-days="5">5 días</button>
+              <button type="button" class="ai-chip" data-days="7">1 semana</button>
+            </div>
+          </div>
+
+          <div class="ai-config-section">
+            <label class="ai-label">Instrucciones especiales (opcional)</label>
+            <textarea id="aiPriorities" class="ai-textarea" placeholder="Ej: Priorizar búsqueda de ofertas de electrónica..." rows="2"></textarea>
+          </div>
+
+          <div class="ai-config-section">
+            <label class="ai-checkbox-label">
+              <input type="checkbox" id="aiClearExisting">
+              <span class="checkmark"></span>
+              Limpiar tareas pendientes
+            </label>
+          </div>
+
+          <button type="button" class="ai-generate-btn" id="previewAiPlan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            Generar Plan
+          </button>
+        </div>
+
+        <!-- Step 2: Loading (friendly animation) -->
+        <div class="ai-step hidden" id="aiStep2">
+          <div class="ai-thinking">
+            <div class="ai-thinking-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+              </svg>
+              <div class="thinking-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+            <div class="ai-thinking-text">
+              <p class="thinking-main">Analizando datos...</p>
+              <p class="thinking-sub" id="aiThinkingStatus">Revisando rendimiento histórico</p>
+            </div>
+            <div class="ai-progress-bar">
+              <div class="ai-progress-fill" id="aiProgressFill"></div>
+            </div>
+            <p class="ai-thinking-tip">💡 Puedes seguir usando el calendario mientras genero el plan</p>
+          </div>
+        </div>
+
+        <!-- Step 3: Results -->
+        <div class="ai-step hidden" id="aiStep3">
+          <div class="ai-result-header">
+            <div class="ai-result-icon success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="ai-result-info">
+              <h3>Plan listo</h3>
+              <p><span id="aiTaskCount">0</span> tareas · <span id="aiTokens">0</span> tokens</p>
+            </div>
+          </div>
+
+          <div class="ai-reasoning-box" id="aiReasoning"></div>
+
+          <div class="ai-tasks-list" id="aiTasksPreview"></div>
+
+          <div class="ai-result-actions">
+            <button type="button" class="ai-btn-secondary" id="backToConfig">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Modificar
+            </button>
+            <button type="button" class="ai-btn-primary" id="applyAiPlan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Aplicar
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 4: Applied -->
+        <div class="ai-step hidden" id="aiStep4">
+          <div class="ai-applied">
+            <div class="ai-applied-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <h3>¡Plan aplicado!</h3>
+            <p id="aiSuccessMessage">Las tareas se han añadido al calendario</p>
+            <button type="button" class="ai-btn-primary" id="closeAiSuccess">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Ver en Calendario
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Editor Modal -->
+    <div class="modal" id="scheduleModal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Nuevo Horario</h2>
+          <button class="modal-close" id="closeModal">×</button>
+        </div>
+        <form id="scheduleForm">
+          <div class="form-group">
+            <label>Agente</label>
+            <select name="agentType" required>
+              <option value="deal_hunter">Deal Hunter</option>
+              <option value="content_creator">Content Creator</option>
+              <option value="price_monitor">Price Monitor</option>
+              <option value="channel_manager">Channel Manager</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" name="name" placeholder="Ej: Búsqueda matutina" required>
+          </div>
+          <div class="form-group">
+            <label>Hora</label>
+            <div class="time-inputs">
+              <input type="number" name="hour" min="0" max="23" placeholder="HH" required>
+              <span>:</span>
+              <input type="number" name="minute" min="0" max="59" placeholder="MM" value="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Días</label>
+            <div class="days-checkboxes">
+              <label><input type="checkbox" name="days" value="0"> Dom</label>
+              <label><input type="checkbox" name="days" value="1" checked> Lun</label>
+              <label><input type="checkbox" name="days" value="2" checked> Mar</label>
+              <label><input type="checkbox" name="days" value="3" checked> Mié</label>
+              <label><input type="checkbox" name="days" value="4" checked> Jue</label>
+              <label><input type="checkbox" name="days" value="5" checked> Vie</label>
+              <label><input type="checkbox" name="days" value="6"> Sáb</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Tarea</label>
+            <select name="taskType">
+              <option value="routine">Rutina</option>
+              <option value="deep_scan">Escaneo Profundo</option>
+              <option value="cleanup">Limpieza</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancelSchedule">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .calendar-page {
+    padding: 1.5rem;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--brutal-yellow);
+    border: 3px solid var(--brutal-black);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0 var(--brutal-black);
+  }
+
+  .header-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0;
+  }
+
+  .page-subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .view-toggle {
+    display: flex;
+    border: 3px solid var(--brutal-black);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .view-btn {
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .view-btn.active {
+    background: var(--brutal-yellow);
+  }
+
+  .view-btn:hover:not(.active) {
+    background: var(--bg-tertiary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border: 3px solid var(--brutal-black);
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .btn-primary {
+    background: var(--brutal-yellow);
+    box-shadow: 4px 4px 0 var(--brutal-black);
+  }
+
+  .btn-primary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--brutal-black);
+  }
+
+  .btn-secondary {
+    background: var(--bg-secondary);
+    box-shadow: 3px 3px 0 var(--brutal-black);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .btn-link {
+    background: transparent;
+    color: var(--text-primary);
+    text-decoration: none;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
+  .btn-link:hover {
+    background: var(--bg-secondary);
+    border-color: var(--brutal-black);
+  }
+
+  /* Main Layout */
+  .calendar-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 1024px) {
+    .calendar-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Calendar Section */
+  .calendar-section {
+    background: var(--bg-primary);
+    border: 3px solid var(--brutal-black);
+    border-radius: 12px;
+    box-shadow: 6px 6px 0 var(--brutal-black);
+    overflow: hidden;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-bottom: 3px solid var(--brutal-black);
+  }
+
+  .nav-btn {
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--brutal-black);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .nav-btn:hover {
+    background: var(--brutal-yellow);
+  }
+
+  .nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .today-btn {
+    padding: 0.5rem 1rem;
+  }
+
+  .date-range {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  /* Calendar Grid */
+  .calendar-container {
+    overflow-x: auto;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(3, 1fr);
+    min-width: 600px;
+  }
+
+  .calendar-grid.week-view {
+    grid-template-columns: 60px repeat(7, 1fr);
+    min-width: 900px;
+  }
+
+  .time-column {
+    border-right: 2px solid var(--border-color);
+    background: var(--bg-secondary);
+  }
+
+  .time-slot {
+    height: 60px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0.25rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .time-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  /* Day Column */
+  .day-column {
+    border-right: 1px solid var(--border-color);
+    position: relative;
+  }
+
+  .day-column:last-child {
+    border-right: none;
+  }
+
+  .day-header {
+    padding: 0.75rem;
+    text-align: center;
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .day-header.today {
+    background: var(--brutal-yellow);
+  }
+
+  .day-name {
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+
+  .day-date {
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .hour-slot {
+    height: 60px;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    padding: 2px;
+  }
+
+  .hour-slot:hover {
+    background: var(--bg-hover);
+  }
+
+  .hour-slot.droppable-active {
+    background: rgba(255, 214, 0, 0.2);
+  }
+
+  /* Task Card */
+  .task-card {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    padding: 0.25rem 0.5rem;
+    border: 2px solid var(--brutal-black);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: grab;
+    overflow: hidden;
+    z-index: 5;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .task-card:hover {
+    transform: scale(1.02);
+    box-shadow: 2px 2px 0 var(--brutal-black);
+    z-index: 10;
+  }
+
+  .task-card.dragging {
+    opacity: 0.8;
+    cursor: grabbing;
+  }
+
+  .task-card.deal_hunter { background: var(--brutal-yellow); }
+  .task-card.content_creator { background: var(--brutal-blue); color: white; }
+  .task-card.price_monitor { background: var(--brutal-green); }
+  .task-card.channel_manager { background: var(--brutal-orange); }
+
+  .task-card.completed { opacity: 0.6; }
+  .task-card.failed { border-color: var(--brutal-red); }
+  .task-card.running { animation: pulse 1.5s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .task-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .task-time {
+    font-size: 0.65rem;
+    opacity: 0.8;
+  }
+
+  /* Shift Bar */
+  .shift-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--brutal-black);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .sidebar-card {
+    background: var(--bg-primary);
+    border: 3px solid var(--brutal-black);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 4px 4px 0 var(--brutal-black);
+  }
+
+  .sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+  }
+
+  .sidebar-title svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Compliance Metrics */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric {
+    text-align: center;
+  }
+
+  .metric-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.5rem;
+  }
+
+  .metric-circle svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .circle-bg {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 3;
+  }
+
+  .circle-progress {
+    fill: none;
+    stroke: var(--brutal-yellow);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease;
+  }
+
+  .circle-progress.success {
+    stroke: var(--brutal-green);
+  }
+
+  .metric-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .metric-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .streak-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+  }
+
+  .streak-icon {
+    font-size: 1.5rem;
+  }
+
+  .streak-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .streak-label {
+    color: var(--text-secondary);
+  }
+
+  /* Active Shift */
+  .active-shift {
+    padding: 0.75rem;
+    background: var(--brutal-green);
+    border: 2px solid var(--brutal-black);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .active-shift.inactive {
+    background: var(--bg-secondary);
+  }
+
+  .shift-name {
+    font-weight: 700;
+  }
+
+  /* Alerts */
+  .alert-badge {
+    background: var(--brutal-red);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: auto;
+  }
+
+  .alert-badge:empty,
+  .alert-badge:contains("0") {
+    display: none;
+  }
+
+  .alerts-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .alert-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--brutal-orange);
+    background: var(--bg-secondary);
+    font-size: 0.8rem;
+  }
+
+  .alert-item.error {
+    border-color: var(--brutal-red);
+  }
+
+  .alert-item.warning {
+    border-color: var(--brutal-orange);
+  }
+
+  .no-alerts, .no-tasks {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  /* Tasks List */
+  .tasks-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    font-size: 0.8rem;
+  }
+
+  .task-item.completed {
+    opacity: 0.6;
+    text-decoration: line-through;
+  }
+
+  .task-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .task-dot.deal_hunter { background: var(--brutal-yellow); }
+  .task-dot.content_creator { background: var(--brutal-blue); }
+  .task-dot.price_monitor { background: var(--brutal-green); }
+  .task-dot.channel_manager { background: var(--brutal-orange); }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+  }
+
+  .modal.open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    position: relative;
+    background: var(--bg-primary);
+    border: 3px solid var(--brutal-black);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 8px 8px 0 var(--brutal-black);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--brutal-black);
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  .time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .time-inputs input {
+    width: 80px;
+    text-align: center;
+  }
+
+  .days-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .days-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  /* AI Button */
+  .btn-ai {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 4px 4px 0 var(--brutal-black);
+  }
+
+  .btn-ai:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--brutal-black);
+  }
+
+  /* ==================== AI DRAWER STYLES ==================== */
+
+  /* Backdrop - blocks all interactions when drawer is open */
+  .ai-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 1100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .ai-drawer-backdrop.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Drawer panel */
+  .ai-drawer {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    max-width: 95vw;
+    height: 100vh;
+    background: var(--bg-primary, #FFFEF9);
+    border-left: 4px solid var(--brutal-black, #1a1a1a);
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+  }
+
+  .ai-drawer.open {
+    right: 0;
+  }
+
+  .ai-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: 3px solid var(--brutal-black);
+  }
+
+  .ai-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .ai-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-icon-wrapper svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ai-drawer-close {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .ai-drawer-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .ai-drawer-close svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ai-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+  }
+
+  .ai-step.hidden {
+    display: none;
+  }
+
+  /* Step 1: Welcome & Config */
+  .ai-welcome {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .ai-avatar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ai-avatar svg {
+    width: 28px;
+    height: 28px;
+    color: white;
+  }
+
+  .ai-welcome p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  .ai-config-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .ai-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .ai-chips {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .ai-chip {
+    flex: 1;
+    padding: 0.65rem 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .ai-chip:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+  }
+
+  .ai-chip.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+  }
+
+  .ai-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    resize: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .ai-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  .ai-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .ai-checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #667eea;
+  }
+
+  .ai-generate-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 3px solid var(--brutal-black);
+    border-radius: 12px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 4px 4px 0 var(--brutal-black);
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  .ai-generate-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--brutal-black);
+  }
+
+  .ai-generate-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Step 2: Thinking/Loading */
+  .ai-thinking {
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  .ai-thinking-avatar {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .ai-thinking-avatar svg {
+    width: 100%;
+    height: 100%;
+    color: #667eea;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(102, 126, 234, 0.4)); }
+    50% { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8)); }
+  }
+
+  .thinking-dots {
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+  }
+
+  .thinking-dots span {
+    width: 8px;
+    height: 8px;
+    background: #667eea;
+    border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite;
+  }
+
+  .thinking-dots span:nth-child(1) { animation-delay: 0s; }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+  }
+
+  .ai-thinking-text {
+    margin-bottom: 1.5rem;
+  }
+
+  .thinking-main {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem;
+    color: var(--text-primary);
+  }
+
+  .thinking-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+    animation: fade-text 3s ease-in-out infinite;
+  }
+
+  @keyframes fade-text {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .ai-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .ai-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+    animation: progress-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes progress-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .ai-thinking-tip {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 0;
+  }
+
+  /* Step 3: Results */
+  .ai-result-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .ai-result-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-result-icon.success {
+    background: var(--brutal-green);
+    color: white;
+  }
+
+  .ai-result-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ai-result-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .ai-result-info p {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .ai-reasoning-box {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 0.875rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    border-left: 4px solid #667eea;
+  }
+
+  .ai-tasks-list {
+    max-height: calc(100vh - 450px);
+    overflow-y: auto;
+    margin-bottom: 1rem;
+  }
+
+  .ai-task-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .ai-task-card:hover {
+    border-color: var(--brutal-black);
+  }
+
+  .ai-task-card.deal_hunter { border-left: 4px solid var(--brutal-yellow); }
+  .ai-task-card.content_creator { border-left: 4px solid var(--brutal-blue); }
+  .ai-task-card.price_monitor { border-left: 4px solid var(--brutal-green); }
+  .ai-task-card.channel_manager { border-left: 4px solid var(--brutal-orange); }
+
+  .ai-task-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .ai-task-icon.deal_hunter { background: var(--brutal-yellow); }
+  .ai-task-icon.content_creator { background: var(--brutal-blue); color: white; }
+  .ai-task-icon.price_monitor { background: var(--brutal-green); }
+  .ai-task-icon.channel_manager { background: var(--brutal-orange); }
+
+  .ai-task-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ai-task-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin: 0 0 0.25rem;
+    color: var(--text-primary);
+  }
+
+  .ai-task-schedule {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .ai-task-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+  }
+
+  .ai-task-badge.high { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+  .ai-task-badge.medium { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+  .ai-task-badge.low { background: var(--bg-secondary); color: var(--text-secondary); }
+
+  .ai-result-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .ai-btn-secondary,
+  .ai-btn-primary {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid var(--brutal-black);
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+  }
+
+  .ai-btn-secondary {
+    background: var(--bg-secondary);
+  }
+
+  .ai-btn-secondary:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .ai-btn-primary {
+    background: var(--brutal-yellow);
+    box-shadow: 3px 3px 0 var(--brutal-black);
+  }
+
+  .ai-btn-primary:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--brutal-black);
+  }
+
+  .ai-btn-secondary svg,
+  .ai-btn-primary svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Step 4: Applied */
+  .ai-applied {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .ai-applied-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--brutal-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    animation: success-pop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  @keyframes success-pop {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  .ai-applied-icon svg {
+    width: 40px;
+    height: 40px;
+    color: white;
+  }
+
+  .ai-applied h3 {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .ai-applied p {
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .ai-applied .ai-btn-primary {
+    display: inline-flex;
+    flex: none;
+    padding: 0.875rem 1.5rem;
+  }
+
+  /* ==================== MOBILE STYLES ==================== */
+
+  @media (max-width: 768px) {
+    .calendar-page {
+      padding: 1rem;
+    }
+
+    /* Header Mobile */
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .header-content {
+      margin-bottom: 0.5rem;
+    }
+
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      box-shadow: 3px 3px 0 var(--brutal-black);
+    }
+
+    .header-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .page-title {
+      font-size: 1.25rem;
+    }
+
+    .page-subtitle {
+      font-size: 0.8rem;
+      display: none;
+    }
+
+    .header-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .view-toggle {
+      order: 1;
+      flex: 1;
+    }
+
+    .view-btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .btn {
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn-link {
+      order: 0;
+    }
+
+    #aiPlanBtn {
+      order: 2;
+      flex: 1;
+    }
+
+    .btn .btn-text {
+      display: none;
+    }
+
+    #addScheduleBtn {
+      order: 3;
+      padding: 0.6rem;
+    }
+
+    /* Calendar Layout Mobile */
+    .calendar-layout {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .calendar-section {
+      box-shadow: 4px 4px 0 var(--brutal-black);
+    }
+
+    /* Date Nav Mobile */
+    .date-nav {
+      padding: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      padding: 0.4rem;
+    }
+
+    .nav-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .today-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .date-range {
+      font-size: 0.9rem;
+      width: 100%;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    /* Calendar Grid Mobile */
+    .calendar-container {
+      max-height: 50vh;
+    }
+
+    .calendar-grid {
+      grid-template-columns: 45px repeat(3, 1fr);
+      min-width: 320px;
+    }
+
+    .calendar-grid.week-view {
+      grid-template-columns: 45px repeat(7, 1fr);
+      min-width: 500px;
+    }
+
+    .time-slot {
+      height: 50px;
+    }
+
+    .time-label {
+      font-size: 0.65rem;
+    }
+
+    .day-header {
+      padding: 0.5rem 0.25rem;
+    }
+
+    .day-name {
+      font-size: 0.7rem;
+    }
+
+    .day-date {
+      font-size: 1.1rem;
+    }
+
+    .hour-slot {
+      height: 50px;
+    }
+
+    /* Task Card Mobile */
+    .task-card {
+      padding: 0.2rem 0.35rem;
+      font-size: 0.65rem;
+      border-width: 1.5px;
+    }
+
+    .task-time {
+      display: none;
+    }
+
+    /* Sidebar Mobile */
+    .sidebar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .sidebar-card {
+      padding: 0.75rem;
+      box-shadow: 3px 3px 0 var(--brutal-black);
+    }
+
+    .sidebar-title {
+      font-size: 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .sidebar-title svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Compliance Mobile */
+    .compliance-card {
+      grid-column: span 2;
+    }
+
+    .metrics-grid {
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .metric-circle {
+      width: 60px;
+      height: 60px;
+    }
+
+    .metric-value {
+      font-size: 1rem;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+    }
+
+    .streak-display {
+      padding: 0.5rem;
+    }
+
+    .streak-icon {
+      font-size: 1.25rem;
+    }
+
+    .streak-value {
+      font-size: 1.25rem;
+    }
+
+    .streak-label {
+      font-size: 0.75rem;
+    }
+
+    /* Shift Card Mobile */
+    .active-shift {
+      padding: 0.5rem;
+    }
+
+    .shift-name {
+      font-size: 0.85rem;
+    }
+
+    /* Alerts Mobile */
+    .alerts-card {
+      grid-column: span 2;
+    }
+
+    .alert-badge {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+    }
+
+    .alerts-list {
+      max-height: 120px;
+    }
+
+    .alert-item {
+      padding: 0.4rem;
+      font-size: 0.75rem;
+    }
+
+    /* Tasks List Mobile */
+    .tasks-card {
+      grid-column: span 2;
+    }
+
+    .tasks-list {
+      max-height: 150px;
+    }
+
+    .task-item {
+      padding: 0.4rem;
+      font-size: 0.75rem;
+    }
+
+    .task-dot {
+      width: 6px;
+      height: 6px;
+    }
+
+    /* Modal Mobile */
+    .modal-content {
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1rem;
+      margin: 1rem;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+    }
+
+    .modal-close {
+      font-size: 1.25rem;
+    }
+
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .time-inputs input {
+      width: 60px;
+    }
+
+    .days-checkboxes {
+      gap: 0.35rem;
+    }
+
+    .days-checkboxes label {
+      font-size: 0.75rem;
+    }
+
+    .form-actions {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* AI Modal Mobile */
+    .ai-modal {
+      max-width: 100%;
+    }
+
+    .ai-description {
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .days-selector {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .day-option {
+      padding: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .ai-loading {
+      padding: 2rem 1rem;
+    }
+
+    .ai-spinner {
+      width: 50px;
+      height: 50px;
+    }
+
+    .ai-loading p {
+      font-size: 0.9rem;
+    }
+
+    .ai-reasoning {
+      padding: 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .ai-tasks-preview {
+      max-height: 200px;
+    }
+
+    .ai-task-item {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .ai-task-dot {
+      width: 10px;
+      height: 10px;
+    }
+
+    .ai-task-name {
+      font-size: 0.85rem;
+    }
+
+    .ai-task-meta {
+      font-size: 0.7rem;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .ai-task-reasoning {
+      display: none;
+    }
+
+    .ai-task-priority {
+      font-size: 0.6rem;
+      padding: 0.1rem 0.25rem;
+    }
+
+    .ai-success-icon {
+      width: 60px;
+      height: 60px;
+      font-size: 2rem;
+    }
+
+    .ai-success h3 {
+      font-size: 1.1rem;
+    }
+
+    /* AI Drawer Mobile */
+    .ai-drawer {
+      width: 100%;
+      max-width: 100%;
+      right: -100%;
+    }
+
+    .ai-drawer.open {
+      right: 0;
+    }
+
+    .ai-drawer-header {
+      padding: 0.875rem 1rem;
+    }
+
+    .ai-drawer-content {
+      padding: 1rem;
+    }
+
+    .ai-welcome {
+      gap: 0.75rem;
+      padding: 0.875rem;
+    }
+
+    .ai-avatar {
+      width: 40px;
+      height: 40px;
+    }
+
+    .ai-avatar svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .ai-welcome p {
+      font-size: 0.85rem;
+    }
+
+    .ai-chips {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .ai-chip {
+      padding: 0.75rem;
+    }
+
+    .ai-thinking {
+      padding: 1.5rem 0.5rem;
+    }
+
+    .ai-thinking-avatar {
+      width: 60px;
+      height: 60px;
+    }
+
+    .thinking-main {
+      font-size: 1rem;
+    }
+
+    .ai-tasks-list {
+      max-height: calc(100vh - 500px);
+    }
+
+    .ai-task-card {
+      padding: 0.75rem;
+    }
+
+    .ai-task-icon {
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+    }
+
+    .ai-task-title {
+      font-size: 0.8rem;
+    }
+
+    .ai-task-schedule {
+      font-size: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    .ai-result-actions {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .ai-btn-secondary,
+    .ai-btn-primary {
+      width: 100%;
+    }
+
+    .ai-applied {
+      padding: 2rem 0.5rem;
+    }
+
+    .ai-applied-icon {
+      width: 60px;
+      height: 60px;
+    }
+
+    .ai-applied-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 480px) {
+    .calendar-page {
+      padding: 0.75rem;
+    }
+
+    .header-content {
+      gap: 0.5rem;
+    }
+
+    .page-title {
+      font-size: 1.1rem;
+    }
+
+    .view-toggle {
+      flex: 0 0 100%;
+      order: 3;
+    }
+
+    #aiPlanBtn,
+    #addScheduleBtn {
+      flex: 1;
+    }
+
+    .calendar-grid {
+      grid-template-columns: 40px repeat(3, 1fr);
+      min-width: 280px;
+    }
+
+    .time-slot,
+    .hour-slot {
+      height: 45px;
+    }
+
+    .sidebar {
+      grid-template-columns: 1fr;
+    }
+
+    .compliance-card,
+    .alerts-card,
+    .tasks-card {
+      grid-column: span 1;
+    }
+
+    .metrics-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .modal-content {
+      padding: 0.75rem;
+      border-radius: 8px;
+    }
+
+    .modal-header {
+      margin-bottom: 1rem;
+    }
+  }
+</style>
+
+<script>
+  // State
+  let currentDate = new Date();
+  let view: '3day' | 'week' = '3day';
+  let calendarData: any = null;
+  let complianceData: any = null;
+  let draggedTask: HTMLElement | null = null;
+
+  // DOM Elements
+  const calendarGrid = document.getElementById('calendarGrid')!;
+  const dateRange = document.getElementById('dateRange')!;
+  const viewBtns = document.querySelectorAll('.view-btn');
+  const prevBtn = document.getElementById('prevBtn')!;
+  const nextBtn = document.getElementById('nextBtn')!;
+  const todayBtn = document.getElementById('todayBtn')!;
+  const scheduleModal = document.getElementById('scheduleModal')!;
+  const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
+
+  // Initialize
+  async function init() {
+    await Promise.all([
+      loadCalendarData(),
+      loadComplianceData(),
+    ]);
+    setupEventListeners();
+  }
+
+  // Load calendar data
+  async function loadCalendarData() {
+    try {
+      const from = currentDate.toISOString().split('T')[0];
+      const response = await fetch(`/api/admin/agents/calendar?view=${view}&from=${from}`);
+      calendarData = await response.json();
+      renderCalendar();
+    } catch (error) {
+      console.error('Error loading calendar:', error);
+    }
+  }
+
+  // Load compliance data
+  async function loadComplianceData() {
+    try {
+      const response = await fetch('/api/admin/agents/compliance?includeAlerts=true');
+      complianceData = await response.json();
+      renderCompliance();
+      renderAlerts();
+      renderTodayTasks();
+      renderActiveShift();
+    } catch (error) {
+      console.error('Error loading compliance:', error);
+    }
+  }
+
+  // Render calendar
+  function renderCalendar() {
+    if (!calendarData) return;
+
+    const days = view === 'week' ? 7 : 3;
+    calendarGrid.className = `calendar-grid ${view === 'week' ? 'week-view' : ''}`;
+
+    // Remove old day columns
+    const oldColumns = calendarGrid.querySelectorAll('.day-column');
+    oldColumns.forEach(col => col.remove());
+
+    // Update date range display
+    const endDate = new Date(currentDate);
+    endDate.setDate(endDate.getDate() + days - 1);
+    dateRange.textContent = `${formatDate(currentDate)} - ${formatDate(endDate)}`;
+
+    // Create day columns
+    calendarData.days?.forEach((day: any, index: number) => {
+      const column = createDayColumn(day, index);
+      calendarGrid.appendChild(column);
+    });
+  }
+
+  function createDayColumn(day: any, index: number): HTMLElement {
+    const column = document.createElement('div');
+    column.className = 'day-column';
+
+    const date = new Date(day.date);
+    const isToday = new Date().toDateString() === date.toDateString();
+
+    // Header
+    const header = document.createElement('div');
+    header.className = `day-header ${isToday ? 'today' : ''}`;
+    header.innerHTML = `
+      <div class="day-name">${date.toLocaleDateString('es', { weekday: 'short' }).toUpperCase()}</div>
+      <div class="day-date">${date.getDate()}</div>
+    `;
+    column.appendChild(header);
+
+    // Hour slots
+    for (let hour = 0; hour < 24; hour++) {
+      const slot = document.createElement('div');
+      slot.className = 'hour-slot';
+      slot.dataset.hour = hour.toString();
+      slot.dataset.date = day.date;
+
+      // Add shift bars
+      day.shifts?.forEach((shift: any) => {
+        if (hour >= shift.startHour && hour < shift.endHour) {
+          if (hour === shift.startHour) {
+            const shiftBar = document.createElement('div');
+            shiftBar.className = 'shift-bar';
+            shiftBar.style.height = `${(shift.endHour - shift.startHour) * 60}px`;
+            shiftBar.textContent = shift.name;
+            slot.appendChild(shiftBar);
+          }
+        }
+      });
+
+      // Add tasks
+      day.tasks?.filter((t: any) => t.hour === hour).forEach((task: any) => {
+        const taskCard = createTaskCard(task);
+        slot.appendChild(taskCard);
+      });
+
+      // Drag & drop handlers
+      slot.addEventListener('dragover', handleDragOver);
+      slot.addEventListener('drop', handleDrop);
+      slot.addEventListener('dragleave', handleDragLeave);
+
+      column.appendChild(slot);
+    }
+
+    return column;
+  }
+
+  function createTaskCard(task: any): HTMLElement {
+    const card = document.createElement('div');
+    card.className = `task-card ${task.agentType} ${task.status}`;
+    card.draggable = true;
+    card.dataset.taskId = task.id;
+    card.innerHTML = `
+      <div class="task-name">${task.name}</div>
+      <div class="task-time">${task.hour.toString().padStart(2, '0')}:${task.minute.toString().padStart(2, '0')}</div>
+    `;
+
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+
+    return card;
+  }
+
+  // Drag & Drop
+  function handleDragStart(e: DragEvent) {
+    draggedTask = e.target as HTMLElement;
+    draggedTask.classList.add('dragging');
+    e.dataTransfer!.effectAllowed = 'move';
+  }
+
+  function handleDragEnd(e: DragEvent) {
+    if (draggedTask) {
+      draggedTask.classList.remove('dragging');
+      draggedTask = null;
+    }
+    document.querySelectorAll('.droppable-active').forEach(el => {
+      el.classList.remove('droppable-active');
+    });
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    (e.currentTarget as HTMLElement).classList.add('droppable-active');
+  }
+
+  function handleDragLeave(e: DragEvent) {
+    (e.currentTarget as HTMLElement).classList.remove('droppable-active');
+  }
+
+  async function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    const slot = e.currentTarget as HTMLElement;
+    slot.classList.remove('droppable-active');
+
+    if (!draggedTask) return;
+
+    const taskId = draggedTask.dataset.taskId;
+    const newHour = parseInt(slot.dataset.hour!);
+    const newDate = slot.dataset.date!;
+
+    const newScheduledFor = new Date(newDate);
+    newScheduledFor.setHours(newHour, 0, 0, 0);
+
+    try {
+      const response = await fetch('/api/admin/agents/tasks', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: parseInt(taskId!),
+          scheduledFor: newScheduledFor.toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        await loadCalendarData();
+      } else {
+        console.error('Failed to reschedule task');
+      }
+    } catch (error) {
+      console.error('Error rescheduling task:', error);
+    }
+  }
+
+  // Render compliance
+  function renderCompliance() {
+    if (!complianceData?.overall) return;
+
+    const { onTimeRate, successRate, currentStreak } = complianceData.overall;
+
+    // Update circles
+    updateCircle('onTimeCircle', onTimeRate);
+    updateCircle('successCircle', successRate);
+    document.getElementById('onTimeValue')!.textContent = `${onTimeRate}%`;
+    document.getElementById('successValue')!.textContent = `${successRate}%`;
+    document.getElementById('streakValue')!.textContent = currentStreak.toString();
+  }
+
+  function updateCircle(id: string, value: number) {
+    const circle = document.querySelector(`#${id} .circle-progress`) as SVGPathElement;
+    if (circle) {
+      circle.style.strokeDasharray = `${value}, 100`;
+    }
+  }
+
+  // Render alerts
+  function renderAlerts() {
+    const alertsList = document.getElementById('alertsList')!;
+    const alertBadge = document.getElementById('alertBadge')!;
+
+    if (!complianceData?.alerts?.length) {
+      alertsList.innerHTML = '<p class="no-alerts">Sin alertas recientes</p>';
+      alertBadge.textContent = '0';
+      return;
+    }
+
+    alertBadge.textContent = complianceData.unreadAlertCount?.toString() || '0';
+
+    alertsList.innerHTML = complianceData.alerts.slice(0, 5).map((alert: any) => `
+      <div class="alert-item ${alert.severity}">
+        <strong>${alert.agentType}</strong>: ${alert.message}
+        <div style="font-size: 0.7rem; color: var(--text-secondary);">
+          ${new Date(alert.createdAt).toLocaleString('es')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Render today's tasks
+  function renderTodayTasks() {
+    const tasksList = document.getElementById('tasksList')!;
+    const today = new Date().toISOString().split('T')[0];
+    const todayData = calendarData?.days?.find((d: any) => d.date === today);
+
+    if (!todayData?.tasks?.length) {
+      tasksList.innerHTML = '<p class="no-tasks">Sin tareas para hoy</p>';
+      return;
+    }
+
+    tasksList.innerHTML = todayData.tasks
+      .sort((a: any, b: any) => a.hour - b.hour)
+      .map((task: any) => `
+        <div class="task-item ${task.status}">
+          <div class="task-dot ${task.agentType}"></div>
+          <span>${task.hour.toString().padStart(2, '0')}:${task.minute.toString().padStart(2, '0')}</span>
+          <span style="flex: 1;">${task.name}</span>
+          <span style="font-size: 0.7rem; text-transform: uppercase;">${task.status}</span>
+        </div>
+      `).join('');
+  }
+
+  // Render active shift
+  async function renderActiveShift() {
+    const activeShiftEl = document.getElementById('activeShift')!;
+    try {
+      const response = await fetch('/api/admin/agents/shifts');
+      const data = await response.json();
+
+      if (data.activeShiftId) {
+        const shift = data.shifts.find((s: any) => s.id === data.activeShiftId);
+        activeShiftEl.innerHTML = `<span class="shift-name">${shift?.name || 'Turno Activo'}</span>`;
+        activeShiftEl.classList.remove('inactive');
+      } else {
+        activeShiftEl.innerHTML = '<span class="shift-name">Sin turno activo</span>';
+        activeShiftEl.classList.add('inactive');
+      }
+    } catch (error) {
+      console.error('Error loading shift:', error);
+    }
+  }
+
+  // Event Listeners
+  function setupEventListeners() {
+    viewBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        viewBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        view = btn.dataset.view as '3day' | 'week';
+        loadCalendarData();
+      });
+    });
+
+    prevBtn.addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() - (view === 'week' ? 7 : 3));
+      loadCalendarData();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() + (view === 'week' ? 7 : 3));
+      loadCalendarData();
+    });
+
+    todayBtn.addEventListener('click', () => {
+      currentDate = new Date();
+      loadCalendarData();
+    });
+
+    document.getElementById('addScheduleBtn')?.addEventListener('click', () => {
+      scheduleModal.classList.add('open');
+    });
+
+    document.getElementById('closeModal')?.addEventListener('click', () => {
+      scheduleModal.classList.remove('open');
+    });
+
+    document.getElementById('cancelSchedule')?.addEventListener('click', () => {
+      scheduleModal.classList.remove('open');
+    });
+
+    scheduleModal.querySelector('.modal-backdrop')?.addEventListener('click', () => {
+      scheduleModal.classList.remove('open');
+    });
+
+    scheduleForm.addEventListener('submit', handleScheduleSubmit);
+
+    // AI Planning listeners
+    setupAIPlanningListeners();
+  }
+
+  // AI Planning State
+  let aiDaysAhead = 3;
+  let aiPreviewData: any = null;
+  let aiProgressInterval: number | null = null;
+
+  function setupAIPlanningListeners() {
+    const aiDrawer = document.getElementById('aiDrawer')!;
+    const aiBackdrop = document.getElementById('aiDrawerBackdrop')!;
+
+    // Helper to open drawer with backdrop
+    function openDrawer() {
+      aiDrawer.classList.add('open');
+      aiBackdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Helper to close drawer with backdrop
+    function closeDrawer() {
+      aiDrawer.classList.remove('open');
+      aiBackdrop.classList.remove('open');
+      document.body.style.overflow = '';
+      stopAiProgress();
+    }
+
+    // Open drawer
+    document.getElementById('aiPlanBtn')?.addEventListener('click', () => {
+      openDrawer();
+      showAiStep(1);
+      resetAiProgress();
+    });
+
+    // Close drawer (X button)
+    document.getElementById('closeAiDrawer')?.addEventListener('click', closeDrawer);
+
+    // Close on backdrop click
+    aiBackdrop.addEventListener('click', closeDrawer);
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && aiDrawer.classList.contains('open')) {
+        closeDrawer();
+      }
+    });
+
+    // Days selector (chips)
+    document.querySelectorAll('.ai-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ai-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        aiDaysAhead = parseInt((btn as HTMLElement).dataset.days || '3');
+      });
+    });
+
+    // Preview/Generate button
+    document.getElementById('previewAiPlan')?.addEventListener('click', async () => {
+      showAiStep(2);
+      startAiProgress();
+      await generateAIPreview();
+    });
+
+    // Back button
+    document.getElementById('backToConfig')?.addEventListener('click', () => {
+      showAiStep(1);
+      resetAiProgress();
+    });
+
+    // Apply button
+    document.getElementById('applyAiPlan')?.addEventListener('click', async () => {
+      showAiStep(2);
+      updateThinkingStatus('Aplicando plan al calendario...');
+      startAiProgress();
+      await applyAIPlan();
+    });
+
+    // Success close
+    document.getElementById('closeAiSuccess')?.addEventListener('click', () => {
+      closeDrawer();
+      loadCalendarData();
+    });
+  }
+
+  function showAiStep(step: number) {
+    document.querySelectorAll('.ai-step').forEach(el => el.classList.add('hidden'));
+    document.getElementById(`aiStep${step}`)?.classList.remove('hidden');
+  }
+
+  // Progress bar animation
+  function startAiProgress() {
+    const progressFill = document.getElementById('aiProgressFill');
+    if (!progressFill) return;
+
+    let progress = 0;
+    const thinkingStatuses = [
+      'Revisando rendimiento histórico...',
+      'Analizando patrones de éxito...',
+      'Calculando horarios óptimos...',
+      'Optimizando distribución de tareas...',
+      'Generando plan personalizado...',
+    ];
+    let statusIndex = 0;
+
+    progressFill.style.width = '0%';
+
+    aiProgressInterval = window.setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 90) progress = 90;
+      progressFill.style.width = `${progress}%`;
+
+      // Update status text every ~20% progress
+      if (progress > (statusIndex + 1) * 18 && statusIndex < thinkingStatuses.length - 1) {
+        statusIndex++;
+        updateThinkingStatus(thinkingStatuses[statusIndex]);
+      }
+    }, 400);
+  }
+
+  function stopAiProgress() {
+    if (aiProgressInterval) {
+      clearInterval(aiProgressInterval);
+      aiProgressInterval = null;
+    }
+    const progressFill = document.getElementById('aiProgressFill');
+    if (progressFill) {
+      progressFill.style.width = '100%';
+    }
+  }
+
+  function resetAiProgress() {
+    stopAiProgress();
+    const progressFill = document.getElementById('aiProgressFill');
+    if (progressFill) {
+      progressFill.style.width = '0%';
+    }
+    updateThinkingStatus('Revisando rendimiento histórico...');
+  }
+
+  function updateThinkingStatus(text: string) {
+    const statusEl = document.getElementById('aiThinkingStatus');
+    if (statusEl) {
+      statusEl.textContent = text;
+    }
+  }
+
+  async function generateAIPreview() {
+    try {
+      const response = await fetch(`/api/admin/agents/ai-plan?days=${aiDaysAhead}`);
+      const data = await response.json();
+
+      stopAiProgress();
+
+      if (!data.success) {
+        alert(`Error: ${data.error}`);
+        showAiStep(1);
+        return;
+      }
+
+      aiPreviewData = data;
+      renderAIPreview(data);
+      showAiStep(3);
+    } catch (error) {
+      console.error('Error generating AI preview:', error);
+      stopAiProgress();
+      alert('Error al generar vista previa');
+      showAiStep(1);
+    }
+  }
+
+  function getAgentIcon(agentType: string): string {
+    const icons: Record<string, string> = {
+      deal_hunter: '🎯',
+      content_creator: '✏️',
+      price_monitor: '📊',
+      channel_manager: '📢',
+    };
+    return icons[agentType] || '🤖';
+  }
+
+  function renderAIPreview(data: any) {
+    // Reasoning
+    const reasoningEl = document.getElementById('aiReasoning');
+    if (reasoningEl) {
+      reasoningEl.textContent = data.reasoning;
+    }
+
+    // Task count and tokens
+    const taskCountEl = document.getElementById('aiTaskCount');
+    if (taskCountEl) {
+      taskCountEl.textContent = data.tasks.length.toString();
+    }
+
+    const tokensEl = document.getElementById('aiTokens');
+    if (tokensEl && data.tokensUsed) {
+      tokensEl.textContent = data.tokensUsed.toString();
+    }
+
+    // Tasks preview with new card design
+    const tasksPreview = document.getElementById('aiTasksPreview');
+    if (!tasksPreview) return;
+
+    tasksPreview.innerHTML = data.tasks
+      .sort((a: any, b: any) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())
+      .map((task: any) => {
+        const date = new Date(task.scheduledFor);
+        const priorityClass = task.priority >= 70 ? 'high' : task.priority >= 40 ? 'medium' : 'low';
+        const priorityLabel = task.priority >= 70 ? 'Alta' : task.priority >= 40 ? 'Media' : 'Baja';
+
+        return `
+          <div class="ai-task-card ${task.agentType}">
+            <div class="ai-task-icon ${task.agentType}">
+              ${getAgentIcon(task.agentType)}
+            </div>
+            <div class="ai-task-details">
+              <p class="ai-task-title">${task.name}</p>
+              <div class="ai-task-schedule">
+                <span>${date.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                <span>•</span>
+                <span>${date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="ai-task-badge ${priorityClass}">${priorityLabel}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+  }
+
+  async function applyAIPlan() {
+    try {
+      const clearExisting = (document.getElementById('aiClearExisting') as HTMLInputElement)?.checked || false;
+      const prioritiesText = (document.getElementById('aiPriorities') as HTMLTextAreaElement)?.value || '';
+      const priorities = prioritiesText ? prioritiesText.split('\n').filter(p => p.trim()) : undefined;
+
+      const response = await fetch('/api/admin/agents/ai-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          daysAhead: aiDaysAhead,
+          clearExisting,
+          priorities,
+        }),
+      });
+
+      const data = await response.json();
+      stopAiProgress();
+
+      if (!data.success) {
+        alert(`Error: ${data.error}`);
+        showAiStep(3);
+        return;
+      }
+
+      const successMsgEl = document.getElementById('aiSuccessMessage');
+      if (successMsgEl) {
+        successMsgEl.textContent = `Se crearon ${data.tasksCreated} tareas para los próximos ${aiDaysAhead} días.`;
+      }
+      showAiStep(4);
+    } catch (error) {
+      console.error('Error applying AI plan:', error);
+      stopAiProgress();
+      alert('Error al aplicar el plan');
+      showAiStep(3);
+    }
+  }
+
+  async function handleScheduleSubmit(e: Event) {
+    e.preventDefault();
+    const formData = new FormData(scheduleForm);
+
+    const daysCheckboxes = scheduleForm.querySelectorAll('input[name="days"]:checked');
+    const daysOfWeek = Array.from(daysCheckboxes).map(cb => parseInt((cb as HTMLInputElement).value));
+
+    const data = {
+      agentType: formData.get('agentType'),
+      name: formData.get('name'),
+      hour: parseInt(formData.get('hour') as string),
+      minute: parseInt(formData.get('minute') as string) || 0,
+      daysOfWeek,
+      taskType: formData.get('taskType'),
+    };
+
+    try {
+      const response = await fetch('/api/admin/agents/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        scheduleModal.classList.remove('open');
+        scheduleForm.reset();
+        await loadCalendarData();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Error al crear horario');
+      }
+    } catch (error) {
+      console.error('Error creating schedule:', error);
+    }
+  }
+
+  // Utilities
+  function formatDate(date: Date): string {
+    return date.toLocaleDateString('es', {
+      day: 'numeric',
+      month: 'short'
+    });
+  }
+
+  // Initialize on load
+  init();
+
+  // Refresh every 30 seconds
+  setInterval(() => {
+    loadCalendarData();
+    loadComplianceData();
+  }, 30000);
+</script>
