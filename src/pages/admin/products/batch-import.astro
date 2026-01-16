@@ -1,0 +1,573 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+---
+
+<AdminLayout title="Importar Productos en Lote">
+  <style>
+    .batch-import-page {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+      max-width: 800px;
+    }
+
+    .import-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+    }
+
+    .card-header {
+      margin-bottom: var(--space-lg);
+    }
+
+    .card-header h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .card-header p {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .input-section {
+      margin-bottom: var(--space-lg);
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .asin-textarea {
+      width: 100%;
+      min-height: 150px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      resize: vertical;
+    }
+
+    .asin-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+    }
+
+    .asin-textarea::placeholder {
+      color: var(--text-muted);
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .input-help {
+      margin-top: var(--space-sm);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .options-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .option-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .option-group label {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+
+    .option-select {
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: 8px 32px 8px 12px;
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Progress Section */
+    .progress-section {
+      display: none;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-md);
+    }
+
+    .progress-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .progress-count {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-feature-settings: 'tnum';
+    }
+
+    .progress-bar-container {
+      background: var(--bg-base);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: var(--space-lg);
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, #fcd34d 100%);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+    }
+
+    .result-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .result-icon.success {
+      color: var(--success);
+    }
+
+    .result-icon.error {
+      color: var(--error);
+    }
+
+    .result-icon.pending {
+      color: var(--text-muted);
+      animation: spin 1s linear infinite;
+    }
+
+    .result-asin {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 100px;
+    }
+
+    .result-title {
+      flex: 1;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-error {
+      color: var(--error);
+      font-size: 0.75rem;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Summary */
+    .summary-row {
+      display: flex;
+      gap: var(--space-lg);
+      margin-top: var(--space-lg);
+      padding-top: var(--space-lg);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .summary-item {
+      text-align: center;
+    }
+
+    .summary-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-feature-settings: 'tnum';
+    }
+
+    .summary-value.success {
+      color: var(--success);
+    }
+
+    .summary-value.error {
+      color: var(--error);
+    }
+
+    .summary-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+
+  <div class="batch-import-page">
+    <a href="/admin/products" class="btn btn-secondary" style="align-self: flex-start;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Volver a Productos
+    </a>
+
+    <div class="import-card">
+      <div class="card-header">
+        <h2>Importar Productos en Lote</h2>
+        <p>Pega multiples ASINs o URLs de Amazon (uno por linea) para importar varios productos a la vez.</p>
+      </div>
+
+      <div class="input-section">
+        <label class="input-label">ASINs o URLs (uno por linea)</label>
+        <textarea id="asinInput" class="asin-textarea" placeholder="B0D1XD1ZV3
+B09XS7JWHH
+https://www.amazon.com/dp/B0CMDRCZBJ
+..."></textarea>
+        <p class="input-help">Acepta ASINs (B0XXXXXXXXX) o URLs de Amazon. Maximo 20 productos por lote.</p>
+      </div>
+
+      <div class="options-row">
+        <div class="option-group">
+          <label>Idioma:</label>
+          <select id="defaultLang" class="option-select">
+            <option value="en">Ingles (EN)</option>
+            <option value="es">Espanol (ES)</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label>Estado:</label>
+          <select id="defaultStatus" class="option-select">
+            <option value="draft">Borrador</option>
+            <option value="published">Publicado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button type="button" id="startImportBtn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Iniciar Importacion
+        </button>
+      </div>
+    </div>
+
+    <div id="progressSection" class="import-card progress-section">
+      <div class="progress-header">
+        <span class="progress-title">Importando productos...</span>
+        <span class="progress-count" id="progressCount">0 / 0</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      <div class="results-list" id="resultsList"></div>
+
+      <div class="summary-row" id="summaryRow" style="display: none;">
+        <div class="summary-item">
+          <div class="summary-value success" id="successCount">0</div>
+          <div class="summary-label">Importados</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value error" id="errorCount">0</div>
+          <div class="summary-label">Errores</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const asinInput = document.getElementById('asinInput') as HTMLTextAreaElement;
+    const defaultLang = document.getElementById('defaultLang') as HTMLSelectElement;
+    const defaultStatus = document.getElementById('defaultStatus') as HTMLSelectElement;
+    const startImportBtn = document.getElementById('startImportBtn') as HTMLButtonElement;
+    const progressSection = document.getElementById('progressSection')!;
+    const progressCount = document.getElementById('progressCount')!;
+    const progressBar = document.getElementById('progressBar')!;
+    const resultsList = document.getElementById('resultsList')!;
+    const summaryRow = document.getElementById('summaryRow')!;
+    const successCountEl = document.getElementById('successCount')!;
+    const errorCountEl = document.getElementById('errorCount')!;
+
+    // Extract ASINs from input
+    function extractAsins(input: string): string[] {
+      const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+      const asins: string[] = [];
+
+      for (const line of lines) {
+        // Check if it's a direct ASIN
+        if (/^[A-Z0-9]{10}$/i.test(line)) {
+          asins.push(line.toUpperCase());
+          continue;
+        }
+
+        // Try to extract ASIN from URL
+        const urlMatch = line.match(/\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})/i);
+        if (urlMatch) {
+          asins.push(urlMatch[1].toUpperCase());
+          continue;
+        }
+
+        // Check for amzn.to or short URLs
+        const shortMatch = line.match(/amzn\.to\/([A-Za-z0-9]+)/i);
+        if (shortMatch) {
+          // Can't resolve short URLs easily, skip with warning
+          console.warn('Short URLs not supported:', line);
+        }
+      }
+
+      // Remove duplicates and limit to 20
+      return [...new Set(asins)].slice(0, 20);
+    }
+
+    // Add result item to the list
+    function addResultItem(asin: string, status: 'pending' | 'success' | 'error', title?: string, error?: string) {
+      const existingItem = resultsList.querySelector(`[data-asin="${asin}"]`);
+
+      const iconHtml = {
+        pending: `<svg class="result-icon pending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+        success: `<svg class="result-icon success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+        error: `<svg class="result-icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+      };
+
+      const html = `
+        <div class="result-item" data-asin="${asin}">
+          ${iconHtml[status]}
+          <span class="result-asin">${asin}</span>
+          <span class="result-title">${title || (status === 'pending' ? 'Importando...' : '')}</span>
+          ${error ? `<span class="result-error">${error}</span>` : ''}
+        </div>
+      `;
+
+      if (existingItem) {
+        existingItem.outerHTML = html;
+      } else {
+        resultsList.insertAdjacentHTML('beforeend', html);
+      }
+    }
+
+    // Import a single product
+    async function importProduct(asin: string, lang: string, status: string): Promise<{ success: boolean; title?: string; error?: string }> {
+      try {
+        // Try RapidAPI first (more reliable for most users)
+        let productData = null;
+
+        try {
+          const rapidapiResponse = await fetch('/api/admin/fetch-product-rapidapi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ asin }),
+          });
+
+          if (rapidapiResponse.ok) {
+            const result = await rapidapiResponse.json();
+            if (result.success && result.data) {
+              productData = result.data;
+            }
+          }
+        } catch (e) {
+          console.log('RapidAPI failed for', asin);
+        }
+
+        // Try PA-API as fallback
+        if (!productData) {
+          try {
+            const paapiResponse = await fetch('/api/admin/fetch-product-data', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ asin }),
+            });
+
+            if (paapiResponse.ok) {
+              const result = await paapiResponse.json();
+              if (result.success && result.data) {
+                productData = result.data;
+              }
+            }
+          } catch (e) {
+            console.log('PA-API failed for', asin);
+          }
+        }
+
+        if (!productData) {
+          return { success: false, error: 'No se pudo obtener datos del producto' };
+        }
+
+        // Create the product
+        const createResponse = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...productData,
+            lang,
+            status,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          return { success: false, error: errorData.error || 'Error al crear producto' };
+        }
+
+        return { success: true, title: productData.title };
+      } catch (error) {
+        return { success: false, error: 'Error de conexion' };
+      }
+    }
+
+    // Start batch import
+    async function startBatchImport() {
+      const asins = extractAsins(asinInput.value);
+
+      if (asins.length === 0) {
+        alert('No se encontraron ASINs validos');
+        return;
+      }
+
+      const lang = defaultLang.value;
+      const status = defaultStatus.value;
+
+      // Show progress section
+      progressSection.classList.add('visible');
+      resultsList.innerHTML = '';
+      summaryRow.style.display = 'none';
+      startImportBtn.disabled = true;
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Add all items as pending
+      for (const asin of asins) {
+        addResultItem(asin, 'pending');
+      }
+
+      // Process each ASIN
+      for (let i = 0; i < asins.length; i++) {
+        const asin = asins[i];
+        progressCount.textContent = `${i + 1} / ${asins.length}`;
+        progressBar.style.width = `${((i + 1) / asins.length) * 100}%`;
+
+        const result = await importProduct(asin, lang, status);
+
+        if (result.success) {
+          addResultItem(asin, 'success', result.title);
+          successCount++;
+        } else {
+          addResultItem(asin, 'error', undefined, result.error);
+          errorCount++;
+        }
+
+        // Small delay between requests to avoid rate limiting
+        if (i < asins.length - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+
+      // Show summary
+      summaryRow.style.display = 'flex';
+      successCountEl.textContent = String(successCount);
+      errorCountEl.textContent = String(errorCount);
+      startImportBtn.disabled = false;
+    }
+
+    startImportBtn.addEventListener('click', startBatchImport);
+  </script>
+</AdminLayout>

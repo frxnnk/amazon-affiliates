@@ -11,7 +11,8 @@ import { BaseAgent } from './base-agent';
 import type { AgentContext, PriceMonitorConfig, PriceAlertData } from './types';
 import { getProductRainforest, isRainforestConfigured } from '@lib/rainforest-api';
 import { recordUsage, canMakeCall } from '@lib/quota';
-import { trackPrice, getPriceHistory } from '@lib/keepa-api';
+import { trackPrice, getPriceHistory, isKeepaConfigured } from '@lib/keepa-api';
+import { trackApiCall } from '@lib/api-tracker';
 
 const DEFAULT_CONFIG: PriceMonitorConfig = {
   maxProductsPerRun: 20,
@@ -164,11 +165,21 @@ export class PriceMonitorAgent extends BaseAgent {
       this.log(`Checking price for: ${product.asin}`);
 
       // Fetch current price from API
+      const startTime = Date.now();
       const result = await getProductRainforest(product.asin, product.marketplace);
+      const responseTimeMs = Date.now() - startTime;
 
       // Track API call
       this.trackApiCall();
       await recordUsage('rapidapi', 1, { asin: product.asin, type: 'price_check' });
+      await trackApiCall({
+        apiName: 'rapidapi',
+        endpoint: 'product',
+        agentType: this.type,
+        context: { asin: product.asin, marketplace: product.marketplace },
+        success: result.success,
+        responseTimeMs,
+      });
       await this.incrementQuota();
 
       if (!result.success || !result.data) {

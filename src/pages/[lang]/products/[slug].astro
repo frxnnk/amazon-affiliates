@@ -9,6 +9,7 @@ import ProsConsList from '@components/products/ProsConsList.astro';
 import ProductGrid from '@components/products/ProductGrid.astro';
 import ProductSchema from '@components/seo/ProductSchema.astro';
 import BreadcrumbSchema from '@components/seo/BreadcrumbSchema.astro';
+import ReviewSection from '@components/reviews/ReviewSection.astro';
 import { getProductBySlug, getRelatedProducts as getRelatedProductsFromDB } from '@lib/db';
 import { type Lang, getTranslation, formatDate } from '@i18n/utils';
 import siteConfig from '@data/site-config.json';
@@ -197,6 +198,13 @@ const gallery = product.gallery as {url: string, alt: string}[] | null;
       <div class="p-6 lg:p-8 border-t prose prose-gray max-w-none" set:html={product.content} />
     )}
   </article>
+
+  <!-- Customer Reviews -->
+  <ReviewSection
+    asin={product.asin}
+    productId={product.productId}
+    lang={lang as Lang}
+  />
 
   <!-- Related Products -->
   {relatedProductsForGrid.length > 0 && (

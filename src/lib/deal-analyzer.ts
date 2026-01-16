@@ -24,6 +24,13 @@ export interface AnalyzableProduct {
   category?: string;
   dealType?: string | null;
   isPrime?: boolean;
+  // Extended fields from RapidAPI MCP
+  salesVolume?: string | null; // "10K+ bought in past month"
+  isBestSeller?: boolean;
+  isAmazonChoice?: boolean;
+  couponText?: string | null;
+  productBadge?: string | null;
+  numOffers?: number | null;
 }
 
 export interface ProductAnalysis {
@@ -88,7 +95,7 @@ export function toAnalyzableProduct(
   category?: string
 ): AnalyzableProduct {
   const rfProduct = product as RainforestProductData;
-  
+
   return {
     asin: product.asin,
     title: product.title,
@@ -102,6 +109,13 @@ export function toAnalyzableProduct(
     category: category || (rfProduct.categories?.[0]) || undefined,
     dealType: rfProduct.dealType || null,
     isPrime: rfProduct.isPrime || false,
+    // Extended fields from RapidAPI MCP
+    salesVolume: rfProduct.salesVolume || null,
+    isBestSeller: rfProduct.isBestSeller || false,
+    isAmazonChoice: rfProduct.isAmazonChoice || false,
+    couponText: rfProduct.couponText || null,
+    productBadge: rfProduct.productBadge || null,
+    numOffers: rfProduct.numOffers || null,
   };
 }
 
@@ -343,11 +357,31 @@ Allowed values:
 }
 
 /**
+ * Parse sales volume string to get approximate number
+ * e.g. "10K+ bought in past month" -> 10000
+ */
+function parseSalesVolume(salesVolume: string | null | undefined): number {
+  if (!salesVolume) return 0;
+
+  const match = salesVolume.match(/(\d+)([KkMm])?/);
+  if (!match) return 0;
+
+  let num = parseInt(match[1]);
+  const multiplier = match[2]?.toUpperCase();
+
+  if (multiplier === 'K') num *= 1000;
+  else if (multiplier === 'M') num *= 1000000;
+
+  return num;
+}
+
+/**
  * Quick score calculation without AI (for initial filtering)
+ * Now includes salesVolume, isBestSeller, isAmazonChoice from MCP
  */
 export function calculateQuickScore(product: AnalyzableProduct): number {
   let score = 5; // Base score
-  
+
   // Price factor (sweet spot: $30-200)
   if (product.price) {
     if (product.price >= 30 && product.price <= 200) score += 1.5;
@@ -355,36 +389,64 @@ export function calculateQuickScore(product: AnalyzableProduct): number {
     else if (product.price < 15) score -= 1;
     else if (product.price > 500) score -= 0.5;
   }
-  
+
   // Discount factor
   const discount = calculateDiscount(product);
   if (discount >= 30) score += 1.5;
   else if (discount >= 20) score += 1;
   else if (discount >= 10) score += 0.5;
-  
+
   // Rating factor
   if (product.rating) {
     if (product.rating >= 4.5) score += 1;
     else if (product.rating >= 4.0) score += 0.5;
     else if (product.rating < 3.5) score -= 1;
   }
-  
+
   // Reviews factor
   if (product.totalReviews) {
     if (product.totalReviews >= 1000) score += 1;
     else if (product.totalReviews >= 100) score += 0.5;
     else if (product.totalReviews < 10) score -= 0.5;
   }
-  
+
   // Deal factor
   if (product.dealType) score += 1;
-  
+
   // Prime factor
   if (product.isPrime) score += 0.5;
-  
+
   // Brand factor (if known brand)
   if (product.brand) score += 0.25;
-  
+
+  // === NEW MCP FACTORS ===
+
+  // Sales volume factor - high demand products convert better
+  const salesNum = parseSalesVolume(product.salesVolume);
+  if (salesNum >= 10000) score += 1.5; // 10K+ bought
+  else if (salesNum >= 5000) score += 1.0; // 5K+ bought
+  else if (salesNum >= 1000) score += 0.5; // 1K+ bought
+
+  // Best Seller badge - Amazon's endorsement of popularity
+  if (product.isBestSeller) score += 1.0;
+
+  // Amazon's Choice badge - quality + value endorsement
+  if (product.isAmazonChoice) score += 0.75;
+
+  // Coupon available - extra savings signal
+  if (product.couponText) score += 0.5;
+
+  // Product badge (Overall Pick, Limited time deal, etc.)
+  if (product.productBadge) {
+    const badge = product.productBadge.toLowerCase();
+    if (badge.includes('overall pick')) score += 0.75;
+    else if (badge.includes('limited')) score += 0.5;
+    else score += 0.25;
+  }
+
+  // Multiple sellers = competitive pricing, good for affiliate
+  if (product.numOffers && product.numOffers > 3) score += 0.25;
+
   // Clamp to 1-10
   return Math.max(1, Math.min(10, Math.round(score * 10) / 10));
 }

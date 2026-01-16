@@ -1,8 +1,8 @@
 /**
  * Telegram Bot API Client
- * 
- * Sends product notifications and publishes to a Telegram channel.
- * 
+ *
+ * Sends beautiful product notifications to a Telegram channel.
+ *
  * Required environment variables:
  * - TELEGRAM_BOT_TOKEN: Bot token from @BotFather
  * - TELEGRAM_CHANNEL_ID: Channel ID (e.g., @mychannel or -100123456789)
@@ -17,15 +17,18 @@ export interface TelegramConfig {
 
 export interface ProductMessage {
   title: string;
-  brand: string;
+  brand?: string;
   price: number;
-  originalPrice?: number;
+  originalPrice?: number | null;
   currency: string;
   discount?: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
   affiliateUrl: string;
-  rating?: number;
+  rating?: number | null;
+  totalReviews?: number | null;
   category?: string;
+  isPrime?: boolean;
+  shortDescription?: string;
 }
 
 export interface TelegramResult {
@@ -56,88 +59,146 @@ export function isTelegramConfigured(): boolean {
 }
 
 /**
- * Format price with currency
+ * Escape special characters for Telegram MarkdownV2
+ */
+function escapeMarkdown(text: string): string {
+  return text.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+}
+
+/**
+ * Format price with currency (escaped for MarkdownV2)
  */
 function formatPrice(price: number, currency: string): string {
   const symbols: Record<string, string> = {
     EUR: '€',
     USD: '$',
     GBP: '£',
+    MXN: 'MX$',
   };
-  const symbol = symbols[currency] || currency;
-  return `${symbol}${price.toFixed(2)}`;
+  const symbol = symbols[currency] || currency + ' ';
+  return `${symbol}${price.toFixed(2).replace('.', '\\.')}`;
 }
 
 /**
- * Build product message for Telegram
+ * Format large numbers (1500 → 1.5K)
+ */
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace('.', '\\.')}M`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace('.', '\\.')}K`;
+  }
+  return num.toString();
+}
+
+/**
+ * Generate star rating display
+ */
+function formatRating(rating: number): string {
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating % 1 >= 0.5;
+  let stars = '★'.repeat(fullStars);
+  if (hasHalf) stars += '½';
+  stars += '☆'.repeat(5 - fullStars - (hasHalf ? 1 : 0));
+  return stars;
+}
+
+/**
+ * Build beautiful product message for Telegram
  */
 function buildProductMessage(product: ProductMessage, lang: string = 'es'): string {
   const labels = {
     es: {
-      deal: '🔥 OFERTA',
-      brand: '🏷️',
-      price: '💰 Precio',
+      hotDeal: '🔥 OFERTÓN',
+      deal: '💰 OFERTA',
+      brand: 'Marca',
+      price: 'Precio',
       was: 'Antes',
       save: 'Ahorras',
-      rating: '⭐ Rating',
-      buy: '🛒 Comprar ahora',
+      reviews: 'opiniones',
+      prime: '✓ Prime',
+      limited: '⚡ Oferta limitada',
     },
     en: {
-      deal: '🔥 DEAL',
-      brand: '🏷️',
-      price: '💰 Price',
+      hotDeal: '🔥 HOT DEAL',
+      deal: '💰 DEAL',
+      brand: 'Brand',
+      price: 'Price',
       was: 'Was',
-      save: 'Save',
-      rating: '⭐ Rating',
-      buy: '🛒 Buy now',
+      save: 'You save',
+      reviews: 'reviews',
+      prime: '✓ Prime',
+      limited: '⚡ Limited offer',
     },
   };
 
   const t = labels[lang as keyof typeof labels] || labels.es;
-  const discount = product.discount || (product.originalPrice 
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : 0);
+
+  const discount =
+    product.discount ||
+    (product.originalPrice ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0);
 
   let message = '';
 
-  // Header with deal badge if applicable
-  if (discount >= 10) {
-    message += `${t.deal} -${discount}%\n\n`;
+  // Header badge based on discount level
+  if (discount >= 40) {
+    message += `${t.hotDeal} \\-${discount}%\n`;
+    message += `${'━'.repeat(20)}\n\n`;
+  } else if (discount >= 15) {
+    message += `${t.deal} \\-${discount}%\n`;
+    message += `${'─'.repeat(20)}\n\n`;
   }
 
-  // Title
-  message += `*${escapeMarkdown(product.title)}*\n\n`;
+  // Title (truncated if too long)
+  const title = product.title.length > 100 ? product.title.slice(0, 97) + '...' : product.title;
+  message += `*${escapeMarkdown(title)}*\n\n`;
 
-  // Brand
+  // Brand (if available)
   if (product.brand) {
-    message += `${t.brand} ${escapeMarkdown(product.brand)}\n`;
+    message += `🏷 ${escapeMarkdown(product.brand)}\n`;
   }
 
-  // Price
-  message += `${t.price}: *${formatPrice(product.price, product.currency)}*`;
-  
-  if (product.originalPrice && product.originalPrice > product.price) {
-    message += ` ~~${formatPrice(product.originalPrice, product.currency)}~~`;
-    const savings = product.originalPrice - product.price;
-    message += `\n${t.save}: ${formatPrice(savings, product.currency)}`;
-  }
-  message += '\n';
-
-  // Rating
+  // Rating with stars
   if (product.rating) {
-    message += `${t.rating}: ${product.rating.toFixed(1)}/5\n`;
+    const stars = formatRating(product.rating);
+    message += `${stars} *${product.rating.toFixed(1).replace('.', '\\.')}*`;
+    if (product.totalReviews) {
+      message += ` \\(${formatNumber(product.totalReviews)} ${t.reviews}\\)`;
+    }
+    message += '\n';
+  }
+
+  // Prime badge
+  if (product.isPrime) {
+    message += `${t.prime}\n`;
   }
 
   message += '\n';
+
+  // Price section - the star of the show
+  message += `💵 *${formatPrice(product.price, product.currency)}*`;
+
+  if (product.originalPrice && product.originalPrice > product.price) {
+    message += `  ~~${formatPrice(product.originalPrice, product.currency)}~~\n`;
+    const savings = product.originalPrice - product.price;
+    message += `✨ ${t.save}: *${formatPrice(savings, product.currency)}*\n`;
+  } else {
+    message += '\n';
+  }
+
+  // Short description if available
+  if (product.shortDescription) {
+    const desc = product.shortDescription.length > 120 ? product.shortDescription.slice(0, 117) + '...' : product.shortDescription;
+    message += `\n_${escapeMarkdown(desc)}_\n`;
+  }
+
+  // Limited offer indicator for high discounts
+  if (discount >= 30) {
+    message += `\n${t.limited}`;
+  }
 
   return message;
-}
-
-/**
- * Escape special characters for Telegram MarkdownV2
- */
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
 }
 
 /**
@@ -146,7 +207,7 @@ function escapeMarkdown(text: string): string {
 export async function sendToChannel(
   text: string,
   options?: {
-    imageUrl?: string;
+    imageUrl?: string | null;
     replyMarkup?: object;
     parseMode?: 'MarkdownV2' | 'HTML';
   },
@@ -194,6 +255,7 @@ export async function sendToChannel(
         chat_id: channelId,
         text,
         parse_mode: parseMode,
+        disable_web_page_preview: false,
       };
 
       if (options?.replyMarkup) {
@@ -215,12 +277,14 @@ export async function sendToChannel(
         messageId: data.result.message_id,
       };
     } else {
+      console.error('[Telegram] API Error:', data.description);
       return {
         success: false,
         error: data.description || 'Unknown Telegram API error',
       };
     }
   } catch (error) {
+    console.error('[Telegram] Network Error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network error',
@@ -237,9 +301,14 @@ export async function publishProduct(
   config?: TelegramConfig
 ): Promise<TelegramResult> {
   const message = buildProductMessage(product, lang);
-  
+
   // Build inline keyboard with buy button
-  const buyLabel = lang === 'es' ? '🛒 Comprar en Amazon' : '🛒 Buy on Amazon';
+  const buyLabels = {
+    es: '🛒 Ver en Amazon',
+    en: '🛒 View on Amazon',
+  };
+  const buyLabel = buyLabels[lang as keyof typeof buyLabels] || buyLabels.es;
+
   const replyMarkup = {
     inline_keyboard: [
       [
@@ -262,33 +331,97 @@ export async function publishProduct(
 }
 
 /**
- * Send a deal alert to the channel
+ * Send a batch deal alert to the channel
  */
 export async function sendDealAlert(
   products: ProductMessage[],
   lang: string = 'es',
   config?: TelegramConfig
 ): Promise<TelegramResult> {
-  const title = lang === 'es' 
-    ? '🔥 *NUEVAS OFERTAS ENCONTRADAS* 🔥\n\n'
-    : '🔥 *NEW DEALS FOUND* 🔥\n\n';
+  const titles = {
+    es: '🔥 *OFERTAS DEL DÍA* 🔥',
+    en: '🔥 *DEALS OF THE DAY* 🔥',
+  };
 
-  let message = title;
+  let message = `${titles[lang as keyof typeof titles] || titles.es}\n`;
+  message += `${'━'.repeat(22)}\n\n`;
 
   products.slice(0, 5).forEach((product, index) => {
-    const discount = product.discount || (product.originalPrice 
-      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-      : 0);
+    const discount =
+      product.discount ||
+      (product.originalPrice ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0);
 
-    message += `${index + 1}\\. *${escapeMarkdown(product.title.slice(0, 50))}*`;
+    const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}\\.`;
+
+    message += `${emoji} *${escapeMarkdown(product.title.slice(0, 45))}*`;
+    if (product.title.length > 45) message += '\\.\\.\\. ';
+
     if (discount > 0) {
       message += ` \\-${discount}%`;
     }
-    message += `\n   ${formatPrice(product.price, product.currency)}`;
-    message += `\n   [Ver oferta](${product.affiliateUrl})\n\n`;
+    message += '\n';
+    message += `    ${formatPrice(product.price, product.currency)}`;
+    if (product.originalPrice && product.originalPrice > product.price) {
+      message += ` ~~${formatPrice(product.originalPrice, product.currency)}~~`;
+    }
+    message += '\n';
+    message += `    [Ver oferta ➜](${product.affiliateUrl})\n\n`;
   });
 
+  const footers = {
+    es: '_Ofertas por tiempo limitado_',
+    en: '_Limited time offers_',
+  };
+  message += footers[lang as keyof typeof footers] || footers.es;
+
   return sendToChannel(message, { parseMode: 'MarkdownV2' }, config);
+}
+
+/**
+ * Send a price drop alert
+ */
+export async function sendPriceDropAlert(
+  product: ProductMessage & {
+    previousPrice: number;
+    dropPercent: number;
+  },
+  lang: string = 'es',
+  config?: TelegramConfig
+): Promise<TelegramResult> {
+  const titles = {
+    es: '📉 *BAJADA DE PRECIO* 📉',
+    en: '📉 *PRICE DROP* 📉',
+  };
+
+  let message = `${titles[lang as keyof typeof titles] || titles.es}\n`;
+  message += `${'━'.repeat(22)}\n\n`;
+
+  message += `*${escapeMarkdown(product.title.slice(0, 80))}*\n\n`;
+
+  message += `❌ Antes: ~~${formatPrice(product.previousPrice, product.currency)}~~\n`;
+  message += `✅ Ahora: *${formatPrice(product.price, product.currency)}*\n`;
+  message += `📉 Bajó: *${product.dropPercent}%*\n`;
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: '🛒 Aprovechar oferta',
+          url: product.affiliateUrl,
+        },
+      ],
+    ],
+  };
+
+  return sendToChannel(
+    message,
+    {
+      imageUrl: product.imageUrl,
+      replyMarkup,
+      parseMode: 'MarkdownV2',
+    },
+    config
+  );
 }
 
 /**
@@ -305,9 +438,7 @@ export async function testConnection(config?: TelegramConfig): Promise<TelegramR
   }
 
   try {
-    const response = await fetch(
-      `${TELEGRAM_API_BASE}${telegramConfig.botToken}/getMe`
-    );
+    const response = await fetch(`${TELEGRAM_API_BASE}${telegramConfig.botToken}/getMe`);
     const data = await response.json();
 
     if (data.ok) {
@@ -326,4 +457,13 @@ export async function testConnection(config?: TelegramConfig): Promise<TelegramR
       error: error instanceof Error ? error.message : 'Network error',
     };
   }
+}
+
+/**
+ * Send a test message to verify everything works
+ */
+export async function sendTestMessage(config?: TelegramConfig): Promise<TelegramResult> {
+  const message = `✅ *Bot conectado correctamente*\n\n` + `El sistema de ofertas está activo y funcionando\\.\n\n` + `_Mensaje de prueba_`;
+
+  return sendToChannel(message, { parseMode: 'MarkdownV2' }, config);
 }

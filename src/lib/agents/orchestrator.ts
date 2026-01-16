@@ -3,9 +3,10 @@
  *
  * Central coordinator that manages the execution of all agents.
  * Handles scheduling, quota management, and sequential execution.
+ * Supports real-time control: start, stop, enable/disable agents.
  */
 
-import { db, AgentConfig } from 'astro:db';
+import { db, AgentConfig, AgentEvents } from 'astro:db';
 import type { BaseAgent } from './base-agent';
 import type { AgentType, AgentContext, AgentResult, TriggerSource } from './types';
 
@@ -14,6 +15,7 @@ export interface OrchestratorConfig {
   maxItemsPerAgent: number;
   agents?: AgentType[]; // Specific agents to run, or all if not specified
   triggeredBy: TriggerSource;
+  force?: boolean; // Skip time-based scheduling checks
 }
 
 export interface OrchestratorResult {
@@ -23,6 +25,18 @@ export interface OrchestratorResult {
   agentsSkipped: number;
   results: Map<AgentType, AgentResult>;
   errors: string[];
+}
+
+export type OrchestratorStatus = 'idle' | 'running' | 'stopping' | 'error';
+
+export interface OrchestratorState {
+  status: OrchestratorStatus;
+  currentAgent: AgentType | null;
+  runningAgents: AgentType[];
+  queuedAgents: AgentType[];
+  startedAt: Date | null;
+  stoppedAt: Date | null;
+  lastError: string | null;
 }
 
 // Agent execution order (priority)
@@ -37,6 +51,19 @@ export class AgentOrchestrator {
   private agents: Map<AgentType, BaseAgent> = new Map();
   private results: Map<AgentType, AgentResult> = new Map();
   private errors: string[] = [];
+
+  // State management for real-time control
+  private state: OrchestratorState = {
+    status: 'idle',
+    currentAgent: null,
+    runningAgents: [],
+    queuedAgents: [],
+    startedAt: null,
+    stoppedAt: null,
+    lastError: null,
+  };
+
+  private stopRequested: boolean = false;
 
   /**
    * Register an agent with the orchestrator
@@ -53,12 +80,85 @@ export class AgentOrchestrator {
   }
 
   /**
+   * Get current orchestrator state
+   */
+  getState(): OrchestratorState {
+    return { ...this.state };
+  }
+
+  /**
+   * Request stop of current execution
+   */
+  requestStop(): void {
+    if (this.state.status === 'running') {
+      this.stopRequested = true;
+      this.state.status = 'stopping';
+
+      // Request stop on current running agent
+      if (this.state.currentAgent) {
+        const agent = this.agents.get(this.state.currentAgent);
+        if (agent) {
+          agent.requestStop();
+        }
+      }
+
+      this.emitOrchestratorEvent('stop_requested', 'Stop requested by admin');
+    }
+  }
+
+  /**
+   * Check if stop has been requested
+   */
+  isStopRequested(): boolean {
+    return this.stopRequested;
+  }
+
+  /**
+   * Reset stop flag
+   */
+  private resetStop(): void {
+    this.stopRequested = false;
+  }
+
+  /**
+   * Emit orchestrator event for real-time updates
+   */
+  private async emitOrchestratorEvent(
+    eventType: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await db.insert(AgentEvents).values({
+        eventType: `orchestrator_${eventType}`,
+        agentType: 'orchestrator',
+        message,
+        data: {
+          ...data,
+          state: this.state,
+        },
+        level: 'info',
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('[Orchestrator] Failed to emit event:', error);
+    }
+  }
+
+  /**
    * Run all registered agents in order
    */
   async runAll(config: OrchestratorConfig): Promise<OrchestratorResult> {
     const startTime = Date.now();
     this.results.clear();
     this.errors = [];
+    this.resetStop();
+
+    // Update state
+    this.state.status = 'running';
+    this.state.startedAt = new Date();
+    this.state.stoppedAt = null;
+    this.state.lastError = null;
 
     let agentsRun = 0;
     let agentsSkipped = 0;
@@ -74,10 +174,26 @@ export class AgentOrchestrator {
       (type) => agentsToRun.includes(type) && this.agents.has(type)
     );
 
+    // Set queued agents
+    this.state.queuedAgents = [...orderedAgents];
+
     console.log(`[Orchestrator] Starting run with ${orderedAgents.length} agents`);
     console.log(`[Orchestrator] Dry run: ${config.dryRun}`);
 
+    await this.emitOrchestratorEvent('started', `Orchestrator started with ${orderedAgents.length} agents`, {
+      agents: orderedAgents,
+      dryRun: config.dryRun,
+      triggeredBy: config.triggeredBy,
+    });
+
     for (const agentType of orderedAgents) {
+      // Check for stop request
+      if (this.stopRequested) {
+        console.log(`[Orchestrator] Stop requested, aborting remaining agents`);
+        await this.emitOrchestratorEvent('stopped', 'Orchestrator stopped by request');
+        break;
+      }
+
       const agent = this.agents.get(agentType);
       if (!agent) {
         console.log(`[Orchestrator] Agent ${agentType} not registered, skipping`);
@@ -85,18 +201,27 @@ export class AgentOrchestrator {
         continue;
       }
 
-      // Check if agent can run
-      const canRunResult = await agent.canRun({
-        dryRun: config.dryRun,
-        maxItems: config.maxItemsPerAgent,
-        triggeredBy: config.triggeredBy,
-        quotaRemaining,
-      });
+      // Update state
+      this.state.currentAgent = agentType;
+      this.state.queuedAgents = this.state.queuedAgents.filter((a) => a !== agentType);
+      this.state.runningAgents = [agentType];
 
-      if (!canRunResult.canRun) {
-        console.log(`[Orchestrator] Skipping ${agent.name}: ${canRunResult.reason}`);
-        agentsSkipped++;
-        continue;
+      // Check if agent can run (skip check if force is true)
+      if (!config.force) {
+        const canRunResult = await agent.canRun({
+          dryRun: config.dryRun,
+          maxItems: config.maxItemsPerAgent,
+          triggeredBy: config.triggeredBy,
+          quotaRemaining,
+        });
+
+        if (!canRunResult.canRun) {
+          console.log(`[Orchestrator] Skipping ${agent.name}: ${canRunResult.reason}`);
+          agentsSkipped++;
+          continue;
+        }
+      } else {
+        console.log(`[Orchestrator] Force mode: skipping canRun check for ${agent.name}`);
       }
 
       console.log(`[Orchestrator] Running ${agent.name}...`);
@@ -128,18 +253,33 @@ export class AgentOrchestrator {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.errors.push(`${agent.name}: ${errorMessage}`);
+        this.state.lastError = errorMessage;
         console.error(`[Orchestrator] ${agent.name} failed:`, errorMessage);
       }
     }
 
     const totalDuration = Date.now() - startTime;
 
+    // Reset state
+    this.state.status = this.stopRequested ? 'idle' : (this.errors.length > 0 ? 'error' : 'idle');
+    this.state.currentAgent = null;
+    this.state.runningAgents = [];
+    this.state.queuedAgents = [];
+    this.state.stoppedAt = new Date();
+
     console.log(
       `[Orchestrator] Run complete: ${agentsRun} agents run, ${agentsSkipped} skipped, ${totalDuration}ms`
     );
 
+    await this.emitOrchestratorEvent('completed', `Orchestrator completed: ${agentsRun} run, ${agentsSkipped} skipped`, {
+      agentsRun,
+      agentsSkipped,
+      totalDuration,
+      errors: this.errors,
+    });
+
     return {
-      success: this.errors.length === 0,
+      success: this.errors.length === 0 && !this.stopRequested,
       totalDuration,
       agentsRun,
       agentsSkipped,
@@ -247,6 +387,123 @@ export class AgentOrchestrator {
 
     await agent.updateConfig({ intervalHours });
     return true;
+  }
+
+  /**
+   * Stop a specific agent that is currently running
+   */
+  async stopAgent(agentType: AgentType): Promise<boolean> {
+    const agent = this.agents.get(agentType);
+    if (!agent) {
+      console.error(`[Orchestrator] Agent ${agentType} not found`);
+      return false;
+    }
+
+    agent.requestStop();
+
+    // If this is the current agent, update orchestrator state
+    if (this.state.currentAgent === agentType) {
+      this.state.runningAgents = this.state.runningAgents.filter((a) => a !== agentType);
+    }
+
+    await this.emitOrchestratorEvent('agent_stop_requested', `Stop requested for ${agentType}`, {
+      agentType,
+    });
+
+    return true;
+  }
+
+  /**
+   * Run a single agent by type (with auto-initialization)
+   * Used for manual triggering from the admin dashboard
+   */
+  async runSingleAgent(
+    agentType: AgentType,
+    options: {
+      dryRun?: boolean;
+      triggeredBy?: TriggerSource;
+      maxItems?: number;
+    } = {}
+  ): Promise<AgentResult | null> {
+    const { dryRun = false, triggeredBy = 'manual', maxItems = 10 } = options;
+
+    // Auto-register agent if not already registered
+    if (!this.agents.has(agentType)) {
+      await this.autoRegisterAgent(agentType);
+    }
+
+    const agent = this.agents.get(agentType);
+    if (!agent) {
+      console.error(`[Orchestrator] Failed to initialize agent ${agentType}`);
+      return null;
+    }
+
+    // Update state
+    this.state.status = 'running';
+    this.state.currentAgent = agentType;
+    this.state.runningAgents = [agentType];
+    this.state.startedAt = new Date();
+
+    const quotaRemaining = await this.getQuotaStatus();
+
+    const context: AgentContext = {
+      dryRun,
+      maxItems,
+      triggeredBy,
+      quotaRemaining,
+    };
+
+    console.log(`[Orchestrator] Running single agent: ${agent.name} (manual trigger)`);
+
+    try {
+      const result = await agent.run(context);
+
+      // Reset state after completion
+      this.state.status = 'idle';
+      this.state.currentAgent = null;
+      this.state.runningAgents = [];
+      this.state.stoppedAt = new Date();
+
+      return result;
+    } catch (error) {
+      this.state.status = 'error';
+      this.state.lastError = error instanceof Error ? error.message : String(error);
+      this.state.currentAgent = null;
+      this.state.runningAgents = [];
+      throw error;
+    }
+  }
+
+  /**
+   * Auto-register an agent by type
+   */
+  private async autoRegisterAgent(agentType: AgentType): Promise<void> {
+    try {
+      switch (agentType) {
+        case 'deal_hunter': {
+          const { DealHunterAgent } = await import('./deal-hunter');
+          this.registerAgent(new DealHunterAgent());
+          break;
+        }
+        case 'content_creator': {
+          const { ContentCreatorAgent } = await import('./content-creator');
+          this.registerAgent(new ContentCreatorAgent());
+          break;
+        }
+        case 'price_monitor': {
+          const { PriceMonitorAgent } = await import('./price-monitor');
+          this.registerAgent(new PriceMonitorAgent());
+          break;
+        }
+        case 'channel_manager': {
+          const { ChannelManagerAgent } = await import('./channel-manager');
+          this.registerAgent(new ChannelManagerAgent());
+          break;
+        }
+      }
+    } catch (error) {
+      console.error(`[Orchestrator] Failed to auto-register ${agentType}:`, error);
+    }
   }
 }
 

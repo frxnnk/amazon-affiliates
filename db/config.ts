@@ -121,21 +121,98 @@ const ProductLikes = defineTable({
   ],
 });
 
-// Product Comments - user comments on products
-const ProductComments = defineTable({
+// Product Reviews - user reviews with ratings on products
+const ProductReviews = defineTable({
   columns: {
     id: column.number({ primaryKey: true, autoIncrement: true }),
     userId: column.text({ references: () => Users.columns.id }),
     asin: column.text(), // Product ASIN
     productId: column.text({ optional: true }), // Optional reference to Products table
-    content: column.text(),
-    isVisible: column.boolean({ default: true }), // For moderation
+
+    // Review content
+    rating: column.number({ default: 5 }), // 1-5 stars (default 5 for migration)
+    title: column.text({ optional: true }), // Review title (max 100 chars)
+    content: column.text(), // Review body
+
+    // Verification
+    isVerifiedPurchase: column.boolean({ default: false }),
+    purchaseClaimId: column.number({ optional: true }), // FK to PurchaseClaims
+
+    // Moderation
+    isVisible: column.boolean({ default: true }),
+    isApproved: column.boolean({ default: false }), // Requires admin approval
+    moderationNote: column.text({ optional: true }),
+    moderatedBy: column.text({ optional: true }),
+    moderatedAt: column.date({ optional: true }),
+
+    // Metrics (cached)
+    helpfulCount: column.number({ default: 0 }),
+
+    // Timestamps
     createdAt: column.date({ default: new Date() }),
     updatedAt: column.date({ default: new Date() }),
   },
   indexes: [
-    { on: ['asin'] }, // For fetching product comments
-    { on: ['userId'] }, // For fetching user's comments
+    { on: ['asin'] }, // For fetching product reviews
+    { on: ['userId'] }, // For fetching user's reviews
+    { on: ['asin', 'isVisible', 'isApproved'] }, // For visible approved reviews
+    { on: ['rating'] }, // For filtering by rating
+  ],
+});
+
+// Review Helpful Votes - tracks helpful/not helpful votes on reviews
+const ReviewHelpfulVotes = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    reviewId: column.number({ references: () => ProductReviews.columns.id }),
+    userId: column.text({ references: () => Users.columns.id }),
+    isHelpful: column.boolean({ default: true }), // true = helpful, false = not helpful
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['reviewId', 'userId'], unique: true }, // One vote per user per review
+    { on: ['reviewId'] }, // For counting votes
+  ],
+});
+
+// Legacy alias for backwards compatibility
+const ProductComments = ProductReviews;
+
+// Amazon Reviews - imported reviews from Amazon via RapidAPI
+const AmazonReviews = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    asin: column.text(), // Product ASIN
+    productId: column.text({ optional: true }), // Optional FK to Products
+
+    // Review content from Amazon
+    externalId: column.text(), // Amazon's review ID
+    title: column.text({ optional: true }),
+    content: column.text(),
+    rating: column.number(), // 1-5 stars
+
+    // Reviewer info
+    reviewerName: column.text({ optional: true }),
+    reviewerUrl: column.text({ optional: true }),
+
+    // Metadata
+    isVerifiedPurchase: column.boolean({ default: false }),
+    helpfulCount: column.number({ default: 0 }),
+    reviewDate: column.text({ optional: true }), // Original date string from Amazon
+    images: column.json({ optional: true }), // Array of image URLs
+
+    // Source tracking
+    source: column.text({ default: 'rapidapi' }), // 'rapidapi' | 'scraper'
+    marketplace: column.text({ default: 'com' }), // Amazon domain
+
+    // Caching
+    fetchedAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['asin'] }, // For fetching reviews by product
+    { on: ['externalId'], unique: true }, // Prevent duplicates
+    { on: ['rating'] }, // For filtering by rating
+    { on: ['fetchedAt'] }, // For cache expiration
   ],
 });
 
@@ -172,7 +249,7 @@ const VideoCache = defineTable({
     searchKey: column.text({ unique: true }), // Hash of ASIN + normalized title
     asin: column.text({ optional: true }), // Product ASIN
     productTitle: column.text(), // Original product title searched
-    
+
     // Video data (null if no video found)
     videoId: column.text({ optional: true }),
     videoTitle: column.text({ optional: true }),
@@ -180,7 +257,9 @@ const VideoCache = defineTable({
     thumbnail: column.text({ optional: true }),
     thumbnailHigh: column.text({ optional: true }),
     isShort: column.boolean({ default: true }),
-    
+    isPremiumChannel: column.boolean({ default: false }), // True if from a known quality tech review channel
+    isHidden: column.boolean({ default: false }), // Admin can hide specific videos from appearing
+
     // Cache metadata
     fetchedAt: column.date({ default: new Date() }),
     expiresAt: column.date(), // When this cache entry expires
@@ -276,12 +355,20 @@ const Products = defineTable({
     asin: column.text(),
     lang: column.text({ default: 'en' }), // 'es' | 'en'
 
-    // Content
+    // Content - Canonical fields (source of truth)
     title: column.text(),
     brand: column.text(),
     model: column.text({ optional: true }),
     description: column.text(),
     shortDescription: column.text({ optional: true }),
+
+    // Text variants for different contexts
+    displayTitle: column.text({ optional: true }),     // Clean UI title (max 60 chars)
+    seoTitle: column.text({ optional: true }),         // Meta title (max 70 chars)
+    shortTitle: column.text({ optional: true }),       // Badges/compact (max 30 chars)
+    metaDescription: column.text({ optional: true }),  // SEO meta (max 160 chars)
+    cardDescription: column.text({ optional: true }),  // ProductCard (max 200 chars)
+    fullDescription: column.text({ optional: true }),  // Full markdown content
 
     // Categorization
     category: column.text({ optional: true }),
@@ -590,6 +677,281 @@ const CollaborativeRecommendations = defineTable({
   ],
 });
 
+// Agent Events - real-time event stream for dashboard
+const AgentEvents = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    eventType: column.text(), // 'started' | 'completed' | 'item_processed' | 'error' | 'warning' | 'progress'
+    agentType: column.text(), // 'deal_hunter' | 'content_creator' | 'price_monitor' | 'channel_manager' | etc.
+    runId: column.number({ optional: true }), // Reference to AgentRunHistory
+    message: column.text({ optional: true }), // Human-readable message
+    data: column.json({ optional: true }), // Event-specific data (items processed, errors, etc.)
+    level: column.text({ default: 'info' }), // 'info' | 'warn' | 'error' | 'success'
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['createdAt'] }, // For fetching recent events
+    { on: ['agentType', 'createdAt'] }, // For filtering by agent
+    { on: ['runId'] }, // For fetching events of a specific run
+  ],
+});
+
+// Agent Heartbeat - live status for each agent
+const AgentHeartbeat = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text({ unique: true }), // One row per agent type
+    status: column.text({ default: 'idle' }), // 'idle' | 'running' | 'error' | 'disabled'
+    currentRunId: column.number({ optional: true }), // Current AgentRunHistory ID
+    currentTask: column.text({ optional: true }), // What the agent is currently doing
+    progress: column.number({ optional: true }), // 0-100 percentage
+    itemsProcessed: column.number({ default: 0 }), // Items processed in current run
+    itemsTotal: column.number({ optional: true }), // Total items to process (if known)
+    lastHeartbeat: column.date({ default: new Date() }), // Last update timestamp
+    lastError: column.text({ optional: true }), // Last error message
+  },
+});
+
+// API Usage Tracking - detailed cost and usage tracking per API call
+const ApiUsage = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    apiName: column.text(), // 'rapidapi' | 'openai' | 'youtube' | 'telegram' | 'discord' | 'twitter'
+    endpoint: column.text({ optional: true }), // Specific endpoint called
+
+    // Usage metrics
+    requestCount: column.number({ default: 1 }), // Number of requests
+    tokensInput: column.number({ optional: true }), // For OpenAI - input tokens
+    tokensOutput: column.number({ optional: true }), // For OpenAI - output tokens
+
+    // Cost tracking (in cents USD)
+    costCents: column.number({ default: 0 }), // Actual cost in cents
+
+    // Context
+    agentType: column.text({ optional: true }), // Which agent made the call
+    runId: column.number({ optional: true }), // Reference to AgentRunHistory
+    context: column.json({ optional: true }), // Additional context (keyword, asin, etc.)
+
+    // Response info
+    statusCode: column.number({ optional: true }), // HTTP status code
+    success: column.boolean({ default: true }),
+    errorMessage: column.text({ optional: true }),
+    responseTimeMs: column.number({ optional: true }), // Response time in milliseconds
+
+    // Timestamps
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['apiName', 'createdAt'] }, // For daily/monthly aggregations
+    { on: ['agentType', 'createdAt'] }, // For agent-specific reporting
+    { on: ['createdAt'] }, // For cleanup
+  ],
+});
+
+// API Cost Summary - daily aggregated costs per API
+const ApiCostSummary = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    apiName: column.text(),
+    date: column.text(), // YYYY-MM-DD format
+
+    // Aggregated metrics
+    totalRequests: column.number({ default: 0 }),
+    totalTokensInput: column.number({ default: 0 }),
+    totalTokensOutput: column.number({ default: 0 }),
+    totalCostCents: column.number({ default: 0 }),
+
+    // Success/failure tracking
+    successCount: column.number({ default: 0 }),
+    errorCount: column.number({ default: 0 }),
+
+    // Quota tracking
+    quotaLimit: column.number({ optional: true }),
+    quotaUsed: column.number({ default: 0 }),
+
+    // Timestamps
+    updatedAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['apiName', 'date'], unique: true },
+    { on: ['date'] }, // For reports
+  ],
+});
+
+// ============================================================================
+// AGENT SCHEDULING SYSTEM TABLES
+// ============================================================================
+
+// Agent Schedule - Weekly recurring schedules for agents
+const AgentSchedule = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text(), // 'deal_hunter' | 'content_creator' | 'price_monitor' | 'channel_manager'
+    name: column.text(), // Display name: "Morning Deal Hunt"
+
+    // Schedule pattern (cron-like)
+    daysOfWeek: column.json({ default: [1, 2, 3, 4, 5] }), // [0,1,2,3,4,5,6] - 0=Sunday
+    hour: column.number(), // 0-23
+    minute: column.number({ default: 0 }), // 0-59
+    timezone: column.text({ default: 'America/New_York' }),
+
+    // Task configuration
+    taskType: column.text({ default: 'routine' }), // 'routine' | 'deep_scan' | 'cleanup'
+    config: column.json({ default: {} }), // Task-specific config overrides
+    maxItems: column.number({ default: 10 }),
+    priority: column.number({ default: 50 }), // 0-100
+
+    // Conditions for execution
+    conditions: column.json({ optional: true }), // { queueMinItems: 5, onlyIfIdle: true }
+
+    // State
+    isEnabled: column.boolean({ default: true }),
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ default: new Date() }),
+    createdBy: column.text({ optional: true }), // Admin Clerk ID or 'system'
+  },
+  indexes: [
+    { on: ['agentType', 'isEnabled'] },
+    { on: ['hour', 'minute'] },
+  ],
+});
+
+// Agent Task - Individual scheduled or ad-hoc tasks
+const AgentTask = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text(),
+    scheduleId: column.number({ optional: true }), // FK to AgentSchedule (null for ad-hoc)
+
+    // Task details
+    name: column.text(),
+    description: column.text({ optional: true }),
+    taskType: column.text({ default: 'routine' }), // 'routine' | 'ad_hoc' | 'conditional'
+    config: column.json({ default: {} }),
+
+    // Timing
+    scheduledFor: column.date(), // When task should run
+    dueBy: column.date({ optional: true }), // Deadline for compliance tracking
+
+    // Dependencies
+    dependsOnTaskId: column.number({ optional: true }), // Run after this task completes
+
+    // Status
+    status: column.text({ default: 'pending' }), // 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'overdue'
+    runId: column.number({ optional: true }), // FK to AgentRunHistory when executed
+
+    // Compliance tracking
+    startedAt: column.date({ optional: true }),
+    completedAt: column.date({ optional: true }),
+    wasOnTime: column.boolean({ optional: true }), // Started before dueBy
+    delayMinutes: column.number({ optional: true }), // How late it started
+
+    // Metadata
+    priority: column.number({ default: 50 }),
+    createdAt: column.date({ default: new Date() }),
+    createdBy: column.text({ optional: true }), // 'system' | 'admin' | Clerk ID
+  },
+  indexes: [
+    { on: ['agentType', 'status', 'scheduledFor'] },
+    { on: ['scheduledFor'] },
+    { on: ['status'] },
+    { on: ['scheduleId'] },
+  ],
+});
+
+// Agent Shift - Define work periods/roles ("Puestos")
+const AgentShift = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    name: column.text(), // "Turno Mañana", "Turno Tarde", "Guardia Nocturna"
+    description: column.text({ optional: true }),
+
+    // Time window
+    startHour: column.number(), // 0-23
+    endHour: column.number(), // 0-23
+    daysOfWeek: column.json({ default: [1, 2, 3, 4, 5] }), // Weekdays by default
+    timezone: column.text({ default: 'America/New_York' }),
+
+    // Agents assigned to this shift
+    agents: column.json({ default: [] }), // ['deal_hunter', 'price_monitor']
+
+    // Shift behavior
+    maxConcurrentAgents: column.number({ default: 1 }),
+    runIntervalMinutes: column.number({ default: 60 }), // Run cycle within shift
+
+    // State
+    isEnabled: column.boolean({ default: true }),
+    createdAt: column.date({ default: new Date() }),
+    updatedAt: column.date({ default: new Date() }),
+  },
+  indexes: [{ on: ['isEnabled'] }],
+});
+
+// Task Completion - Daily compliance tracking aggregates
+const TaskCompletion = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    date: column.text(), // YYYY-MM-DD
+    agentType: column.text(),
+
+    // Daily metrics
+    tasksScheduled: column.number({ default: 0 }),
+    tasksCompleted: column.number({ default: 0 }),
+    tasksFailed: column.number({ default: 0 }),
+    tasksSkipped: column.number({ default: 0 }),
+
+    // Compliance
+    onTimeCount: column.number({ default: 0 }),
+    lateCount: column.number({ default: 0 }),
+    averageDelayMinutes: column.number({ default: 0 }),
+
+    // Performance
+    totalDurationMs: column.number({ default: 0 }),
+    totalItemsProcessed: column.number({ default: 0 }),
+
+    // Streak tracking
+    consecutiveSuccessDays: column.number({ default: 0 }),
+
+    updatedAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['date', 'agentType'] },
+    { on: ['agentType'] },
+  ],
+});
+
+// Agent Alerts - Compliance alerts and notifications
+const AgentAlerts = defineTable({
+  columns: {
+    id: column.number({ primaryKey: true, autoIncrement: true }),
+    agentType: column.text(),
+    taskId: column.number({ optional: true }), // FK to AgentTask
+
+    // Alert details
+    alertType: column.text(), // 'task_delayed' | 'task_failed' | 'streak_broken' | 'low_performance'
+    severity: column.text({ default: 'warning' }), // 'info' | 'warning' | 'error' | 'critical'
+    message: column.text(),
+    data: column.json({ optional: true }), // Alert-specific data
+
+    // Status
+    isRead: column.boolean({ default: false }),
+    isResolved: column.boolean({ default: false }),
+    resolvedAt: column.date({ optional: true }),
+    resolvedBy: column.text({ optional: true }),
+
+    // Notification tracking
+    notifiedChannels: column.json({ default: [] }), // ['dashboard', 'telegram', 'email']
+    notifiedAt: column.date({ optional: true }),
+
+    createdAt: column.date({ default: new Date() }),
+  },
+  indexes: [
+    { on: ['agentType', 'isRead'] },
+    { on: ['alertType', 'createdAt'] },
+    { on: ['isResolved'] },
+  ],
+});
+
 export default defineDb({
   tables: {
     Users,
@@ -601,7 +963,10 @@ export default defineDb({
     DealAgentConfig,
     DealAgentKeywords,
     ProductLikes,
-    ProductComments,
+    ProductReviews,
+    ReviewHelpfulVotes,
+    AmazonReviews,
+    ProductComments, // Legacy alias
     UserPreferences,
     PriceHistory,
     CuratedDeals,
@@ -622,5 +987,17 @@ export default defineDb({
     PublishQueue,
     PriceAlerts,
     SocialAccounts,
+    // Real-Time Dashboard Tables
+    AgentEvents,
+    AgentHeartbeat,
+    // API Cost Tracking Tables
+    ApiUsage,
+    ApiCostSummary,
+    // Agent Scheduling System Tables
+    AgentSchedule,
+    AgentTask,
+    AgentShift,
+    TaskCompletion,
+    AgentAlerts,
   },
 });

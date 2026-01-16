@@ -8,6 +8,19 @@ const allProducts = await getAllProducts();
 const products = allProducts.sort((a, b) =>
   new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
 );
+
+// Calculate stats
+const stats = {
+  total: products.length,
+  published: products.filter(p => p.status === 'published').length,
+  draft: products.filter(p => p.status === 'draft').length,
+  featured: products.filter(p => p.isFeatured).length,
+  onSale: products.filter(p => p.isOnSale).length,
+  byLang: {
+    en: products.filter(p => p.lang === 'en').length,
+    es: products.filter(p => p.lang === 'es').length,
+  },
+};
 ---
 
 <AdminLayout title="Productos">
@@ -18,6 +31,51 @@ const products = allProducts.sort((a, b) =>
       gap: var(--space-md);
     }
 
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-sm);
+    }
+
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-md);
+      }
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-feature-settings: 'tnum';
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-top: 2px;
+    }
+
+    .stat-published .stat-value {
+      color: var(--success);
+    }
+
+    .stat-draft .stat-value {
+      color: var(--warning);
+    }
+
     /* Toolbar */
     .toolbar {
       display: flex;
@@ -25,12 +83,50 @@ const products = allProducts.sort((a, b) =>
       gap: var(--space-md);
     }
 
-    @media (min-width: 480px) {
+    @media (min-width: 768px) {
       .toolbar {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
       }
+    }
+
+    .toolbar-left {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    @media (min-width: 480px) {
+      .toolbar-left {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-md);
+      }
+    }
+
+    .filter-group {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .filter-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 28px 6px 10px;
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
     }
 
     .product-count {
@@ -353,10 +449,44 @@ const products = allProducts.sort((a, b) =>
   </style>
 
   <div class="products-page">
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{stats.total}</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card stat-published">
+        <div class="stat-value">{stats.published}</div>
+        <div class="stat-label">Publicados</div>
+      </div>
+      <div class="stat-card stat-draft">
+        <div class="stat-value">{stats.draft}</div>
+        <div class="stat-label">Borradores</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{stats.featured}</div>
+        <div class="stat-label">Destacados</div>
+      </div>
+    </div>
+
     <div class="toolbar">
-      <span class="product-count">
-        <strong>{products.length}</strong> productos
-      </span>
+      <div class="toolbar-left">
+        <span class="product-count">
+          <strong id="filteredCount">{products.length}</strong> productos
+        </span>
+        <div class="filter-group">
+          <select id="filterStatus" class="filter-select">
+            <option value="">Todo estado</option>
+            <option value="published">Publicados</option>
+            <option value="draft">Borradores</option>
+          </select>
+          <select id="filterLang" class="filter-select">
+            <option value="">Todo idioma</option>
+            <option value="en">EN ({stats.byLang.en})</option>
+            <option value="es">ES ({stats.byLang.es})</option>
+          </select>
+        </div>
+      </div>
       <div class="toolbar-actions">
         <a href="/admin/products/import" class="admin-btn admin-btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -366,7 +496,16 @@ const products = allProducts.sort((a, b) =>
           </svg>
           Importar
         </a>
-        <a href="/admin/products/new" class="admin-btn admin-btn-secondary">
+        <a href="/admin/products/batch-import" class="admin-btn admin-btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Lote
+        </a>
+        <a href="/admin/products/new" class="admin-btn admin-btn-ghost">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -377,9 +516,9 @@ const products = allProducts.sort((a, b) =>
     </div>
 
     {products.length > 0 ? (
-      <div class="products-list">
+      <div class="products-list" id="productsList">
         {products.map((product) => (
-          <div class="product-card">
+          <div class="product-card" data-status={product.status} data-lang={product.lang || 'es'}>
             <div class="product-main">
               <div class="product-image">
                 {product.featuredImageUrl ? (
@@ -466,6 +605,42 @@ const products = allProducts.sort((a, b) =>
   </div>
 
   <script>
+    // Filter functionality
+    const filterStatus = document.getElementById('filterStatus') as HTMLSelectElement;
+    const filterLang = document.getElementById('filterLang') as HTMLSelectElement;
+    const filteredCount = document.getElementById('filteredCount');
+    const productsList = document.getElementById('productsList');
+    const productCards = productsList?.querySelectorAll('.product-card');
+
+    function applyFilters() {
+      const statusFilter = filterStatus?.value || '';
+      const langFilter = filterLang?.value || '';
+      let visibleCount = 0;
+
+      productCards?.forEach(card => {
+        const status = card.getAttribute('data-status');
+        const lang = card.getAttribute('data-lang');
+
+        const matchesStatus = !statusFilter || status === statusFilter;
+        const matchesLang = !langFilter || lang === langFilter;
+
+        if (matchesStatus && matchesLang) {
+          (card as HTMLElement).style.display = '';
+          visibleCount++;
+        } else {
+          (card as HTMLElement).style.display = 'none';
+        }
+      });
+
+      if (filteredCount) {
+        filteredCount.textContent = String(visibleCount);
+      }
+    }
+
+    filterStatus?.addEventListener('change', applyFilters);
+    filterLang?.addEventListener('change', applyFilters);
+
+    // Delete functionality
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');

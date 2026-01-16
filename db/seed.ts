@@ -638,7 +638,7 @@ async function seedAgentConfigs() {
       intervalHours: 6,
       config: {
         maxKeywordsPerRun: 5,
-        minScore: 40,
+        minScore: 6, // Quick score range is ~5-10, so 6 is a reasonable minimum
         minDiscount: 15,
         autoImport: true,
         autoQueueContent: true,

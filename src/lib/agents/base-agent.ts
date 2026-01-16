@@ -2,10 +2,11 @@
  * Base Agent Class
  *
  * Abstract base class that all agents must extend.
- * Provides common functionality for quota tracking, logging, and state management.
+ * Provides common functionality for quota tracking, logging, state management,
+ * and real-time event emission for dashboard visibility.
  */
 
-import { db, AgentConfig, AgentRunHistory } from 'astro:db';
+import { db, AgentConfig, AgentRunHistory, AgentEvents, AgentHeartbeat } from 'astro:db';
 import { eq } from 'astro:db';
 import type {
   AgentType,
@@ -14,6 +15,19 @@ import type {
   AgentMetrics,
   AgentConfig as AgentConfigType,
 } from './types';
+
+// Event types for real-time dashboard
+export type AgentEventType =
+  | 'started'
+  | 'completed'
+  | 'failed'
+  | 'item_processed'
+  | 'progress'
+  | 'error'
+  | 'warning'
+  | 'info';
+
+export type AgentEventLevel = 'info' | 'warn' | 'error' | 'success';
 
 export abstract class BaseAgent {
   abstract readonly name: string;
@@ -32,6 +46,32 @@ export abstract class BaseAgent {
   protected errors: string[] = [];
   protected warnings: string[] = [];
   protected startTime: number = 0;
+
+  // Stop control
+  private _stopRequested: boolean = false;
+
+  /**
+   * Request the agent to stop gracefully
+   */
+  requestStop(): void {
+    this._stopRequested = true;
+    this.log('Stop requested', 'warn');
+  }
+
+  /**
+   * Check if stop has been requested
+   * Agents should check this periodically and exit gracefully
+   */
+  protected isStopRequested(): boolean {
+    return this._stopRequested;
+  }
+
+  /**
+   * Reset stop flag (called at start of new run)
+   */
+  private resetStopFlag(): void {
+    this._stopRequested = false;
+  }
 
   /**
    * Check if the agent can run based on quota and time constraints
@@ -72,19 +112,29 @@ export abstract class BaseAgent {
   abstract execute(context: AgentContext): Promise<void>;
 
   /**
-   * Run the agent with proper lifecycle management
+   * Run the agent with proper lifecycle management and real-time event emission
    */
   async run(context: AgentContext): Promise<AgentResult> {
     this.resetState();
+    this.resetStopFlag();
     this.startTime = Date.now();
 
     // Create run history entry
     const runId = await this.createRunEntry(context.triggeredBy);
     context.runId = runId;
+    this.currentRunId = runId;
 
     try {
       // Update status to running
       await this.updateRunStatus(runId, 'running');
+
+      // Emit started event and update heartbeat
+      await this.emitEvent('started', `${this.name} started`, {
+        triggeredBy: context.triggeredBy,
+        dryRun: context.dryRun,
+        maxItems: context.maxItems,
+      });
+      await this.updateHeartbeat('running', { currentTask: 'Initializing...' });
 
       // Execute agent logic
       await this.execute(context);
@@ -101,6 +151,25 @@ export abstract class BaseAgent {
         metrics: this.metrics,
       });
 
+      // Emit completed event and update heartbeat
+      await this.emitEvent(
+        'completed',
+        `${this.name} completed: ${this.metrics.itemsProcessed} items processed`,
+        {
+          duration: this.metrics.duration,
+          itemsProcessed: this.metrics.itemsProcessed,
+          itemsSucceeded: this.metrics.itemsSucceeded,
+          itemsFailed: this.metrics.itemsFailed,
+          errors: this.errors.length,
+          warnings: this.warnings.length,
+        },
+        this.errors.length > 0 ? 'warn' : 'success'
+      );
+      await this.updateHeartbeat('idle', {
+        progress: 100,
+        itemsProcessed: this.metrics.itemsProcessed,
+      });
+
       return this.buildResult(true);
     } catch (error) {
       this.metrics.duration = Date.now() - this.startTime;
@@ -113,7 +182,17 @@ export abstract class BaseAgent {
         metrics: this.metrics,
       });
 
+      // Emit failed event and update heartbeat
+      await this.emitEvent('failed', `${this.name} failed: ${errorMessage}`, {
+        error: errorMessage,
+        duration: this.metrics.duration,
+        itemsProcessed: this.metrics.itemsProcessed,
+      }, 'error');
+      await this.updateHeartbeat('error', { lastError: errorMessage });
+
       return this.buildResult(false);
+    } finally {
+      this.currentRunId = null;
     }
   }
 
@@ -341,6 +420,126 @@ export abstract class BaseAgent {
       default:
         console.log(prefix, message);
     }
+  }
+
+  // ========== Real-Time Event Emission ==========
+
+  protected currentRunId: number | null = null;
+
+  /**
+   * Emit an event for real-time dashboard visibility
+   */
+  protected async emitEvent(
+    eventType: AgentEventType,
+    message: string,
+    data?: Record<string, unknown>,
+    level: AgentEventLevel = 'info'
+  ): Promise<void> {
+    try {
+      await db.insert(AgentEvents).values({
+        eventType,
+        agentType: this.type,
+        runId: this.currentRunId ?? undefined,
+        message,
+        data: data ?? undefined,
+        level,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      // Don't fail the agent if event emission fails
+      console.error(`[${this.name}] Failed to emit event:`, error);
+    }
+  }
+
+  /**
+   * Update heartbeat status for live dashboard
+   */
+  protected async updateHeartbeat(
+    status: 'idle' | 'running' | 'error' | 'disabled',
+    updates?: {
+      currentTask?: string;
+      progress?: number;
+      itemsProcessed?: number;
+      itemsTotal?: number;
+      lastError?: string;
+    }
+  ): Promise<void> {
+    try {
+      // Try to update existing heartbeat
+      const existing = await db
+        .select()
+        .from(AgentHeartbeat)
+        .where(eq(AgentHeartbeat.agentType, this.type));
+
+      const heartbeatData = {
+        status,
+        currentRunId: this.currentRunId ?? undefined,
+        currentTask: updates?.currentTask ?? undefined,
+        progress: updates?.progress ?? undefined,
+        itemsProcessed: updates?.itemsProcessed ?? this.metrics.itemsProcessed,
+        itemsTotal: updates?.itemsTotal ?? undefined,
+        lastHeartbeat: new Date(),
+        lastError: updates?.lastError ?? undefined,
+      };
+
+      if (existing.length > 0) {
+        await db
+          .update(AgentHeartbeat)
+          .set(heartbeatData)
+          .where(eq(AgentHeartbeat.agentType, this.type));
+      } else {
+        await db.insert(AgentHeartbeat).values({
+          agentType: this.type,
+          ...heartbeatData,
+        });
+      }
+    } catch (error) {
+      console.error(`[${this.name}] Failed to update heartbeat:`, error);
+    }
+  }
+
+  /**
+   * Emit progress update (convenience method)
+   */
+  protected async emitProgress(
+    currentItem: number,
+    totalItems: number,
+    taskDescription?: string
+  ): Promise<void> {
+    const progress = Math.round((currentItem / totalItems) * 100);
+
+    await this.updateHeartbeat('running', {
+      progress,
+      itemsProcessed: currentItem,
+      itemsTotal: totalItems,
+      currentTask: taskDescription,
+    });
+
+    // Only emit event every 10% or for small batches
+    if (totalItems <= 5 || currentItem % Math.ceil(totalItems / 10) === 0 || currentItem === totalItems) {
+      await this.emitEvent('progress', `Progress: ${currentItem}/${totalItems} (${progress}%)`, {
+        current: currentItem,
+        total: totalItems,
+        progress,
+        task: taskDescription,
+      });
+    }
+  }
+
+  /**
+   * Emit item processed event
+   */
+  protected async emitItemProcessed(
+    itemId: string,
+    success: boolean,
+    details?: Record<string, unknown>
+  ): Promise<void> {
+    await this.emitEvent(
+      'item_processed',
+      success ? `Processed: ${itemId}` : `Failed: ${itemId}`,
+      { itemId, success, ...details },
+      success ? 'success' : 'error'
+    );
   }
 
   /**

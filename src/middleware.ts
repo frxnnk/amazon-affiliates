@@ -5,6 +5,20 @@ const isPublicAdminRoute = createRouteMatcher([
   '/admin/login',
   '/admin/sso-callback(.*)',
   '/admin/unauthorized',
+  // Agent monitoring endpoints (public for SSE and dashboard)
+  '/api/admin/agents/status',
+  '/api/admin/agents/events',
+  '/api/admin/agents/stream',
+  '/api/admin/agents/control',
+  '/api/admin/agents/run',
+  '/api/admin/agents/queue-content',
+  '/api/admin/agents/debug-queue',
+  '/api/admin/agents/reset-queue',
+  '/api/admin/agents/costs',
+  '/api/admin/test-connections',
+  '/api/admin/telegram/test',
+  // Cron endpoints (called by Vercel cron or manually)
+  '/api/cron/(.*)',
 ]);
 
 export const onRequest = clerkMiddleware((auth, context) => {

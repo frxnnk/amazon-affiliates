@@ -11,6 +11,7 @@ import { BaseAgent } from './base-agent';
 import type { AgentContext, ContentCreatorConfig, ContentItem } from './types';
 import { generateProductContent, type GeneratedProductContent } from '@lib/openai';
 import { recordUsage, canMakeCall } from '@lib/quota';
+import { trackApiCall } from '@lib/api-tracker';
 
 const DEFAULT_CONFIG: ContentCreatorConfig = {
   maxItemsPerRun: 5,
@@ -126,8 +127,25 @@ export class ContentCreatorAgent extends BaseAgent {
           asin: item.asin,
           type: item.contentType,
         });
+        // Track in ApiUsage table for cost dashboard
+        await trackApiCall({
+          apiName: 'openai',
+          endpoint: 'chat/completions',
+          tokensInput: Math.floor(result.tokensUsed * 0.3), // Estimate ~30% input
+          tokensOutput: Math.floor(result.tokensUsed * 0.7), // Estimate ~70% output
+          agentType: this.type,
+          context: { asin: item.asin, contentType: item.contentType },
+          success: result.success,
+        });
       }
       await this.incrementQuota();
+
+      // Emit progress event
+      await this.emitEvent('item_processed', `Content generated for ${item.asin}`, {
+        asin: item.asin,
+        tokensUsed: result.tokensUsed,
+        hasImage: !!product.featuredImageUrl,
+      });
 
       if (!result.success || !result.content) {
         await this.markFailed(item.id, result.error || 'Generation failed');

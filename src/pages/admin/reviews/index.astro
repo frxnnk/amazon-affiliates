@@ -1,0 +1,854 @@
+---
+export const prerender = false;
+
+import AdminLayout from '@components/admin/AdminLayout.astro';
+import { getAdminReviews, getReviewStats } from '@lib/db';
+
+// Get initial reviews
+const { reviews, pagination } = await getAdminReviews({
+  page: 1,
+  limit: 20,
+  status: 'all',
+  sortBy: 'recent',
+});
+
+// Count by status
+const pendingCount = reviews.filter(r => !r.isApproved && r.isVisible).length;
+const approvedCount = reviews.filter(r => r.isApproved).length;
+---
+
+<AdminLayout title="Moderacion de Reviews">
+  <style>
+    .reviews-page {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      text-align: center;
+    }
+
+    .stat-card.pending {
+      border-color: var(--warning);
+      background: var(--warning-muted);
+    }
+
+    .stat-card.approved {
+      border-color: var(--success);
+      background: var(--success-muted);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filters {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 8px 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .filter-btn:hover {
+      border-color: var(--border-default);
+      color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg-base);
+    }
+
+    .filter-btn .count {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      margin-left: 4px;
+    }
+
+    /* Reviews List */
+    .reviews-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .review-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .review-card.pending {
+      border-left: 3px solid var(--warning);
+    }
+
+    .review-card.approved {
+      border-left: 3px solid var(--success);
+    }
+
+    .review-card.rejected {
+      border-left: 3px solid var(--error);
+      opacity: 0.7;
+    }
+
+    .review-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      background: var(--bg-hover);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .review-product {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .product-image {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .product-info {
+      min-width: 0;
+    }
+
+    .product-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .product-asin {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+
+    .review-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .review-rating {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .star {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+    }
+
+    .star.filled {
+      color: #FFE14D;
+      fill: #FFE14D;
+    }
+
+    .review-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.pending {
+      background: var(--warning-muted);
+      color: var(--warning);
+    }
+
+    .status-badge.approved {
+      background: var(--success-muted);
+      color: var(--success);
+    }
+
+    .status-badge.rejected {
+      background: var(--error-muted);
+      color: var(--error);
+    }
+
+    .review-body {
+      padding: var(--space-md);
+    }
+
+    .review-user {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .user-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: var(--success-muted);
+      color: var(--success);
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      border-radius: 999px;
+    }
+
+    .verified-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .review-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .review-content {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .review-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      background: var(--bg-hover);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .review-stats {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .review-stats span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .review-stats svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .review-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .action-btn.approve {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .action-btn.approve:hover {
+      opacity: 0.9;
+    }
+
+    .action-btn.reject {
+      background: var(--error);
+      color: #fff;
+    }
+
+    .action-btn.reject:hover {
+      opacity: 0.9;
+    }
+
+    .action-btn.delete {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+
+    .action-btn.delete:hover {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    /* Empty State */
+    .empty-state {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: var(--space-2xl);
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto var(--space-md);
+      background: var(--bg-hover);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--text-muted);
+    }
+
+    .empty-state h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .empty-state p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: var(--space-xl);
+      color: var(--text-muted);
+    }
+
+    /* Moderation Note Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: var(--space-md);
+    }
+
+    .modal textarea {
+      width: 100%;
+      padding: var(--space-sm);
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: var(--space-sm);
+      justify-content: flex-end;
+      margin-top: var(--space-md);
+    }
+  </style>
+
+  <div class="reviews-page">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="total-count">{reviews.length}</div>
+        <div class="stat-label">Total Reviews</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-value" id="pending-count">{pendingCount}</div>
+        <div class="stat-label">Pendientes</div>
+      </div>
+      <div class="stat-card approved">
+        <div class="stat-value" id="approved-count">{approvedCount}</div>
+        <div class="stat-label">Aprobadas</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filters">
+        <button type="button" class="filter-btn active" data-filter="all">
+          Todas
+        </button>
+        <button type="button" class="filter-btn" data-filter="pending">
+          Pendientes <span class="count" id="pending-badge">{pendingCount}</span>
+        </button>
+        <button type="button" class="filter-btn" data-filter="approved">
+          Aprobadas
+        </button>
+        <button type="button" class="filter-btn" data-filter="rejected">
+          Rechazadas
+        </button>
+      </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div class="reviews-list" id="reviews-container">
+      {reviews.length > 0 ? (
+        reviews.map((review) => {
+          const status = !review.isVisible ? 'rejected' : (review.isApproved ? 'approved' : 'pending');
+          return (
+            <div class={`review-card ${status}`} data-review-id={review.id}>
+              <div class="review-header">
+                <div class="review-product">
+                  <div class="product-info">
+                    <div class="product-title">{review.productId || 'Producto'}</div>
+                    <div class="product-asin">{review.asin}</div>
+                  </div>
+                </div>
+                <div class="review-meta">
+                  <div class="review-rating">
+                    {[1,2,3,4,5].map((star) => (
+                      <svg class={`star ${star <= review.rating ? 'filled' : ''}`} viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span class="review-date">
+                    {new Date(review.createdAt).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                  <span class={`status-badge ${status}`}>
+                    {status === 'pending' ? 'Pendiente' : status === 'approved' ? 'Aprobada' : 'Rechazada'}
+                  </span>
+                </div>
+              </div>
+              <div class="review-body">
+                <div class="review-user">
+                  <div class="user-avatar">
+                    {review.userId?.substring(0, 2).toUpperCase() || 'U'}
+                  </div>
+                  <span class="user-name">{review.userId?.substring(0, 8) || 'Usuario'}...</span>
+                  {review.isVerifiedPurchase && (
+                    <span class="verified-badge">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+                      </svg>
+                      Compra Verificada
+                    </span>
+                  )}
+                </div>
+                {review.title && <h4 class="review-title">{review.title}</h4>}
+                <p class="review-content">{review.content}</p>
+              </div>
+              <div class="review-footer">
+                <div class="review-stats">
+                  <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                    </svg>
+                    {review.helpfulCount || 0} utiles
+                  </span>
+                </div>
+                <div class="review-actions">
+                  {status === 'pending' && (
+                    <>
+                      <button type="button" class="action-btn approve" data-action="approve" data-id={review.id}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Aprobar
+                      </button>
+                      <button type="button" class="action-btn reject" data-action="reject" data-id={review.id}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        Rechazar
+                      </button>
+                    </>
+                  )}
+                  <button type="button" class="action-btn delete" data-action="delete" data-id={review.id}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <h3>No hay reviews</h3>
+          <p>Las reviews de clientes apareceran aqui para moderacion</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Rejection Note Modal -->
+  <div class="modal-overlay" id="reject-modal">
+    <div class="modal">
+      <h3>Rechazar Review</h3>
+      <textarea id="reject-note" placeholder="Nota de moderacion (opcional)"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="action-btn delete" id="cancel-reject">Cancelar</button>
+        <button type="button" class="action-btn reject" id="confirm-reject">Rechazar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentFilter = 'all';
+    let pendingRejectId: number | null = null;
+
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter') || 'all';
+        await loadReviews();
+      });
+    });
+
+    // Action buttons
+    document.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const actionBtn = target.closest('[data-action]') as HTMLElement;
+      if (!actionBtn) return;
+
+      const action = actionBtn.getAttribute('data-action');
+      const reviewId = parseInt(actionBtn.getAttribute('data-id') || '0');
+
+      if (action === 'approve') {
+        await moderateReview(reviewId, 'approve');
+      } else if (action === 'reject') {
+        pendingRejectId = reviewId;
+        document.getElementById('reject-modal')?.classList.add('active');
+      } else if (action === 'delete') {
+        if (confirm('Eliminar esta review permanentemente?')) {
+          await deleteReview(reviewId);
+        }
+      }
+    });
+
+    // Reject modal
+    document.getElementById('cancel-reject')?.addEventListener('click', () => {
+      document.getElementById('reject-modal')?.classList.remove('active');
+      pendingRejectId = null;
+    });
+
+    document.getElementById('confirm-reject')?.addEventListener('click', async () => {
+      if (pendingRejectId) {
+        const note = (document.getElementById('reject-note') as HTMLTextAreaElement)?.value;
+        await moderateReview(pendingRejectId, 'reject', note);
+        document.getElementById('reject-modal')?.classList.remove('active');
+        pendingRejectId = null;
+      }
+    });
+
+    async function loadReviews() {
+      const container = document.getElementById('reviews-container');
+      if (!container) return;
+
+      container.innerHTML = '<div class="loading">Cargando...</div>';
+
+      try {
+        const params = new URLSearchParams({
+          status: currentFilter,
+          sortBy: 'recent',
+        });
+
+        const response = await fetch(`/api/admin/reviews?${params}`, {
+          credentials: 'include',
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          renderReviews(data.reviews);
+        }
+      } catch (error) {
+        console.error('Load reviews error:', error);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar reviews</p></div>';
+      }
+    }
+
+    async function moderateReview(reviewId: number, action: 'approve' | 'reject', note?: string) {
+      try {
+        const response = await fetch('/api/admin/reviews', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reviewId, action, note }),
+        });
+
+        if (response.ok) {
+          await loadReviews();
+          updateCounts();
+        } else {
+          alert('Error al moderar review');
+        }
+      } catch (error) {
+        console.error('Moderate error:', error);
+        alert('Error de conexion');
+      }
+    }
+
+    async function deleteReview(reviewId: number) {
+      try {
+        const response = await fetch(`/api/admin/reviews?id=${reviewId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          await loadReviews();
+          updateCounts();
+        } else {
+          alert('Error al eliminar review');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Error de conexion');
+      }
+    }
+
+    function updateCounts() {
+      // Reload page to get fresh counts
+      window.location.reload();
+    }
+
+    function renderReviews(reviews: any[]) {
+      const container = document.getElementById('reviews-container');
+      if (!container) return;
+
+      if (reviews.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h3>No hay reviews</h3>
+            <p>No se encontraron reviews con este filtro</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = reviews.map(review => {
+        const status = !review.isVisible ? 'rejected' : (review.isApproved ? 'approved' : 'pending');
+        const statusText = status === 'pending' ? 'Pendiente' : status === 'approved' ? 'Aprobada' : 'Rechazada';
+        const date = new Date(review.createdAt).toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        return `
+          <div class="review-card ${status}" data-review-id="${review.id}">
+            <div class="review-header">
+              <div class="review-product">
+                <div class="product-info">
+                  <div class="product-title">${review.productId || 'Producto'}</div>
+                  <div class="product-asin">${review.asin}</div>
+                </div>
+              </div>
+              <div class="review-meta">
+                <div class="review-rating">
+                  ${[1,2,3,4,5].map(star =>
+                    `<svg class="star ${star <= review.rating ? 'filled' : ''}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>`
+                  ).join('')}
+                </div>
+                <span class="review-date">${date}</span>
+                <span class="status-badge ${status}">${statusText}</span>
+              </div>
+            </div>
+            <div class="review-body">
+              <div class="review-user">
+                <div class="user-avatar">${review.userId?.substring(0, 2).toUpperCase() || 'U'}</div>
+                <span class="user-name">${review.userId?.substring(0, 8) || 'Usuario'}...</span>
+                ${review.isVerifiedPurchase ? `
+                  <span class="verified-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+                    </svg>
+                    Compra Verificada
+                  </span>
+                ` : ''}
+              </div>
+              ${review.title ? `<h4 class="review-title">${review.title}</h4>` : ''}
+              <p class="review-content">${review.content}</p>
+            </div>
+            <div class="review-footer">
+              <div class="review-stats">
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                  </svg>
+                  ${review.helpfulCount || 0} utiles
+                </span>
+              </div>
+              <div class="review-actions">
+                ${status === 'pending' ? `
+                  <button type="button" class="action-btn approve" data-action="approve" data-id="${review.id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Aprobar
+                  </button>
+                  <button type="button" class="action-btn reject" data-action="reject" data-id="${review.id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    Rechazar
+                  </button>
+                ` : ''}
+                <button type="button" class="action-btn delete" data-action="delete" data-id="${review.id}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</AdminLayout>

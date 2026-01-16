@@ -232,6 +232,8 @@ export async function getProductVideo(
         thumbnailHigh: cached.thumbnailHigh || undefined,
         publishedAt: cached.fetchedAt.toISOString(),
         isShort: cached.isShort,
+        isPremiumChannel: cached.isPremiumChannel ?? false,
+        isHidden: cached.isHidden ?? false,
       };
     }
 
@@ -311,6 +313,8 @@ export async function getProductVideo(
       thumbnailHigh: cached.thumbnailHigh || undefined,
       publishedAt: cached.fetchedAt.toISOString(),
       isShort: cached.isShort,
+      isPremiumChannel: cached.isPremiumChannel ?? false,
+      isHidden: cached.isHidden ?? false,
     } : null);
 
     // Calculate expiration date
@@ -329,6 +333,7 @@ export async function getProductVideo(
         thumbnail: cached.thumbnail,
         thumbnailHigh: cached.thumbnailHigh,
         isShort: cached.isShort,
+        isPremiumChannel: cached.isPremiumChannel,
       } : null);
 
       await db
@@ -340,6 +345,7 @@ export async function getProductVideo(
           thumbnail: videoToStore?.thumbnail || null,
           thumbnailHigh: videoToStore?.thumbnailHigh || null,
           isShort: videoToStore?.isShort ?? false,
+          isPremiumChannel: videoToStore?.isPremiumChannel ?? false,
           fetchedAt: now,
           expiresAt,
           hitCount: 0,
@@ -358,6 +364,7 @@ export async function getProductVideo(
           thumbnail: result.video?.thumbnail || null,
           thumbnailHigh: result.video?.thumbnailHigh || null,
           isShort: result.video?.isShort ?? false,
+          isPremiumChannel: result.video?.isPremiumChannel ?? false,
           fetchedAt: now,
           expiresAt,
           hitCount: 0,
@@ -538,4 +545,117 @@ export async function invalidateProductVideo(asin: string): Promise<boolean> {
 
   console.log(`[VideoCache] Invalidated cache for ASIN: ${asin}`);
   return true;
+}
+
+/**
+ * Hide a video by its videoId
+ * Hidden videos won't appear in the feed
+ */
+export async function hideVideo(videoId: string): Promise<boolean> {
+  try {
+    await db
+      .update(VideoCache)
+      .set({ isHidden: true })
+      .where(eq(VideoCache.videoId, videoId));
+
+    console.log(`[VideoCache] Video hidden: ${videoId}`);
+    return true;
+  } catch (error) {
+    console.error('[VideoCache] Error hiding video:', error);
+    return false;
+  }
+}
+
+/**
+ * Unhide a video by its videoId
+ * Makes the video visible in the feed again
+ */
+export async function unhideVideo(videoId: string): Promise<boolean> {
+  try {
+    await db
+      .update(VideoCache)
+      .set({ isHidden: false })
+      .where(eq(VideoCache.videoId, videoId));
+
+    console.log(`[VideoCache] Video unhidden: ${videoId}`);
+    return true;
+  } catch (error) {
+    console.error('[VideoCache] Error unhiding video:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all cached videos for admin panel
+ * Returns videos with their product info, sorted by most recent
+ */
+export async function getAllCachedVideos(options?: {
+  filter?: 'all' | 'visible' | 'hidden';
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  videos: Array<{
+    id: number;
+    videoId: string | null;
+    videoTitle: string | null;
+    channelTitle: string | null;
+    thumbnail: string | null;
+    isShort: boolean;
+    isPremiumChannel: boolean;
+    isHidden: boolean;
+    asin: string | null;
+    productTitle: string;
+    fetchedAt: Date;
+    hitCount: number;
+  }>;
+  total: number;
+}> {
+  const { filter = 'all', limit = 50, offset = 0 } = options || {};
+
+  try {
+    // Get all videos that have a videoId
+    let allVideos = await db
+      .select()
+      .from(VideoCache)
+      .all();
+
+    // Filter to only entries with videos
+    let videos = allVideos.filter(v => v.videoId);
+
+    // Apply visibility filter
+    if (filter === 'visible') {
+      videos = videos.filter(v => !v.isHidden);
+    } else if (filter === 'hidden') {
+      videos = videos.filter(v => v.isHidden);
+    }
+
+    // Sort by fetchedAt descending (most recent first)
+    videos.sort((a, b) => b.fetchedAt.getTime() - a.fetchedAt.getTime());
+
+    const total = videos.length;
+
+    // Apply pagination
+    const paginatedVideos = videos.slice(offset, offset + limit);
+
+    return {
+      videos: paginatedVideos.map(v => ({
+        id: v.id,
+        videoId: v.videoId,
+        videoTitle: v.videoTitle,
+        channelTitle: v.channelTitle,
+        thumbnail: v.thumbnail,
+        isShort: v.isShort,
+        isPremiumChannel: v.isPremiumChannel ?? false,
+        isHidden: v.isHidden ?? false,
+        asin: v.asin,
+        productTitle: v.productTitle,
+        fetchedAt: v.fetchedAt,
+        hitCount: v.hitCount || 0,
+      })),
+      total,
+    };
+  } catch (error) {
+    console.error('[VideoCache] Error getting all videos:', error);
+    return { videos: [], total: 0 };
+  }
 }

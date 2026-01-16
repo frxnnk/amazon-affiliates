@@ -13,11 +13,12 @@ import { getDealAgentKeywords, updateKeywordSearched, getDealAgentConfig } from 
 import { searchProductsRainforest, isRainforestConfigured } from '@lib/rainforest-api';
 import { calculateQuickScore, type AnalyzableProduct } from '@lib/deal-analyzer';
 import { recordUsage, canMakeCall } from '@lib/quota';
+import { trackApiCall } from '@lib/api-tracker';
 
 const DEFAULT_CONFIG: DealHunterConfig = {
   maxKeywordsPerRun: 5,
-  minScore: 40, // Quick score threshold (1-100)
-  minDiscount: 15, // Minimum discount percentage
+  minScore: 25, // Quick score threshold (1-100) - lowered for better discovery
+  minDiscount: 10, // Minimum discount percentage
   autoImport: true,
   autoQueueContent: true,
 };
@@ -64,10 +65,16 @@ export class DealHunterAgent extends BaseAgent {
     const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
 
     // Process each keyword
-    for (const keyword of keywordsToProcess) {
+    for (let i = 0; i < keywordsToProcess.length; i++) {
+      const keyword = keywordsToProcess[i];
+
+      // Emit progress
+      await this.emitProgress(i + 1, keywordsToProcess.length, `Searching: ${keyword.keyword}`);
+
       // Check quota before each search
       if (!(await canMakeCall('rapidapi'))) {
         this.addWarning('RapidAPI quota exhausted, stopping');
+        await this.emitEvent('warning', 'RapidAPI quota exhausted', { keyword: keyword.keyword });
         break;
       }
 
@@ -109,15 +116,26 @@ export class DealHunterAgent extends BaseAgent {
       this.log(`Searching: "${keyword.keyword}" in ${keyword.marketplace}`);
 
       // Search products
+      const startTime = Date.now();
       const searchResult = await searchProductsRainforest({
         keywords: keyword.keyword,
         amazonDomain: keyword.marketplace,
         category: keyword.category || undefined,
       });
+      const responseTimeMs = Date.now() - startTime;
 
       // Track API call
       this.trackApiCall();
       await recordUsage('rapidapi', 1, { keyword: keyword.keyword });
+      // Track in ApiUsage table for cost dashboard
+      await trackApiCall({
+        apiName: 'rapidapi',
+        endpoint: 'search',
+        agentType: this.type,
+        context: { keyword: keyword.keyword, marketplace: keyword.marketplace },
+        success: searchResult.success,
+        responseTimeMs,
+      });
       await this.incrementQuota();
 
       if (!searchResult.success || !searchResult.data) {
@@ -131,6 +149,12 @@ export class DealHunterAgent extends BaseAgent {
       // Update keyword stats
       await updateKeywordSearched(keyword.id, products.length);
 
+      // Emit search results event
+      await this.emitEvent('info', `Found ${products.length} products for "${keyword.keyword}"`, {
+        keyword: keyword.keyword,
+        resultsCount: products.length,
+      });
+
       // Filter for deals with minimum discount
       const deals = products.filter((p) => {
         if (!p.price || !p.originalPrice) return false;
@@ -139,6 +163,13 @@ export class DealHunterAgent extends BaseAgent {
       });
 
       this.log(`${deals.length} products meet minimum discount of ${options.minDiscount}%`);
+
+      if (deals.length > 0) {
+        await this.emitEvent('info', `${deals.length} deals found with ${options.minDiscount}%+ discount`, {
+          keyword: keyword.keyword,
+          dealsCount: deals.length,
+        });
+      }
 
       // Process each deal
       let imported = 0;
@@ -164,12 +195,18 @@ export class DealHunterAgent extends BaseAgent {
 
         if (quickScore < options.minScore) {
           this.log(`Skipping ${deal.asin}: score ${quickScore} < ${options.minScore}`);
+          await this.emitEvent('info', `Skipped: score ${quickScore} < ${options.minScore}`, {
+            asin: deal.asin,
+            score: quickScore,
+            minScore: options.minScore,
+          });
           continue;
         }
 
         // Check if already imported
         if (await this.isAlreadyImported(deal.asin)) {
           this.log(`Skipping ${deal.asin}: already exists`);
+          await this.emitEvent('info', `Skipped: already exists`, { asin: deal.asin });
           continue;
         }
 
@@ -254,6 +291,15 @@ export class DealHunterAgent extends BaseAgent {
 
       this.trackItem(true);
       this.log(`Imported: ${deal.asin} - ${deal.title.slice(0, 50)}...`);
+
+      // Emit item processed event
+      await this.emitItemProcessed(deal.asin, true, {
+        title: deal.title.slice(0, 60),
+        price: deal.price,
+        originalPrice: deal.originalPrice,
+        discount: deal.originalPrice ? Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100) : 0,
+      });
+
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

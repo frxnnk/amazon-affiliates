@@ -263,6 +263,8 @@ export async function searchProductVideoRapidAPI(
     const item = best.item;
     const duration = parseDuration(item.lengthText || item.length || '');
     const isShort = duration > 0 && duration < 62;
+    const channelLower = (item.channelName || item.author || '').toLowerCase();
+    const isPremiumChannel = TRUSTED_CHANNELS.some(tc => channelLower.includes(tc));
 
     const video: YouTubeVideo = {
       videoId: item.videoId,
@@ -274,6 +276,7 @@ export async function searchProductVideoRapidAPI(
                      `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`,
       publishedAt: item.publishedTimeText || new Date().toISOString(),
       isShort,
+      isPremiumChannel,
     };
 
     console.log(`[RapidAPI YouTube] Found: ${video.videoId} (score: ${best.score})`);
