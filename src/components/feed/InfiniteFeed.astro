@@ -273,7 +273,24 @@ class Feed {
     // Filter state
     this.currentFilters = {};
 
+    // Region state (from localStorage)
+    this.region = this.getRegionFromStorage();
+
     if (this.container) this.init();
+  }
+
+  // Get region from localStorage or default based on lang
+  getRegionFromStorage() {
+    try {
+      const saved = localStorage.getItem('preferredRegion');
+      if (saved) {
+        const region = JSON.parse(saved);
+        return region.code || (this.lang === 'es' ? 'ES' : 'US');
+      }
+    } catch (e) {
+      console.error('[Feed] Error reading region:', e);
+    }
+    return this.lang === 'es' ? 'ES' : 'US';
   }
   
   async init() {
@@ -904,6 +921,16 @@ class Feed {
       }
     });
 
+    // Listen for region changes (from RegionSelector)
+    window.addEventListener('region:change', (e) => {
+      const newRegion = e.detail?.code;
+      if (newRegion && newRegion !== this.region) {
+        this.region = newRegion;
+        console.log('[Feed] Region changed to:', newRegion);
+        // Note: RegionSelector already reloads the page, but we save it here for consistency
+      }
+    });
+
     // Send pending views when user leaves
     window.addEventListener('beforeunload', () => {
       this.sendViewBatch();
@@ -1014,7 +1041,7 @@ class Feed {
         if (f.dealsOnly) filterParams += `&dealsOnly=true`;
       }
 
-      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&limit=5${exclude}${searchParam}${filterParams}`);
+      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&region=${this.region}&limit=5${exclude}${searchParam}${filterParams}`);
       const data = await res.json();
       
       if (!data.success) throw new Error(data.error);
