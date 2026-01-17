@@ -16,6 +16,7 @@ import { type Lang } from '@i18n/utils';
 import '@styles/feed-brutal.css';
 import FeedSearchBar from './FeedSearchBar.astro';
 import FilterPanel from './FilterPanel.astro';
+import RegionSelector from './RegionSelector.astro';
 
 interface Props {
   lang: Lang;
@@ -149,6 +150,9 @@ const categories = [
           </div>
         </div>
       </div>
+
+      <!-- Region/Currency Selector -->
+      <RegionSelector currentLang={lang} />
 
       <!-- Cart Button -->
       <button type="button" class="cart-ctrl" id="feed-cart-btn" aria-label={lang === 'es' ? 'Ver carrito' : 'View cart'}>
