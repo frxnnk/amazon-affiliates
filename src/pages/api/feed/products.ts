@@ -715,15 +715,53 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const sortBy = url.searchParams.get('sortBy') || 'relevance';
     const dealsOnly = url.searchParams.get('dealsOnly') === 'true';
 
+    // Region parameter (from RegionSelector)
+    const region = url.searchParams.get('region') || (lang === 'es' ? 'ES' : 'US');
+
     console.log(`[Feed API] Filters: minPrice=${minPrice}, maxPrice=${maxPrice}, minRating=${minRating}, sortBy=${sortBy}, dealsOnly=${dealsOnly}`);
 
     // Get authenticated user for personalization
     const auth = locals.auth?.();
     const userId = auth?.userId || null;
 
+    // Map region code to Amazon marketplace domain
+    const REGION_TO_MARKETPLACE: Record<string, string> = {
+      'US': 'com',
+      'ES': 'es',
+      'GB': 'co.uk',
+      'DE': 'de',
+      'FR': 'fr',
+      'IT': 'it',
+      'MX': 'com.mx',
+      'CA': 'ca',
+      'BR': 'com.br',
+      'JP': 'co.jp',
+      'AU': 'com.au',
+      'IN': 'in',
+    };
+
+    // Map region code to currency
+    const REGION_TO_CURRENCY: Record<string, string> = {
+      'US': 'USD',
+      'ES': 'EUR',
+      'GB': 'GBP',
+      'DE': 'EUR',
+      'FR': 'EUR',
+      'IT': 'EUR',
+      'MX': 'MXN',
+      'CA': 'CAD',
+      'BR': 'BRL',
+      'JP': 'JPY',
+      'AU': 'AUD',
+      'IN': 'INR',
+    };
+
     // Get affiliate tag from environment
     const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
-    const marketplace = lang === 'es' ? 'es' : 'com';
+    const marketplace = REGION_TO_MARKETPLACE[region] || (lang === 'es' ? 'es' : 'com');
+    const defaultCurrency = REGION_TO_CURRENCY[region] || (lang === 'es' ? 'EUR' : 'USD');
+
+    console.log(`[Feed API] Region: ${region}, Marketplace: ${marketplace}, Currency: ${defaultCurrency}`);
 
     let feedProducts: FeedProduct[] = [];
     let source = 'database';
@@ -773,7 +811,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
               brand: deal.brand || 'Amazon',
               price: deal.price!,
               originalPrice: deal.originalPrice || undefined,
-              currency: deal.currency || (marketplace === 'es' ? 'EUR' : 'USD'),
+              currency: deal.currency || (defaultCurrency),
               rating: deal.rating || undefined,
               totalReviews: deal.totalReviews || undefined,
               featuredImage: {
@@ -892,7 +930,22 @@ export const GET: APIRoute = async ({ url, locals }) => {
             .slice(0, sliceAmount)
             .map(async (product, index) => {
               // Build affiliate URL
-              const amazonDomain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
+              // Map marketplace to Amazon domain
+              const MARKETPLACE_TO_DOMAIN: Record<string, string> = {
+                'com': 'amazon.com',
+                'es': 'amazon.es',
+                'co.uk': 'amazon.co.uk',
+                'de': 'amazon.de',
+                'fr': 'amazon.fr',
+                'it': 'amazon.it',
+                'com.mx': 'amazon.com.mx',
+                'ca': 'amazon.ca',
+                'com.br': 'amazon.com.br',
+                'co.jp': 'amazon.co.jp',
+                'com.au': 'amazon.com.au',
+                'in': 'amazon.in',
+              };
+              const amazonDomain = MARKETPLACE_TO_DOMAIN[marketplace] || 'amazon.com';
               const affiliateUrl = `https://www.${amazonDomain}/dp/${product.asin}?tag=${affiliateTag}`;
 
               // Calculate deal indicators
@@ -968,7 +1021,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
                 brand: product.brand || 'Amazon',
                 price: product.price!,
                 originalPrice: product.originalPrice || undefined,
-                currency: product.currency || (marketplace === 'es' ? 'EUR' : 'USD'),
+                currency: product.currency || (defaultCurrency),
                 rating: product.rating || undefined,
                 totalReviews: product.totalReviews || undefined,
                 featuredImage: {
