@@ -1220,17 +1220,6 @@ const truncatedDescription = shouldTruncate
     display: none;
   }
 
-  /* Hide cart label on very small screens */
-  @media (max-width: 380px) {
-    .add-to-cart-btn .cart-label {
-      display: none;
-    }
-    .add-to-cart-btn {
-      flex: 0 0 auto;
-      padding: 1rem;
-    }
-  }
-
   /* AMAZON BUTTON - SECONDARY (Smaller) */
   .buy-button-floating {
     display: flex;
@@ -1295,6 +1284,46 @@ const truncatedDescription = shouldTruncate
   @media (max-width: 380px) {
     .buy-price {
       display: none;
+    }
+  }
+
+  /* MOBILE: Cart PROTAGONIST, Amazon SECONDARY (must be after base styles) */
+  @media (max-width: 480px) {
+    .cta-row {
+      gap: 0.375rem;
+    }
+    .add-to-cart-btn {
+      flex: 1 !important;
+      padding: 0.875rem 1rem !important;
+    }
+    .add-to-cart-btn .cart-label {
+      display: inline !important;
+      font-size: 0.75rem;
+    }
+    .buy-button-floating {
+      flex: 0 0 auto !important;
+      padding: 0.5rem 0.625rem !important;
+      font-size: 0.5rem;
+    }
+    .buy-button-floating .buy-text {
+      font-size: 0.5rem;
+    }
+    .buy-button-floating .arrow-icon {
+      display: none !important;
+    }
+    .buy-button-floating .cart-icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .add-to-cart-btn .cart-label {
+      display: none !important;
+    }
+    .add-to-cart-btn {
+      flex: 1 !important;
+      padding: 0.875rem !important;
     }
   }
 

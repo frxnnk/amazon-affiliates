@@ -911,17 +911,37 @@
   font-size: 0;
 }
 
-/* Mobile: Cart icon only, still protagonist */
-@media (max-width: 380px) {
+/* Mobile: Cart stays PROTAGONIST, Amazon becomes small/icon */
+@media (max-width: 480px) {
   .add-cart-btn {
-    flex: 0 0 auto;
-    padding: 16px;
+    flex: 1;
+    padding: 14px 16px;
   }
+  .add-cart-btn .cart-label {
+    display: inline;
+    font-size: 0.75rem;
+  }
+  .cta {
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    font-size: 0.6rem;
+  }
+  .cta .arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
   .add-cart-btn .cart-label {
     display: none;
   }
-  .cta {
+  .add-cart-btn {
     flex: 1;
+    padding: 14px;
+  }
+  .cta {
+    flex: 0 0 auto;
+    padding: 10px;
   }
 }
 
@@ -1791,39 +1811,23 @@
     box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
   }
 
-  .cta {
-    padding: 10px 12px;
-    font-size: 0.6875rem;
-    border-width: 2px;
-    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
-    gap: 6px;
-  }
-
-  .cta svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  .cta .arrow {
-    width: 12px;
-    height: 12px;
-  }
-
-  /* Cart button responsive */
+  /* CTA buttons - CART PROTAGONIST even on extra small */
   .cta-row {
     gap: 6px;
   }
 
+  /* CART BUTTON - still protagonist on extra small, just compact */
   .add-cart-btn {
-    width: auto;
-    min-width: 44px;
-    padding: 0 10px;
+    flex: 1;
+    padding: 0 12px;
+    height: 44px;
     border-width: 2px;
     box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE135);
   }
 
   .add-cart-btn .cart-label {
-    display: none; /* Hide label on small screens */
+    display: none; /* Hide label on EXTRA small screens only */
   }
 
   .add-cart-btn svg {
@@ -1837,6 +1841,28 @@
     font-size: 0.5rem;
     bottom: 2px;
     right: 2px;
+  }
+
+  /* AMAZON BUTTON - small secondary on extra small screens */
+  .cta {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    font-size: 0.5rem;
+    border-width: 2px;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    gap: 4px;
+    background: transparent;
+    border-color: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-orange, #FF6B35);
+  }
+
+  .cta svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .cta .arrow {
+    display: none;
   }
 
   /* Toast responsive */
@@ -3455,22 +3481,25 @@
     display: none !important;
   }
 
-  /* CTA buttons */
+  /* CTA buttons - CART PROTAGONIST, Amazon secondary */
   .cta-row {
     gap: 8px;
   }
 
+  /* CART BUTTON - PROTAGONIST (Main CTA on mobile) */
   .add-cart-btn {
-    width: auto;
-    min-width: 48px;
+    flex: 1;
     height: 48px;
-    padding: 0 12px;
+    padding: 0 16px;
     border-width: 2px;
-    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    background: var(--color-brutal-yellow, #FFE135);
   }
 
   .add-cart-btn .cart-label {
-    display: none; /* Hide label on small screens */
+    display: inline;
+    font-size: 0.75rem;
+    font-weight: 800;
   }
 
   .add-cart-btn svg {
@@ -3486,22 +3515,26 @@
     right: 3px;
   }
 
+  /* AMAZON BUTTON - SECONDARY (smaller on mobile) */
   .cta {
-    padding: 12px 16px;
-    font-size: 0.75rem;
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    font-size: 0.625rem;
     border-width: 2px;
-    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
-    gap: 6px;
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+    gap: 4px;
+    background: transparent;
+    border-color: var(--color-brutal-orange, #FF6B35);
+    color: var(--color-brutal-orange, #FF6B35);
   }
 
   .cta svg {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
   }
 
   .cta .arrow {
-    width: 14px;
-    height: 14px;
+    display: none;
   }
 }
 
