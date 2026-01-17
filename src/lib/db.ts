@@ -1,4 +1,4 @@
-import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, ProductViews, ProductLikes, ProductReviews, ReviewHelpfulVotes, AmazonReviews, eq, desc, and, like, or, gte, lte, asc, sql } from 'astro:db';
+import { db, Users, PurchaseClaims, CashbackTransactions, PayoutRequests, AffiliateClicks, Products, DealAgentConfig, DealAgentKeywords, UserPreferences, PriceHistory, CuratedDeals, ProductViews, ProductLikes, ProductReviews, ReviewHelpfulVotes, AmazonReviews, eq, desc, and, like, or, gte, lte, asc, sql, inArray } from 'astro:db';
 
 // Tier thresholds
 const TIER_THRESHOLDS = {
@@ -2181,6 +2181,77 @@ export async function hasAmazonReviews(asin: string): Promise<boolean> {
     .get();
 
   return (result?.count ?? 0) > 0;
+}
+
+/**
+ * Get top reviews for multiple ASINs (batch operation for feed)
+ * Returns a map of ASIN -> top reviews (sorted by helpful count)
+ */
+export async function getTopReviewsForAsins(
+  asins: string[],
+  limit: number = 2
+): Promise<Map<string, {
+  reviews: Array<{
+    title: string | null;
+    content: string;
+    rating: number;
+    reviewerName: string | null;
+    isVerifiedPurchase: boolean;
+    helpfulCount: number;
+  }>;
+  totalCount: number;
+  averageRating: number;
+}>> {
+  if (asins.length === 0) return new Map();
+
+  // Get all reviews for the given ASINs in one query
+  const allReviews = await db.select()
+    .from(AmazonReviews)
+    .where(inArray(AmazonReviews.asin, asins))
+    .orderBy(desc(AmazonReviews.helpfulCount))
+    .all();
+
+  // Group reviews by ASIN
+  const reviewsByAsin = new Map<string, typeof allReviews>();
+  for (const review of allReviews) {
+    const existing = reviewsByAsin.get(review.asin) || [];
+    existing.push(review);
+    reviewsByAsin.set(review.asin, existing);
+  }
+
+  // Build result map with top N reviews and stats
+  const result = new Map<string, {
+    reviews: Array<{
+      title: string | null;
+      content: string;
+      rating: number;
+      reviewerName: string | null;
+      isVerifiedPurchase: boolean;
+      helpfulCount: number;
+    }>;
+    totalCount: number;
+    averageRating: number;
+  }>();
+
+  for (const [asin, reviews] of reviewsByAsin) {
+    const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const avgRating = reviews.length > 0 ? Math.round((totalRating / reviews.length) * 10) / 10 : 0;
+
+    result.set(asin, {
+      reviews: reviews.slice(0, limit).map(r => ({
+        title: r.title,
+        content: r.content,
+        rating: r.rating,
+        reviewerName: r.reviewerName,
+        isVerifiedPurchase: r.isVerifiedPurchase,
+        helpfulCount: r.helpfulCount,
+      })),
+      totalCount: reviews.length,
+      averageRating: avgRating,
+    });
+  }
+
+  return result;
 }
 
 /**

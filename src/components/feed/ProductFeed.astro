@@ -16,6 +16,18 @@ interface Product {
   category?: string;
   shortDescription?: string;
   model3dUrl?: string;
+  // Top reviews for feed display
+  topReviews?: {
+    reviews: Array<{
+      title: string | null;
+      content: string;
+      rating: number;
+      reviewerName: string | null;
+      isVerifiedPurchase: boolean;
+    }>;
+    totalCount: number;
+    averageRating: number;
+  };
 }
 
 interface Props {
