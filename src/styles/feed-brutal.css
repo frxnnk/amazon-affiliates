@@ -5256,3 +5256,168 @@
     box-shadow: none;
   }
 }
+
+/* ============================================
+   REVIEWS - Expandable Panel from Rating Row
+   ============================================ */
+
+/* Rating row with reviews indicator */
+.rating-row.has-reviews {
+  cursor: pointer;
+  padding: 0.25rem 0.375rem;
+  margin: -0.25rem -0.375rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.rating-row.has-reviews:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.rating-row .rating-main {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.rating-expand-icon {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+  margin-left: 0.125rem;
+}
+
+.rating-row.expanded .rating-expand-icon {
+  transform: rotate(180deg);
+}
+
+/* Reviews panel - collapsed by default */
+.reviews-panel {
+  display: none;
+  margin-top: 0.5rem;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reviews-panel.open {
+  display: block;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollable content area */
+.reviews-panel-scroll {
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+
+.reviews-panel-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.reviews-panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reviews-panel-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 2px;
+}
+
+/* Review item inside panel */
+.review-item {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.review-item:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.review-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.review-stars {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.verified-mini {
+  font-size: 0.5625rem;
+  color: #00A67E;
+  font-weight: 600;
+}
+
+.reviewer-mini {
+  font-size: 0.5625rem;
+  color: rgba(0, 0, 0, 0.4);
+  font-style: italic;
+}
+
+.review-item-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+  margin: 0 0 0.125rem;
+  line-height: 1.3;
+}
+
+.review-item-content {
+  font-size: 0.625rem;
+  color: rgba(0, 0, 0, 0.65);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Close button */
+.reviews-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.375rem;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.reviews-panel-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.reviews-panel-close svg {
+  transform: rotate(180deg);
+}

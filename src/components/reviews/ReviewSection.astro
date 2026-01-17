@@ -147,7 +147,14 @@ const t = labels[lang] || labels.en;
                 </div>
               </div>
               {review.title && <h4 class="amazon-review-title">{review.title}</h4>}
-              <p class="amazon-review-content">{review.content}</p>
+              <div class="amazon-review-content-wrapper" data-expandable>
+                <p class="amazon-review-content">{review.content}</p>
+                {review.content && review.content.length > 300 && (
+                  <button type="button" class="btn-expand" data-expand-btn>
+                    {lang === 'es' ? 'Leer más' : 'Read more'}
+                  </button>
+                )}
+              </div>
               <div class="amazon-review-footer">
                 <span class="review-date">{review.reviewDate}</span>
                 {review.helpfulCount > 0 && (
@@ -478,11 +485,52 @@ const t = labels[lang] || labels.en;
     margin: 0 0 0.5rem 0;
   }
 
+  .amazon-review-content-wrapper {
+    position: relative;
+  }
+
+  .amazon-review-content-wrapper:not(.expanded) .amazon-review-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-height: 6.4em; /* 4 lines * 1.6 line-height */
+  }
+
+  .amazon-review-content-wrapper.expanded .amazon-review-content {
+    display: block;
+    max-height: none;
+  }
+
   .amazon-review-content {
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--color-brutal-black, #1A1A1A);
     margin: 0;
+  }
+
+  .btn-expand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .btn-expand:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .amazon-review-content-wrapper.expanded .btn-expand {
+    display: none;
   }
 
   .amazon-review-footer {
@@ -659,6 +707,16 @@ const t = labels[lang] || labels.en;
           }
         });
       }
+
+      // Expand review content buttons
+      section.querySelectorAll('[data-expand-btn]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const wrapper = btn.closest('[data-expandable]');
+          if (wrapper) {
+            wrapper.classList.add('expanded');
+          }
+        });
+      });
     });
   }
 

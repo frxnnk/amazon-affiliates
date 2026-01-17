@@ -1200,6 +1200,7 @@ class Feed {
         </div>
         <h2 class="title">${this.truncateTitle(p.title)}</h2>
         ${this.getRatingHtml(p)}
+        ${this.getReviewsHtml(p)}
         <div class="pricing">
           <span class="price">${price}</span>
           ${oldPrice ? `<span class="old-price">${oldPrice}</span>` : ''}
@@ -1400,8 +1401,30 @@ class Feed {
       // Track engagement
       this.trackEngagement(p.asin, 'add_to_cart', { category: p.category });
     });
+
+    // Rating row click to expand reviews panel
+    const ratingRow = el.querySelector('[data-expandable-rating]');
+    const reviewsPanel = el.querySelector('[data-reviews-panel]');
+
+    if (ratingRow && reviewsPanel) {
+      ratingRow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        reviewsPanel.classList.toggle('open');
+        ratingRow.classList.toggle('expanded');
+      });
+
+      // Close button
+      const closeBtn = el.querySelector('[data-close-reviews]');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          reviewsPanel.classList.remove('open');
+          ratingRow.classList.remove('expanded');
+        });
+      }
+    }
   }
-  
+
   truncateTitle(title) {
     if (title.length <= 60) return title;
     return title.substring(0, 60).trim() + '...';
@@ -1411,13 +1434,18 @@ class Feed {
     if (!p.rating) return '';
     const stars = Math.round(p.rating);
     const reviewsText = this.lang === 'es' ? 'opiniones' : 'reviews';
+    const hasReviews = p.topReviews && p.topReviews.reviews && p.topReviews.reviews.length > 0;
+
     return `
-      <div class="rating-row">
-        <div class="stars">
-          ${[1,2,3,4,5].map(s => `<svg class="star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`).join('')}
+      <div class="rating-row ${hasReviews ? 'has-reviews' : ''}" ${hasReviews ? 'data-expandable-rating' : ''}>
+        <div class="rating-main">
+          <div class="stars">
+            ${[1,2,3,4,5].map(s => `<svg class="star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`).join('')}
+          </div>
+          <span class="rating-text">${p.rating.toFixed(1)}</span>
+          ${p.totalReviews ? `<span class="reviews-count">(${p.totalReviews.toLocaleString()} ${reviewsText})</span>` : ''}
+          ${hasReviews ? `<span class="rating-expand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="m6 9 6 6 6-6"/></svg></span>` : ''}
         </div>
-        <span class="rating-text">${p.rating.toFixed(1)}</span>
-        ${p.totalReviews ? `<span class="reviews-count">(${p.totalReviews.toLocaleString()} ${reviewsText})</span>` : ''}
       </div>
     `;
   }
@@ -1490,6 +1518,49 @@ class Feed {
         ` : ''}
       </div>
       ${priceRangeHtml}
+    `;
+  }
+
+  getReviewsHtml(p) {
+    if (!p.topReviews || !p.topReviews.reviews || p.topReviews.reviews.length === 0) {
+      return '';
+    }
+
+    const verifiedText = this.lang === 'es' ? 'Verificada' : 'Verified';
+    const closeText = this.lang === 'es' ? 'Cerrar' : 'Close';
+
+    const reviewsHtml = p.topReviews.reviews.slice(0, 2).map((review, idx) => {
+      const stars = Math.round(review.rating);
+      const starsHtml = [1,2,3,4,5].map(s =>
+        `<svg class="review-star ${s <= stars ? 'filled' : ''}" viewBox="0 0 24 24" fill="${s <= stars ? '#FF9900' : 'none'}" stroke="#FF9900" stroke-width="1.5" width="10" height="10"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>`
+      ).join('');
+
+      const contentEscaped = (review.content || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const titleEscaped = review.title ? review.title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+
+      return `
+        <div class="review-item">
+          <div class="review-item-header">
+            <div class="review-stars">${starsHtml}</div>
+            ${review.isVerifiedPurchase ? `<span class="verified-mini">✓ ${verifiedText}</span>` : ''}
+            ${review.reviewerName ? `<span class="reviewer-mini">— ${review.reviewerName}</span>` : ''}
+          </div>
+          ${titleEscaped ? `<p class="review-item-title">${titleEscaped}</p>` : ''}
+          <p class="review-item-content">${contentEscaped}</p>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="reviews-panel" data-reviews-panel>
+        <div class="reviews-panel-scroll">
+          ${reviewsHtml}
+        </div>
+        <button type="button" class="reviews-panel-close" data-close-reviews>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m6 9 6 6 6-6"/></svg>
+          ${closeText}
+        </button>
+      </div>
     `;
   }
 

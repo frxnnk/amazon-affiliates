@@ -13,7 +13,7 @@
 import type { APIRoute } from 'astro';
 import { isRainforestConfigured } from '@lib/rainforest-api';
 import { cachedSearchProducts, getApiUsageStats, canMakeApiCall } from '@lib/product-cache';
-import { getFeedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices } from '@lib/db';
+import { getFeedProducts, getUserPreferences, getActiveCuratedDeals, isCuratedDeal, getExcludedAsins, checkLowestPrices, getTopReviewsForAsins } from '@lib/db';
 import { db, ProductLikes, Products, eq, desc } from 'astro:db';
 import { trackPrices, getPriceHistory, isKeepaConfigured } from '@lib/keepa-api';
 import { validateDeal, calculateEnhancedScore, toAnalyzableProduct } from '@lib/deal-analyzer';
@@ -159,6 +159,18 @@ interface FeedProduct {
     percentBelowAvg: number;
     priceHistory?: number[];  // Last 30 days prices for sparkline
     priceDrop7Days?: number;  // % price drop in last 7 days
+  };
+  // Top reviews for feed display
+  topReviews?: {
+    reviews: Array<{
+      title: string | null;
+      content: string;
+      rating: number;
+      reviewerName: string | null;
+      isVerifiedPurchase: boolean;
+    }>;
+    totalCount: number;
+    averageRating: number;
   };
 }
 
@@ -1146,6 +1158,30 @@ export const GET: APIRoute = async ({ url, locals }) => {
         } : undefined,
       };
     });
+
+    // Enrich products with top reviews from cache
+    const productAsins = enrichedProducts.map(p => p.asin);
+    const reviewsMap = await getTopReviewsForAsins(productAsins, 2); // Get top 2 reviews per product
+
+    enrichedProducts = enrichedProducts.map(product => {
+      const reviewData = reviewsMap.get(product.asin);
+      return {
+        ...product,
+        topReviews: reviewData ? {
+          reviews: reviewData.reviews.map(r => ({
+            title: r.title,
+            content: r.content,
+            rating: r.rating,
+            reviewerName: r.reviewerName,
+            isVerifiedPurchase: r.isVerifiedPurchase,
+          })),
+          totalCount: reviewData.totalCount,
+          averageRating: reviewData.averageRating,
+        } : undefined,
+      };
+    });
+
+    console.log(`[Feed API] Reviews: ${Array.from(reviewsMap.entries()).filter(([_, v]) => v.reviews.length > 0).length}/${productAsins.length} products have cached reviews`);
 
     // Apply recommendation engine scoring for personalized ranking
     if (userProfile && enrichedProducts.length > 0) {
