@@ -64,6 +64,16 @@ const currentRegion = regions.find(r => r.lang === currentLang) || regions[0];
 </div>
 
 <script>
+  const REGIONS = [
+    { code: 'ES', lang: 'es', currency: 'EUR', flag: '🇪🇸', label: 'España' },
+    { code: 'US', lang: 'en', currency: 'USD', flag: '🇺🇸', label: 'United States' },
+    { code: 'GB', lang: 'en', currency: 'GBP', flag: '🇬🇧', label: 'United Kingdom' },
+    { code: 'DE', lang: 'de', currency: 'EUR', flag: '🇩🇪', label: 'Deutschland' },
+    { code: 'FR', lang: 'fr', currency: 'EUR', flag: '🇫🇷', label: 'France' },
+    { code: 'IT', lang: 'it', currency: 'EUR', flag: '🇮🇹', label: 'Italia' },
+    { code: 'MX', lang: 'es', currency: 'MXN', flag: '🇲🇽', label: 'México' },
+  ];
+
   function initRegionSelector() {
     const selector = document.getElementById('region-selector');
     const toggle = document.getElementById('region-toggle');
@@ -71,6 +81,39 @@ const currentRegion = regions.find(r => r.lang === currentLang) || regions[0];
     const options = document.querySelectorAll('.region-option');
 
     if (!toggle || !dropdown || !selector) return;
+
+    // Update display from localStorage (client-side only)
+    updateDisplayFromStorage();
+
+    function updateDisplayFromStorage() {
+      try {
+        const saved = localStorage.getItem('preferredRegion');
+        if (saved) {
+          const { code } = JSON.parse(saved);
+          const region = REGIONS.find(r => r.code === code);
+          if (region) {
+            // Update toggle display
+            const flagEl = toggle.querySelector('.region-flag');
+            const codeEl = toggle.querySelector('.region-code');
+            if (flagEl) flagEl.textContent = region.flag;
+            if (codeEl) codeEl.textContent = region.code;
+
+            // Update active state in dropdown
+            options.forEach(opt => {
+              const isActive = opt.getAttribute('data-code') === code;
+              opt.classList.toggle('active', isActive);
+              // Update checkmark visibility
+              const checkIcon = opt.querySelector('.check-icon');
+              if (checkIcon) {
+                checkIcon.style.display = isActive ? 'block' : 'none';
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('[RegionSelector] Error reading from localStorage:', e);
+      }
+    }
 
     // Toggle dropdown
     toggle.addEventListener('click', (e) => {
