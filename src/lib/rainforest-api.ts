@@ -55,6 +55,7 @@ export interface RainforestSearchFilters {
   sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'reviews' | 'newest';
   page?: number;
   amazonDomain?: string; // com, es, de, etc.
+  isPrime?: boolean; // Filter for Prime eligible products only
 }
 
 export interface RainforestReview {
@@ -355,6 +356,11 @@ export async function searchProductsRainforest(
       'newest': 'NEWEST',
     };
     params.append('sort_by', sortMapping[filters.sortBy] || 'RELEVANCE');
+  }
+
+  // Add Prime filter - show only Prime eligible products
+  if (filters.isPrime) {
+    params.append('is_prime', 'true');
   }
 
   try {

@@ -25,6 +25,8 @@ const translations = {
     topRated: 'Mejor valorados',
     newest: 'Más recientes',
     onlyDeals: 'Solo ofertas',
+    onlyPrime: 'Solo Prime',
+    primeDescription: 'Envío rápido y confiable',
     apply: 'Aplicar',
     reset: 'Limpiar',
   },
@@ -41,6 +43,8 @@ const translations = {
     topRated: 'Top rated',
     newest: 'Newest',
     onlyDeals: 'Deals only',
+    onlyPrime: 'Prime only',
+    primeDescription: 'Fast & reliable shipping',
     apply: 'Apply',
     reset: 'Reset',
   }
@@ -114,6 +118,18 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
           <option value="reviews">{t.topRated}</option>
           <option value="newest">{t.newest}</option>
         </select>
+      </div>
+
+      <!-- Prime Only -->
+      <div class="filter-section">
+        <label class="checkbox-label prime-label">
+          <input type="checkbox" id="prime-only" class="checkbox-input" />
+          <span class="checkbox-custom prime-check"></span>
+          <span class="prime-text">
+            <span class="prime-badge">✓ {t.onlyPrime}</span>
+            <span class="prime-desc">{t.primeDescription}</span>
+          </span>
+        </label>
       </div>
 
       <!-- Deals Only -->
@@ -251,13 +267,15 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
       const maxPrice = (document.getElementById('max-price') as HTMLInputElement)?.value;
       const sortBy = (document.getElementById('sort-select') as HTMLSelectElement)?.value;
       const dealsOnly = (document.getElementById('deals-only') as HTMLInputElement)?.checked;
-      
+      const primeOnly = (document.getElementById('prime-only') as HTMLInputElement)?.checked;
+
       const filters = {
         minPrice: minPrice ? parseInt(minPrice) : undefined,
         maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
         minRating: currentRating > 0 ? currentRating : undefined,
         sortBy,
-        dealsOnly
+        dealsOnly,
+        primeOnly
       };
       
       // Store filters
@@ -276,9 +294,10 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
       (document.getElementById('max-price') as HTMLInputElement).value = '';
       (document.getElementById('sort-select') as HTMLSelectElement).value = 'relevance';
       (document.getElementById('deals-only') as HTMLInputElement).checked = false;
+      (document.getElementById('prime-only') as HTMLInputElement).checked = false;
       currentRating = 0;
       updateStars();
-      
+
       localStorage.removeItem('feedFilters');
       window.dispatchEvent(new CustomEvent('filters:change', { detail: {} }));
     });
@@ -292,6 +311,7 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
         if (filters.maxPrice) (document.getElementById('max-price') as HTMLInputElement).value = filters.maxPrice;
         if (filters.sortBy) (document.getElementById('sort-select') as HTMLSelectElement).value = filters.sortBy;
         if (filters.dealsOnly) (document.getElementById('deals-only') as HTMLInputElement).checked = true;
+        if (filters.primeOnly) (document.getElementById('prime-only') as HTMLInputElement).checked = true;
         if (filters.minRating) {
           currentRating = filters.minRating;
           updateStars();
@@ -612,5 +632,44 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
   .btn-reset:active {
     transform: translate(1px, 1px);
     box-shadow: 1px 1px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  /* Prime filter special styling */
+  .prime-label {
+    padding: 0.5rem 0.6rem;
+    background: linear-gradient(135deg, #00A8E1 0%, #146EB4 100%);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+  }
+
+  .prime-check {
+    background: var(--color-brutal-black, #1A1A1A);
+    border-color: var(--color-brutal-black, #1A1A1A);
+  }
+
+  .checkbox-input:checked + .prime-check {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .prime-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .prime-badge {
+    font-family: var(--font-display, 'Space Grotesk', sans-serif);
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--color-white, #FFFFFF);
+    letter-spacing: 0.02em;
+  }
+
+  .prime-desc {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: none;
+    letter-spacing: 0;
   }
 </style>
