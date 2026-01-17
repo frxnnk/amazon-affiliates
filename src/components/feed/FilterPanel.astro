@@ -1,8 +1,10 @@
 ---
 /**
  * FilterPanel - Advanced filtering options for the feed
- * Includes price range, rating filter, and sort options
+ * Includes price range, rating filter, sort options, and currency selector
  */
+
+import CurrencySelector from '@components/ui/CurrencySelector.astro';
 
 interface Props {
   lang: string;
@@ -26,6 +28,7 @@ const translations = {
     onlyDeals: 'Solo ofertas',
     apply: 'Aplicar',
     reset: 'Limpiar',
+    currency: 'Moneda',
   },
   en: {
     filters: 'Filters',
@@ -42,6 +45,7 @@ const translations = {
     onlyDeals: 'Deals only',
     apply: 'Apply',
     reset: 'Reset',
+    currency: 'Currency',
   }
 };
 
@@ -60,15 +64,21 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
   <!-- Filter dropdown -->
   <div class="filter-dropdown" id="filter-dropdown">
     <div class="filter-content">
+      <!-- Currency Selector -->
+      <div class="filter-section filter-currency">
+        <label class="filter-label">{t.currency}</label>
+        <CurrencySelector lang={lang} />
+      </div>
+
       <!-- Price Range -->
       <div class="filter-section">
         <label class="filter-label">{t.priceRange}</label>
         <div class="price-inputs">
           <div class="price-input-group">
-            <span class="currency-symbol">€</span>
-            <input 
-              type="number" 
-              id="min-price" 
+            <span class="currency-symbol" data-price-currency-symbol>$</span>
+            <input
+              type="number"
+              id="min-price"
               placeholder={t.minPrice}
               min="0"
               class="price-input"
@@ -76,10 +86,10 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
           </div>
           <span class="price-separator">-</span>
           <div class="price-input-group">
-            <span class="currency-symbol">€</span>
-            <input 
-              type="number" 
-              id="max-price" 
+            <span class="currency-symbol" data-price-currency-symbol>$</span>
+            <input
+              type="number"
+              id="max-price"
               placeholder={t.maxPrice}
               min="0"
               class="price-input"
@@ -145,10 +155,34 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
     const ratingValue = document.getElementById('rating-value');
     const applyBtn = document.getElementById('btn-apply');
     const resetBtn = document.getElementById('btn-reset');
-    
+    const currencySymbols = document.querySelectorAll('[data-price-currency-symbol]');
+
     if (!toggle || !dropdown) return;
-    
+
     let currentRating = 0;
+
+    // Currency handling
+    const currencyData: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+    };
+
+    function updateCurrencySymbols(code: string) {
+      const symbol = currencyData[code] || '$';
+      currencySymbols.forEach((el) => {
+        el.textContent = symbol;
+      });
+    }
+
+    // Load saved currency preference
+    const savedCurrency = localStorage.getItem('preferredCurrency') || 'USD';
+    updateCurrencySymbols(savedCurrency);
+
+    // Listen for currency changes
+    window.addEventListener('currency:change', ((e: CustomEvent) => {
+      updateCurrencySymbols(e.detail.code);
+    }) as EventListener);
     
     // Toggle dropdown
     toggle.addEventListener('click', (e) => {
@@ -346,6 +380,18 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .filter-currency {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px dashed var(--color-brutal-black, #1A1A1A);
+  }
+
+  .filter-currency .filter-label {
+    margin: 0;
   }
 
   .filter-label {

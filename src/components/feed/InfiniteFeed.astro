@@ -990,15 +990,27 @@ class Feed {
 
   async load() {
     if (this.loading || !this.hasMore) return;
-    
+
     this.loading = true;
     this.loader?.classList.add('show');
     this.errorEl?.classList.remove('show');
-    
+
     try {
       const exclude = this.seen.size > 0 ? `&exclude=${[...this.seen].slice(-50).join(',')}` : '';
       const searchParam = this.searchQuery ? `&search=${encodeURIComponent(this.searchQuery)}` : '';
-      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&limit=5${exclude}${searchParam}`);
+
+      // Build filter parameters from currentFilters
+      let filterParams = '';
+      if (this.currentFilters) {
+        const f = this.currentFilters;
+        if (f.minPrice) filterParams += `&minPrice=${f.minPrice}`;
+        if (f.maxPrice) filterParams += `&maxPrice=${f.maxPrice}`;
+        if (f.minRating) filterParams += `&minRating=${f.minRating}`;
+        if (f.sortBy && f.sortBy !== 'relevance') filterParams += `&sortBy=${f.sortBy}`;
+        if (f.dealsOnly) filterParams += `&dealsOnly=true`;
+      }
+
+      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&limit=5${exclude}${searchParam}${filterParams}`);
       const data = await res.json();
       
       if (!data.success) throw new Error(data.error);
@@ -1198,7 +1210,7 @@ class Feed {
           <span class="brand">${p.brand || ''}</span>
           ${badgesHtml}
         </div>
-        <h2 class="title">${this.truncateTitle(p.title)}</h2>
+        <h2 class="title" title="${p.title.replace(/"/g, '&quot;')}">${this.truncateTitle(p.title)}</h2>
         ${this.getRatingHtml(p)}
         ${this.getReviewsHtml(p)}
         <div class="pricing">
@@ -1218,11 +1230,12 @@ class Feed {
             data-currency="${p.currency || 'EUR'}"
             data-affiliate-url="${p.affiliateUrl || ''}"
             aria-label="${this.texts.addToCart || 'Agregar al carrito'}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cart-icon">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
+            <span class="cart-label">${this.lang === 'es' ? 'Carrito' : 'Cart'}</span>
             <span class="plus-badge">+</span>
           </button>
           <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta">
