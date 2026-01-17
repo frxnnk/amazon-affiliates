@@ -22,6 +22,7 @@ import { getVideoEmbedUrl } from '@lib/youtube-api';
 import { buildUserProfile, scoreProducts, getPersonalizedKeywords, type ProductCandidate, type UserProfile } from '@lib/recommendation-engine';
 import { getUserSimilarityProfile } from '@lib/content-similarity';
 import { getCollaborativeBoosts } from '@lib/collaborative-filtering';
+import { hasAmazonReviews } from '@lib/db';
 
 export const prerender = false;
 
@@ -440,6 +441,53 @@ function addConversionBadges(product: FeedProduct, priceStats?: { isLowest: bool
   }
 
   return badges;
+}
+
+/**
+ * Background fetch reviews for products missing cached reviews
+ * Fire-and-forget: doesn't block the response
+ */
+async function fetchReviewsInBackground(
+  asins: string[],
+  marketplace: string,
+  baseUrl: string
+): Promise<void> {
+  // Check which ASINs are missing reviews
+  const missingAsins: string[] = [];
+
+  for (const asin of asins.slice(0, 5)) { // Limit to 5 products per request
+    const has = await hasAmazonReviews(asin);
+    if (!has) {
+      missingAsins.push(asin);
+    }
+  }
+
+  if (missingAsins.length === 0) {
+    return;
+  }
+
+  console.log(`[Feed API] Background fetch: ${missingAsins.length} products need reviews`);
+
+  // Fire requests without awaiting (fire-and-forget)
+  for (const asin of missingAsins) {
+    // Use internal fetch to trigger the reviews API
+    const reviewsUrl = `${baseUrl}/api/products/amazon-reviews?asin=${asin}&marketplace=${marketplace}`;
+
+    fetch(reviewsUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    })
+      .then(res => {
+        if (res.ok) {
+          console.log(`[Background] Reviews fetched for ${asin}`);
+        } else {
+          console.log(`[Background] Reviews fetch failed for ${asin}: ${res.status}`);
+        }
+      })
+      .catch(err => {
+        console.error(`[Background] Reviews fetch error for ${asin}:`, err.message);
+      });
+  }
 }
 
 // Popular search terms for different categories (English)
@@ -1182,6 +1230,15 @@ export const GET: APIRoute = async ({ url, locals }) => {
     });
 
     console.log(`[Feed API] Reviews: ${Array.from(reviewsMap.entries()).filter(([_, v]) => v.reviews.length > 0).length}/${productAsins.length} products have cached reviews`);
+
+    // Background fetch reviews for products missing them (fire-and-forget)
+    // This populates the cache for next time without blocking this response
+    if (isRainforestConfigured()) {
+      const requestUrl = new URL(url.toString());
+      const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+      // Don't await - let it run in background
+      fetchReviewsInBackground(productAsins, marketplace, baseUrl);
+    }
 
     // Apply recommendation engine scoring for personalized ranking
     if (userProfile && enrichedProducts.length > 0) {
