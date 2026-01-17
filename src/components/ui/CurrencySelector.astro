@@ -1,0 +1,216 @@
+---
+/**
+ * CurrencySelector - Dropdown for currency preference
+ * Persists to localStorage and emits events on change
+ */
+
+interface Props {
+  lang?: string;
+  class?: string;
+}
+
+const { lang = 'es', class: className = '' } = Astro.props;
+
+const currencies = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+];
+---
+
+<div class:list={['currency-selector', className]} data-currency-selector>
+  <button type="button" class="currency-toggle" data-currency-toggle aria-haspopup="listbox" aria-expanded="false">
+    <span class="currency-symbol" data-current-symbol>$</span>
+    <span class="currency-code" data-current-code>USD</span>
+    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" class="dropdown-arrow">
+      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+    </svg>
+  </button>
+
+  <ul class="currency-dropdown" role="listbox" data-currency-dropdown>
+    {currencies.map((currency) => (
+      <li class="currency-option" role="option" data-currency-option data-code={currency.code} data-symbol={currency.symbol}>
+        <span class="option-symbol">{currency.symbol}</span>
+        <span class="option-code">{currency.code}</span>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<script>
+  function initCurrencySelector() {
+    document.querySelectorAll('[data-currency-selector]').forEach((selector) => {
+      const toggle = selector.querySelector('[data-currency-toggle]');
+      const dropdown = selector.querySelector('[data-currency-dropdown]');
+      const options = selector.querySelectorAll('[data-currency-option]');
+      const symbolEl = selector.querySelector('[data-current-symbol]');
+      const codeEl = selector.querySelector('[data-current-code]');
+
+      if (!toggle || !dropdown || !symbolEl || !codeEl) return;
+
+      // Load saved preference
+      const savedCurrency = localStorage.getItem('preferredCurrency') || 'USD';
+      const savedOption = [...options].find(opt => opt.dataset.code === savedCurrency);
+      if (savedOption) {
+        symbolEl.textContent = savedOption.dataset.symbol || '$';
+        codeEl.textContent = savedOption.dataset.code || 'USD';
+        options.forEach(opt => opt.classList.toggle('selected', opt === savedOption));
+      }
+
+      // Toggle dropdown
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', String(isOpen));
+      });
+
+      // Close on outside click
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+
+      // Select currency
+      options.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+
+          const code = option.dataset.code || 'USD';
+          const symbol = option.dataset.symbol || '$';
+
+          // Update UI
+          symbolEl.textContent = symbol;
+          codeEl.textContent = code;
+          options.forEach(opt => opt.classList.toggle('selected', opt === option));
+
+          // Save preference
+          localStorage.setItem('preferredCurrency', code);
+
+          // Dispatch event
+          window.dispatchEvent(new CustomEvent('currency:change', {
+            detail: { code, symbol }
+          }));
+
+          // Close dropdown
+          dropdown.classList.remove('open');
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCurrencySelector);
+  } else {
+    initCurrencySelector();
+  }
+  document.addEventListener('astro:page-load', initCurrencySelector);
+</script>
+
+<style>
+  .currency-selector {
+    position: relative;
+    display: inline-block;
+  }
+
+  .currency-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.625rem;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  .currency-toggle:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .currency-toggle:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .currency-symbol {
+    font-weight: 900;
+  }
+
+  .currency-code {
+    opacity: 0.7;
+  }
+
+  .dropdown-arrow {
+    transition: transform 200ms ease;
+  }
+
+  .currency-toggle[aria-expanded="true"] .dropdown-arrow {
+    transform: rotate(180deg);
+  }
+
+  .currency-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    padding: 0;
+    list-style: none;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: all 150ms ease;
+  }
+
+  .currency-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .currency-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 100ms ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .currency-option:last-child {
+    border-bottom: none;
+  }
+
+  .currency-option:hover {
+    background: var(--color-brutal-yellow, #FFE14D);
+  }
+
+  .currency-option.selected {
+    background: var(--color-brutal-orange, #FF6B35);
+    color: white;
+  }
+
+  .option-symbol {
+    font-weight: 900;
+    min-width: 1rem;
+  }
+
+  .option-code {
+    opacity: 0.8;
+  }
+</style>

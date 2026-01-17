@@ -142,8 +142,8 @@ const hasDescription = fullDescription.length > 0;
       )}
     </div>
 
-    <!-- Title -->
-    <h3 class="card-title">
+    <!-- Title - with tooltip for full title on truncated text -->
+    <h3 class="card-title" title={product.title}>
       <a href={`/${lang}/products/${product.productId}`}>
         {displayTitle}
       </a>

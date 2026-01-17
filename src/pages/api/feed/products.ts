@@ -708,6 +708,15 @@ export const GET: APIRoute = async ({ url, locals }) => {
     // NEW: Search query parameter
     const searchQuery = url.searchParams.get('search')?.trim() || '';
 
+    // NEW: Filter parameters
+    const minPrice = url.searchParams.get('minPrice') ? parseFloat(url.searchParams.get('minPrice')!) : undefined;
+    const maxPrice = url.searchParams.get('maxPrice') ? parseFloat(url.searchParams.get('maxPrice')!) : undefined;
+    const minRating = url.searchParams.get('minRating') ? parseFloat(url.searchParams.get('minRating')!) : undefined;
+    const sortBy = url.searchParams.get('sortBy') || 'relevance';
+    const dealsOnly = url.searchParams.get('dealsOnly') === 'true';
+
+    console.log(`[Feed API] Filters: minPrice=${minPrice}, maxPrice=${maxPrice}, minRating=${minRating}, sortBy=${sortBy}, dealsOnly=${dealsOnly}`);
+
     // Get authenticated user for personalization
     const auth = locals.auth?.();
     const userId = auth?.userId || null;
@@ -1306,9 +1315,51 @@ export const GET: APIRoute = async ({ url, locals }) => {
       isPersonalized = true;
     }
 
+    // Apply user filters (price, rating, deals-only)
+    const beforeFilterCount = enrichedProducts.length;
+    enrichedProducts = enrichedProducts.filter(p => {
+      // Price filters
+      if (minPrice !== undefined && p.price < minPrice) return false;
+      if (maxPrice !== undefined && p.price > maxPrice) return false;
+
+      // Rating filter
+      if (minRating !== undefined && (!p.rating || p.rating < minRating)) return false;
+
+      // Deals only filter
+      if (dealsOnly) {
+        const hasDiscount = (p.discountPercent && p.discountPercent >= 10) || p.isHotDeal;
+        if (!hasDiscount) return false;
+      }
+
+      return true;
+    });
+
+    // Apply sorting
+    if (sortBy && sortBy !== 'relevance') {
+      enrichedProducts.sort((a, b) => {
+        switch (sortBy) {
+          case 'price_asc':
+            return a.price - b.price;
+          case 'price_desc':
+            return b.price - a.price;
+          case 'reviews':
+            return (b.rating || 0) - (a.rating || 0);
+          case 'newest':
+            // For newest, we prioritize by dealScore as a proxy (curated/new items have higher scores)
+            return (b.dealScore || 0) - (a.dealScore || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    if (beforeFilterCount !== enrichedProducts.length) {
+      console.log(`[Feed API] Filtered: ${beforeFilterCount} -> ${enrichedProducts.length} products`);
+    }
+
     // Apply intelligent sequencing for better retention (skip on first page with curated)
-    // Pass session seed for controlled randomization
-    if (page > 1 || !feedProducts.some(p => p.isCurated)) {
+    // Pass session seed for controlled randomization (only if not user-sorted)
+    if (sortBy === 'relevance' && (page > 1 || !feedProducts.some(p => p.isCurated))) {
       const sequenceSeed = getSessionSeed() + page * 17; // Different seed per page
       enrichedProducts = sequenceProductsForRetention(enrichedProducts, sequenceSeed);
     }
