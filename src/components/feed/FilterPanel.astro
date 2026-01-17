@@ -1,10 +1,9 @@
 ---
 /**
  * FilterPanel - Advanced filtering options for the feed
- * Includes price range, rating filter, sort options, and currency selector
+ * Includes price range, rating filter, and sort options
+ * Currency is determined by region (not selectable independently)
  */
-
-import CurrencySelector from '@components/ui/CurrencySelector.astro';
 
 interface Props {
   lang: string;
@@ -28,7 +27,6 @@ const translations = {
     onlyDeals: 'Solo ofertas',
     apply: 'Aplicar',
     reset: 'Limpiar',
-    currency: 'Moneda',
   },
   en: {
     filters: 'Filters',
@@ -45,7 +43,6 @@ const translations = {
     onlyDeals: 'Deals only',
     apply: 'Apply',
     reset: 'Reset',
-    currency: 'Currency',
   }
 };
 
@@ -64,12 +61,6 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
   <!-- Filter dropdown -->
   <div class="filter-dropdown" id="filter-dropdown">
     <div class="filter-content">
-      <!-- Currency Selector -->
-      <div class="filter-section filter-currency">
-        <label class="filter-label">{t.currency}</label>
-        <CurrencySelector lang={lang} />
-      </div>
-
       <!-- Price Range -->
       <div class="filter-section">
         <label class="filter-label">{t.priceRange}</label>
@@ -161,27 +152,44 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
 
     let currentRating = 0;
 
-    // Currency handling
+    // Currency handling - determined by region
     const currencyData: Record<string, string> = {
       'USD': '$',
       'EUR': '€',
       'GBP': '£',
+      'MXN': '$',
     };
 
-    function updateCurrencySymbols(code: string) {
-      const symbol = currencyData[code] || '$';
+    function updateCurrencySymbols(currency: string) {
+      const symbol = currencyData[currency] || '€';
       currencySymbols.forEach((el) => {
         el.textContent = symbol;
       });
     }
 
-    // Load saved currency preference
-    const savedCurrency = localStorage.getItem('preferredCurrency') || 'USD';
-    updateCurrencySymbols(savedCurrency);
+    // Get currency from region preference (region determines currency)
+    function getCurrencyFromRegion(): string {
+      try {
+        const savedRegion = localStorage.getItem('preferredRegion');
+        if (savedRegion) {
+          const region = JSON.parse(savedRegion);
+          return region.currency || 'EUR';
+        }
+      } catch (e) {
+        console.error('Error reading region:', e);
+      }
+      // Default based on current lang
+      const currentLang = window.location.pathname.split('/')[1];
+      return currentLang === 'en' ? 'USD' : 'EUR';
+    }
 
-    // Listen for currency changes
-    window.addEventListener('currency:change', ((e: CustomEvent) => {
-      updateCurrencySymbols(e.detail.code);
+    updateCurrencySymbols(getCurrencyFromRegion());
+
+    // Listen for region changes (region includes currency)
+    window.addEventListener('region:change', ((e: CustomEvent) => {
+      if (e.detail.currency) {
+        updateCurrencySymbols(e.detail.currency);
+      }
     }) as EventListener);
     
     // Toggle dropdown
@@ -380,18 +388,6 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-
-  .filter-currency {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px dashed var(--color-brutal-black, #1A1A1A);
-  }
-
-  .filter-currency .filter-label {
-    margin: 0;
   }
 
   .filter-label {
