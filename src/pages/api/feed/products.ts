@@ -714,11 +714,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const minRating = url.searchParams.get('minRating') ? parseFloat(url.searchParams.get('minRating')!) : undefined;
     const sortBy = url.searchParams.get('sortBy') || 'relevance';
     const dealsOnly = url.searchParams.get('dealsOnly') === 'true';
+    const primeOnly = url.searchParams.get('primeOnly') === 'true';
 
     // Region parameter (from RegionSelector)
     const region = url.searchParams.get('region') || (lang === 'es' ? 'ES' : 'US');
 
-    console.log(`[Feed API] Filters: minPrice=${minPrice}, maxPrice=${maxPrice}, minRating=${minRating}, sortBy=${sortBy}, dealsOnly=${dealsOnly}`);
+    console.log(`[Feed API] Filters: minPrice=${minPrice}, maxPrice=${maxPrice}, minRating=${minRating}, sortBy=${sortBy}, dealsOnly=${dealsOnly}, primeOnly=${primeOnly}`);
 
     // Get authenticated user for personalization
     const auth = locals.auth?.();
@@ -881,11 +882,14 @@ export const GET: APIRoute = async ({ url, locals }) => {
       }
 
       // Search products using cached RapidAPI (4-hour cache)
-      console.log(`[Feed API] Searching products with keywords: "${keywords}" (cached)`);
+      // Pass Prime filter if enabled
+      const searchOptions = primeOnly ? { isPrime: true } : undefined;
+      console.log(`[Feed API] Searching products with keywords: "${keywords}" (cached, prime: ${primeOnly})`);
       const result = await cachedSearchProducts(
         keywords,
         marketplace,
-        Math.ceil(page / 2) // RapidAPI pages
+        Math.ceil(page / 2), // RapidAPI pages
+        searchOptions
       );
       console.log(`[Feed API] Search result: success=${result.success}, products=${result.success ? result.data?.length : 0}`);
       if (!result.success) {

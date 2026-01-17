@@ -328,17 +328,27 @@ function recordApiCall(): void {
 /**
  * Generate cache key for search
  */
+export interface SearchOptions {
+  isPrime?: boolean;
+  sortBy?: string;
+}
+
 function generateSearchCacheKey(
-  keywords: string, 
-  marketplace: string, 
-  page: number
+  keywords: string,
+  marketplace: string,
+  page: number,
+  options?: SearchOptions
 ): string {
   const normalized = keywords
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-')
     .slice(0, 50);
-  return `search:${marketplace}:${normalized}:p${page}`;
+  // Include options in cache key to separate Prime/non-Prime searches
+  let key = `search:${marketplace}:${normalized}:p${page}`;
+  if (options?.isPrime) key += ':prime';
+  if (options?.sortBy) key += `:${options.sortBy}`;
+  return key;
 }
 
 /**
@@ -361,7 +371,8 @@ function generateDealsCacheKey(category: string | undefined, marketplace: string
 export async function cachedSearchProducts(
   keywords: string,
   marketplace: string = 'com',
-  page: number = 1
+  page: number = 1,
+  options?: SearchOptions
 ): Promise<RainforestSearchResult> {
   if (!isRainforestConfigured()) {
     return {
@@ -370,7 +381,7 @@ export async function cachedSearchProducts(
     };
   }
 
-  const cacheKey = generateSearchCacheKey(keywords, marketplace, page);
+  const cacheKey = generateSearchCacheKey(keywords, marketplace, page, options);
   const now = new Date();
 
   try {
@@ -424,11 +435,13 @@ export async function cachedSearchProducts(
     }
 
     // Make API call
-    console.log(`[ProductCache] Cache MISS for "${keywords}", calling API...`);
+    console.log(`[ProductCache] Cache MISS for "${keywords}", calling API... (prime: ${options?.isPrime || false})`);
     const result = await searchProductsRainforest({
       keywords,
       amazonDomain: marketplace,
       page,
+      isPrime: options?.isPrime,
+      sortBy: options?.sortBy as any,
     });
 
     recordApiCall();
