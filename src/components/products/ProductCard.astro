@@ -191,7 +191,8 @@ const hasDescription = fullDescription.length > 0;
             image: product.featuredImage?.url || '',
             price: product.price,
             currency: product.currency,
-            affiliateUrl: product.affiliateUrl
+            affiliateUrl: product.affiliateUrl,
+            marketplace: product.affiliateUrl?.includes('amazon.es') ? 'amazon.es' : 'amazon.com'
           })}
           aria-label={lang === 'es' ? 'Agregar al carrito' : 'Add to cart'}
         >

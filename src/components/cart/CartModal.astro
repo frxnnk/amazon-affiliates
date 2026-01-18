@@ -10,6 +10,12 @@ const { lang } = Astro.props;
 const affiliateTag = siteConfig.amazon.associates[lang]?.tag || siteConfig.amazon.associates.en.tag;
 const marketplace = siteConfig.amazon.associates[lang]?.marketplace || 'amazon.com';
 
+// Tags for both marketplaces (needed for cart with mixed region support)
+const affiliateTags = {
+  'amazon.com': siteConfig.amazon.associates.en.tag,
+  'amazon.es': siteConfig.amazon.associates.es.tag,
+};
+
 const t = {
   title: lang === 'es' ? 'Tu Carrito' : 'Your Cart',
   empty: lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty',
@@ -45,6 +51,7 @@ const t = {
         </svg>
         {t.title}
         <span class="cart-count-label" id="cart-modal-count">(0 {t.items})</span>
+        <span class="cart-region-badge" id="cart-region-badge"></span>
       </h2>
       <button
         type="button"
@@ -101,7 +108,9 @@ const t = {
           rel="nofollow noopener sponsored"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
           {t.buyAll}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-icon">
@@ -189,6 +198,20 @@ const t = {
     font-size: 0.75rem;
     font-weight: 500;
     opacity: 0.7;
+  }
+
+  .cart-region-badge {
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
   }
 
   .cart-close {
@@ -427,7 +450,7 @@ const t = {
   }
 </style>
 
-<script define:vars={{ affiliateTag, marketplace, t }}>
+<script define:vars={{ affiliateTag, marketplace, affiliateTags, t }}>
   const modal = document.getElementById('cart-modal');
   const closeBtn = document.getElementById('cart-close');
   const continueBtn = document.getElementById('cart-continue');
@@ -464,6 +487,20 @@ const t = {
     // Update count label
     if (countLabel) {
       countLabel.textContent = `(${count} ${t.items})`;
+    }
+
+    // Update region badge
+    const regionBadge = document.getElementById('cart-region-badge');
+    if (regionBadge) {
+      const cartMarketplace = items.length > 0 ? items[0].marketplace : null;
+      if (cartMarketplace) {
+        const flag = cartMarketplace === 'amazon.es' ? '🇪🇸' : '🇺🇸';
+        const label = cartMarketplace === 'amazon.es' ? 'ES' : 'US';
+        regionBadge.textContent = `${flag} ${label}`;
+        regionBadge.style.display = 'inline-flex';
+      } else {
+        regionBadge.style.display = 'none';
+      }
     }
 
     if (items.length === 0) {
@@ -631,8 +668,12 @@ const t = {
   function updateBuyAllUrl(items) {
     if (!buyAllBtn || items.length === 0) return;
 
-    const baseUrl = `https://www.${marketplace}/gp/aws/cart/add.html`;
-    const params = new URLSearchParams({ AssociateTag: affiliateTag });
+    // Use the marketplace from the cart items (all items should have the same marketplace)
+    const cartMarketplace = items[0]?.marketplace || marketplace;
+    const cartTag = affiliateTags[cartMarketplace] || affiliateTag;
+
+    const baseUrl = `https://www.${cartMarketplace}/gp/aws/cart/add.html`;
+    const params = new URLSearchParams({ AssociateTag: cartTag });
 
     items.forEach((item, index) => {
       params.append(`ASIN.${index + 1}`, item.asin);

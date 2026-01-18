@@ -44,7 +44,7 @@ function generateAffiliateUrlFromConfig(asin: string, lang: 'es' | 'en'): string
   const config = siteConfig.amazon.associates[lang];
   const marketplace = config.marketplace;
   const tag = config.tag;
-  return `https://www.${marketplace}/dp/${asin}?tag=${tag}&linkCode=ogi&th=1&psc=1`;
+  return `https://www.${marketplace}/dp/${asin}?tag=${tag}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
 }
 
 /**
