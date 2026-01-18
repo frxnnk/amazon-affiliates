@@ -363,6 +363,7 @@ const truncatedDescription = shouldTruncate
         data-price={product.price}
         data-currency={product.currency}
         data-affiliate-url={product.affiliateUrl}
+        data-marketplace={product.affiliateUrl?.includes('amazon.es') ? 'amazon.es' : 'amazon.com'}
         aria-label={lang === 'es' ? 'Agregar al carrito' : 'Add to cart'}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cart-icon">
@@ -1053,20 +1054,24 @@ const truncatedDescription = shouldTruncate
     max-height: 2.6em;
   }
 
+  /* BRUTALIST EXPANDED REVIEW */
   .review-content-wrapper.expanded {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    padding: 0.75rem;
-    margin: 0.5rem -0.5rem 0;
+    background: var(--color-cream, #FFFEF9);
+    border: 3px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 6px 6px 0 var(--color-brutal-black, #1A1A1A);
+    border-radius: 0;
+    padding: 1rem;
+    margin: 0.75rem 0 0;
+    position: relative;
   }
 
   .review-content-wrapper.expanded .review-content {
     display: block;
     max-height: none;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-brutal-black, #1A1A1A);
+    font-family: var(--font-sans, 'DM Sans', sans-serif);
   }
 
   .review-content {
@@ -1109,24 +1114,31 @@ const truncatedDescription = shouldTruncate
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    margin-top: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    margin-top: 0.75rem;
+    padding: 0.375rem 0.625rem;
+    background: var(--color-brutal-black, #1A1A1A);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    border-radius: 0;
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
     font-size: 0.5625rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-cream, #FFFEF9);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.68, -0.6, 0.32, 1.6);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .btn-collapse:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-collapse:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   }
 
   .review-content-wrapper:not(.expanded) .btn-collapse {
@@ -1683,6 +1695,7 @@ const truncatedDescription = shouldTruncate
           price: parseFloat(button.dataset.price || '0'),
           currency: button.dataset.currency || 'USD',
           affiliateUrl: button.dataset.affiliateUrl || '',
+          marketplace: button.dataset.marketplace || 'amazon.com',
         };
 
         // Add to cart

@@ -84,8 +84,8 @@ function isActive(href: string, exact?: boolean) {
       <!-- Cart -->
       <CartButton lang={lang} />
 
-      <!-- Auth -->
-      <div class="auth-section">
+      <!-- Auth (hidden on desktop - redundant with PROFILE nav) -->
+      <div class="auth-section hide-on-desktop">
         <SignedOut>
           <a href={`/${lang}/login`} class="btn-login">
             <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -103,7 +103,10 @@ function isActive(href: string, exact?: boolean) {
         </SignedIn>
       </div>
 
-      <LanguageSwitcher currentLang={lang} currentPath={currentPath} />
+      <!-- Language Switcher (hidden on desktop - redundant with RegionSelector in feed) -->
+      <div class="hide-on-desktop">
+        <LanguageSwitcher currentLang={lang} currentPath={currentPath} />
+      </div>
 
       <!-- Mobile menu button -->
       <button
@@ -248,7 +251,7 @@ function isActive(href: string, exact?: boolean) {
     flex-shrink: 0;
   }
 
-  /* Search Bar Desktop */
+  /* Search Bar Desktop - Hidden on large screens (redundant with search modal) */
   .search-bar-desktop {
     display: none;
     align-items: center;
@@ -264,7 +267,8 @@ function isActive(href: string, exact?: boolean) {
     font-family: var(--font-sans, 'DM Sans', sans-serif);
   }
 
-  @media (min-width: 768px) {
+  /* Show on tablet, hide on large desktop */
+  @media (min-width: 768px) and (max-width: 1023px) {
     .search-bar-desktop {
       display: flex;
     }
@@ -460,6 +464,7 @@ function isActive(href: string, exact?: boolean) {
     }
   }
 
+
   /* Mobile Navigation */
   .nav-mobile {
     padding: 0.75rem 1.5rem 1.5rem;
@@ -502,6 +507,15 @@ function isActive(href: string, exact?: boolean) {
     background: var(--color-brutal-yellow, #FFE14D);
     border-color: var(--color-brutal-black, #1A1A1A);
     box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
+  }
+</style>
+
+<style is:global>
+  /* Hide auth and language switcher on desktop - they are redundant */
+  @media (min-width: 768px) {
+    .header .hide-on-desktop {
+      display: none !important;
+    }
   }
 </style>
 
