@@ -621,7 +621,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   }
 
   function generateAffiliateUrl(asin: string, marketplace: string): string {
-    return `https://www.${marketplace}/dp/${asin}?tag=${AFFILIATE_TAG}&linkCode=ogi&th=1&psc=1`;
+    return `https://www.${marketplace}/dp/${asin}?tag=${AFFILIATE_TAG}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
   }
 
   function showAmazonLinkResult(asin: string, affiliateUrl: string) {
@@ -884,6 +884,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     const affiliateUrl = amazonLinkCart.dataset.affiliateUrl;
 
     if (asin && affiliateUrl && (window as any).cart?.add) {
+      const marketplace = affiliateUrl.includes('amazon.es') ? 'amazon.es' : 'amazon.com';
       (window as any).cart.add({
         asin,
         productId: `amazon-${asin}`,
@@ -891,8 +892,9 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
         brand: 'Amazon',
         image: '',
         price: 0,
-        currency: 'USD',
-        affiliateUrl
+        currency: marketplace === 'amazon.es' ? 'EUR' : 'USD',
+        affiliateUrl,
+        marketplace
       });
 
       // Visual feedback

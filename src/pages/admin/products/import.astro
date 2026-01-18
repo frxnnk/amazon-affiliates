@@ -1198,8 +1198,8 @@ const affiliateTagEs = siteConfig.amazon.associates.es.tag;
 
     // Generate affiliate URLs
     function generateAffiliateUrls(asin) {
-      const usUrl = `https://www.amazon.com/dp/${asin}?tag=${affiliateTag}&linkCode=ogi&th=1&psc=1`;
-      const esUrl = `https://www.amazon.es/dp/${asin}?tag=${affiliateTagEs}&linkCode=ogi&th=1&psc=1`;
+      const usUrl = `https://www.amazon.com/dp/${asin}?tag=${affiliateTag}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
+      const esUrl = `https://www.amazon.es/dp/${asin}?tag=${affiliateTagEs}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
       return { usUrl, esUrl };
     }
 

@@ -17,9 +17,9 @@ export function getAmazonUrl(
 ): string {
   const url = new URL(baseUrl);
   url.searchParams.set('tag', tag);
-  url.searchParams.set('linkCode', 'ogi');
-  url.searchParams.set('th', '1');
-  url.searchParams.set('psc', '1');
+  url.searchParams.set('linkCode', 'll1');
+  url.searchParams.set('language', 'en_US');
+  url.searchParams.set('ref_', 'as_li_ss_tl');
 
   return url.toString();
 }
@@ -28,7 +28,7 @@ export function generateAmazonProductUrl(asin: string, lang: Lang): string {
   const marketplace = getAmazonMarketplace(lang);
   const tag = getAmazonTag(lang);
 
-  return `https://www.${marketplace}/dp/${asin}?tag=${tag}&linkCode=ogi&th=1&psc=1`;
+  return `https://www.${marketplace}/dp/${asin}?tag=${tag}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
 }
 
 export function isValidAsin(asin: string): boolean {

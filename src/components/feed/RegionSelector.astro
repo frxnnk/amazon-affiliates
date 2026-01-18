@@ -11,13 +11,8 @@ interface Props {
 const { currentLang } = Astro.props;
 
 const regions = [
-  { code: 'ES', lang: 'es', currency: 'EUR', flag: '🇪🇸', label: 'España' },
   { code: 'US', lang: 'en', currency: 'USD', flag: '🇺🇸', label: 'United States' },
-  { code: 'GB', lang: 'en', currency: 'GBP', flag: '🇬🇧', label: 'United Kingdom' },
-  { code: 'DE', lang: 'de', currency: 'EUR', flag: '🇩🇪', label: 'Deutschland' },
-  { code: 'FR', lang: 'fr', currency: 'EUR', flag: '🇫🇷', label: 'France' },
-  { code: 'IT', lang: 'it', currency: 'EUR', flag: '🇮🇹', label: 'Italia' },
-  { code: 'MX', lang: 'es', currency: 'MXN', flag: '🇲🇽', label: 'México' },
+  { code: 'ES', lang: 'es', currency: 'EUR', flag: '🇪🇸', label: 'España' },
 ];
 
 // Find current region
@@ -65,13 +60,8 @@ const currentRegion = regions.find(r => r.lang === currentLang) || regions[0];
 
 <script>
   const REGIONS = [
-    { code: 'ES', lang: 'es', currency: 'EUR', flag: '🇪🇸', label: 'España' },
     { code: 'US', lang: 'en', currency: 'USD', flag: '🇺🇸', label: 'United States' },
-    { code: 'GB', lang: 'en', currency: 'GBP', flag: '🇬🇧', label: 'United Kingdom' },
-    { code: 'DE', lang: 'de', currency: 'EUR', flag: '🇩🇪', label: 'Deutschland' },
-    { code: 'FR', lang: 'fr', currency: 'EUR', flag: '🇫🇷', label: 'France' },
-    { code: 'IT', lang: 'it', currency: 'EUR', flag: '🇮🇹', label: 'Italia' },
-    { code: 'MX', lang: 'es', currency: 'MXN', flag: '🇲🇽', label: 'México' },
+    { code: 'ES', lang: 'es', currency: 'EUR', flag: '🇪🇸', label: 'España' },
   ];
 
   function initRegionSelector() {
