@@ -8,7 +8,7 @@
 import { db, DealAgentConfig } from 'astro:db';
 import { eq } from 'astro:db';
 
-export type ApiName = 'rapidapi' | 'openai' | 'twitter' | 'discord' | 'youtube';
+export type ApiName = 'rapidapi' | 'openai' | 'twitter' | 'discord' | 'youtube' | 'creators';
 
 export interface QuotaLimits {
   rapidapi: { daily: number; monthly: number };
@@ -16,6 +16,7 @@ export interface QuotaLimits {
   twitter: { daily: number; monthly: number };
   discord: { daily: number }; // Webhooks have no real limit
   youtube: { daily: number };
+  creators: { daily: number }; // Amazon Creators API (no official limits documented)
 }
 
 export interface QuotaStatus {
@@ -54,6 +55,9 @@ const DEFAULT_LIMITS: QuotaLimits = {
   },
   youtube: {
     daily: 95, // 10000 units/day, 100 per search = ~100 searches, keep 5 buffer
+  },
+  creators: {
+    daily: 1000, // Amazon Creators API - no official limits documented, monitor for 429s
   },
 };
 
@@ -214,6 +218,8 @@ function getLimit(apiName: ApiName): number {
       return DEFAULT_LIMITS.discord.daily;
     case 'youtube':
       return DEFAULT_LIMITS.youtube.daily;
+    case 'creators':
+      return DEFAULT_LIMITS.creators.daily;
     default:
       return 100;
   }
@@ -234,7 +240,7 @@ function getNextResetTime(): Date {
  * Get all API quota statuses
  */
 export async function getAllQuotaStatuses(): Promise<QuotaStatus[]> {
-  const apis: ApiName[] = ['rapidapi', 'openai', 'twitter', 'discord', 'youtube'];
+  const apis: ApiName[] = ['rapidapi', 'openai', 'twitter', 'discord', 'youtube', 'creators'];
   return Promise.all(apis.map((api) => getQuotaStatus(api)));
 }
 

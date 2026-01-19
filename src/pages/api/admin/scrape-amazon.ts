@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { unauthorizedResponse } from '@lib/auth';
 import { parseAmazonUrl, isValidAsin } from '@utils/amazon';
-import { getProductByAsin, isPaapiConfigured, type PaapiProductData } from '@lib/amazon-paapi';
+import { getProduct, getAdapterStatus, type DataSource } from '@lib/amazon-api-adapter';
+import type { RainforestProductData } from '@lib/rainforest-api';
 import siteConfig from '@data/site-config.json';
 
 export interface ScrapedFieldStatus {
@@ -82,39 +83,43 @@ function parsePrice(priceStr: string | undefined | null): number | null {
 }
 
 /**
- * Convert PA-API response to our format
+ * Convert API adapter response (RainforestProductData) to our scraped format
  */
-function paapiToScrapedFormat(paapiData: PaapiProductData): ScrapedProductData {
+function apiDataToScrapedFormat(
+  apiData: RainforestProductData,
+  marketplace: string,
+  lang: 'es' | 'en'
+): ScrapedProductData {
   const fieldStatus: ScrapedFieldStatus = {
-    title: !!paapiData.title,
-    brand: !!paapiData.brand,
-    price: paapiData.price !== null,
-    originalPrice: paapiData.originalPrice !== null,
-    rating: paapiData.rating !== null,
-    totalReviews: paapiData.totalReviews !== null,
-    images: paapiData.images.length > 0,
-    features: paapiData.features.length > 0,
-    description: !!paapiData.description,
-    category: !!paapiData.category,
+    title: !!apiData.title,
+    brand: !!apiData.brand,
+    price: apiData.price !== null,
+    originalPrice: apiData.originalPrice !== null,
+    rating: apiData.rating !== null,
+    totalReviews: apiData.totalReviews !== null,
+    images: apiData.images.length > 0,
+    features: apiData.features.length > 0,
+    description: !!apiData.description,
+    category: apiData.categories.length > 0,
   };
 
   return {
-    asin: paapiData.asin,
-    marketplace: paapiData.marketplace,
-    affiliateUrl: paapiData.affiliateUrl,
-    lang: paapiData.lang,
-    title: paapiData.title,
-    brand: paapiData.brand,
-    price: paapiData.price,
-    originalPrice: paapiData.originalPrice,
-    currency: paapiData.currency,
-    description: paapiData.description,
-    shortDescription: paapiData.shortDescription,
-    rating: paapiData.rating,
-    totalReviews: paapiData.totalReviews,
-    images: paapiData.images,
-    features: paapiData.features,
-    category: paapiData.category,
+    asin: apiData.asin,
+    marketplace,
+    affiliateUrl: generateAffiliateUrlFromConfig(apiData.asin, lang),
+    lang,
+    title: apiData.title,
+    brand: apiData.brand,
+    price: apiData.price,
+    originalPrice: apiData.originalPrice,
+    currency: apiData.currency,
+    description: apiData.description,
+    shortDescription: apiData.features?.[0] || null,
+    rating: apiData.rating,
+    totalReviews: apiData.totalReviews,
+    images: apiData.images,
+    features: apiData.features,
+    category: apiData.categories?.[0] || null,
     fieldStatus,
   };
 }
@@ -427,7 +432,7 @@ export const POST: APIRoute = async (context) => {
 
   try {
     const body = await request.json();
-    const { url, asin: inputAsin, usePaapi = true } = body;
+    const { url, asin: inputAsin, useApi = true } = body;
 
     let asin: string | null = null;
     let marketplace: string = 'es';
@@ -455,23 +460,26 @@ export const POST: APIRoute = async (context) => {
     const currency = marketplace === 'com' ? 'USD' : 'EUR';
 
     let productData: ScrapedProductData | null = null;
-    let dataSource: 'paapi' | 'scraper' | 'none' = 'none';
+    let dataSource: DataSource = 'none';
 
-    // Try PA-API first if configured and requested
-    if (usePaapi && isPaapiConfigured()) {
-      console.log('[Product Import] Trying PA-API first...');
-      const paapiResult = await getProductByAsin(asin, marketplace);
+    // Get adapter status for response
+    const adapterStatus = getAdapterStatus();
 
-      if (paapiResult.success && paapiResult.data) {
-        productData = paapiToScrapedFormat(paapiResult.data);
-        dataSource = 'paapi';
-        console.log('[Product Import] PA-API success');
+    // Try unified adapter first (Creators API -> RapidAPI)
+    if (useApi) {
+      console.log('[Product Import] Trying unified API adapter...');
+      const apiResult = await getProduct(asin, marketplace);
+
+      if (apiResult.success && apiResult.data) {
+        productData = apiDataToScrapedFormat(apiResult.data, marketplace, lang);
+        dataSource = apiResult.dataSource;
+        console.log(`[Product Import] API adapter success via ${dataSource}`);
       } else {
-        console.log('[Product Import] PA-API failed:', paapiResult.error);
+        console.log('[Product Import] API adapter failed:', apiResult.error);
       }
     }
 
-    // Fall back to scraping if PA-API didn't work
+    // Fall back to scraping if API didn't work
     if (!productData || dataSource === 'none') {
       console.log('[Product Import] Falling back to scraper...');
       const { data: scrapedData, fieldStatus } = await scrapeAmazonProduct(asin, marketplace);
@@ -503,6 +511,14 @@ export const POST: APIRoute = async (context) => {
     const totalFields = Object.keys(productData.fieldStatus).length;
     const hasData = successCount > 0;
 
+    // Map data source to user-friendly name
+    const dataSourceLabel: Record<DataSource, string> = {
+      'creators': 'Amazon Creators API',
+      'rapidapi': 'RapidAPI',
+      'scraper': 'web scraping',
+      'none': 'none',
+    };
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -510,9 +526,13 @@ export const POST: APIRoute = async (context) => {
         scrapedFieldCount: successCount,
         totalFields,
         dataSource,
-        paapiConfigured: isPaapiConfigured(),
+        apiStatus: {
+          creatorsConfigured: adapterStatus.creatorsConfigured,
+          rapidapiConfigured: adapterStatus.rapidapiConfigured,
+          primaryApi: adapterStatus.primaryApi,
+        },
         message: hasData
-          ? `Product data fetched via ${dataSource === 'paapi' ? 'Amazon API' : 'web scraping'} (${successCount}/${totalFields} fields). Review and complete missing data.`
+          ? `Product data fetched via ${dataSourceLabel[dataSource]} (${successCount}/${totalFields} fields). Review and complete missing data.`
           : 'Could not fetch product data automatically. Please fill in manually.',
         data: productData,
       }),

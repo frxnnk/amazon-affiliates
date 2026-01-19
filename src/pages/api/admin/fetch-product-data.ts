@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { unauthorizedResponse } from '@lib/auth';
-import { getProductByAsin, type PAAPIProductData } from '@lib/amazon-paapi';
+import { getProduct, getAdapterStatus } from '@lib/amazon-api-adapter';
+import type { RainforestProductData } from '@lib/rainforest-api';
 import { parseAmazonUrl, isValidAsin } from '@utils/amazon';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -46,29 +47,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Fetch product data from PA-API
-    const result = await getProductByAsin(asin);
+    // Fetch product data using unified adapter (Creators API -> RapidAPI fallback)
+    const result = await getProduct(asin, 'com');
 
-    if (!result.success) {
-      const statusCode =
-        result.error.code === 'MISSING_CONFIG'
-          ? 500
-          : result.error.code === 'ITEM_NOT_FOUND'
-            ? 404
-            : result.error.code === 'INVALID_ASIN'
-              ? 400
-              : 502;
+    if (!result.success || !result.data) {
+      const adapterStatus = getAdapterStatus();
+      const statusCode = adapterStatus.primaryApi === 'none' ? 500 : 502;
 
       return new Response(
         JSON.stringify({
-          error: result.error.message,
-          code: result.error.code,
+          error: result.error || 'Product not found',
+          code: 'API_ERROR',
+          apiStatus: adapterStatus,
         }),
         { status: statusCode, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Transform PA-API data to product form format
+    // Transform API data to product form format
     const productData = transformToProductData(result.data);
 
     return new Response(
@@ -88,11 +84,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 /**
- * Transform PA-API response to product creation format
+ * Transform API response to product creation format
+ * Works with RainforestProductData (unified format from adapter)
  */
-function transformToProductData(paapiData: PAAPIProductData) {
+function transformToProductData(apiData: RainforestProductData) {
   // Generate slug from title
-  const slug = paapiData.title
+  const slug = apiData.title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
@@ -103,48 +100,48 @@ function transformToProductData(paapiData: PAAPIProductData) {
   return {
     // Core identifiers
     productId: slug,
-    asin: paapiData.asin,
+    asin: apiData.asin,
 
     // Content
-    title: paapiData.title,
-    brand: paapiData.brand || '',
-    description: paapiData.description || paapiData.features.join('\n\n') || '',
-    shortDescription: paapiData.features[0] || '',
+    title: apiData.title,
+    brand: apiData.brand || '',
+    description: apiData.description || apiData.features.join('\n\n') || '',
+    shortDescription: apiData.features[0] || '',
 
     // Pricing
-    price: paapiData.price || 0,
-    originalPrice: paapiData.originalPrice,
-    currency: paapiData.currency,
-    isOnSale: paapiData.originalPrice
-      ? paapiData.price !== null && paapiData.price < paapiData.originalPrice
+    price: apiData.price || 0,
+    originalPrice: apiData.originalPrice,
+    currency: apiData.currency,
+    isOnSale: apiData.originalPrice
+      ? apiData.price !== null && apiData.price < apiData.originalPrice
       : false,
 
     // Ratings
-    rating: paapiData.rating,
-    totalReviews: paapiData.totalReviews,
+    rating: apiData.rating,
+    totalReviews: apiData.totalReviews,
 
     // Images
-    featuredImageUrl: paapiData.imageUrl || '',
-    featuredImageAlt: paapiData.title,
-    gallery: paapiData.images.slice(1).map((url) => ({
+    featuredImageUrl: apiData.imageUrl || '',
+    featuredImageAlt: apiData.title,
+    gallery: apiData.images.slice(1).map((url) => ({
       url,
-      alt: paapiData.title,
+      alt: apiData.title,
     })),
 
     // URL
-    affiliateUrl: paapiData.url,
+    affiliateUrl: apiData.url,
 
     // Features as pros (user can edit)
-    pros: paapiData.features.slice(0, 5),
+    pros: apiData.features.slice(0, 5),
     cons: [],
 
     // Availability
-    availability: paapiData.availability,
+    availability: apiData.availability,
 
     // Defaults
     status: 'draft',
     isFeatured: false,
-    category: '',
+    category: apiData.categories?.[0] || '',
     tags: [],
   };
 }
