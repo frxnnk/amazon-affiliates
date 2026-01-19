@@ -1,13 +1,12 @@
 /**
  * API Endpoint: Search Products
- * 
+ *
  * POST /api/admin/deals/search
- * 
- * Searches Amazon products using PA-API with Rainforest fallback.
+ *
+ * Searches Amazon products using RapidAPI (search is not available in Creators API).
  */
 
 import type { APIRoute } from 'astro';
-import { searchProducts, isPaapiConfigured, type SearchFilters } from '@lib/amazon-paapi';
 import { searchProductsRainforest, isRainforestConfigured, type RainforestSearchFilters } from '@lib/rainforest-api';
 import { rankProducts, toAnalyzableProduct, type AnalyzableProduct } from '@lib/deal-analyzer';
 
@@ -28,7 +27,7 @@ interface SearchResponse {
   success: boolean;
   products?: Array<AnalyzableProduct & { quickScore: number }>;
   totalResults?: number;
-  source?: 'paapi' | 'rainforest';
+  source?: 'rapidapi';
   error?: string;
 }
 
@@ -49,69 +48,43 @@ export const POST: APIRoute = async ({ request }) => {
     const marketplace = body.marketplace || 'com';
     let products: AnalyzableProduct[] = [];
     let totalResults = 0;
-    let source: 'paapi' | 'rainforest' = 'paapi';
 
-    // Try PA-API first
-    if (isPaapiConfigured()) {
-      const filters: SearchFilters = {
-        keywords: body.keywords,
-        category: body.category,
-        minPrice: body.minPrice,
-        maxPrice: body.maxPrice,
-        minSavingsPercent: body.minDiscount,
-        sortBy: body.sortBy,
-        itemCount: 10,
-      };
-
-      const result = await searchProducts(filters, marketplace);
-
-      if (result.success && result.data.length > 0) {
-        products = result.data.map(p => toAnalyzableProduct(p, body.category));
-        totalResults = result.totalResults;
-        source = 'paapi';
-      }
-    }
-
-    // Fallback to Rainforest if PA-API failed or returned no results
-    if (products.length === 0 && isRainforestConfigured()) {
-      const filters: RainforestSearchFilters = {
-        keywords: body.keywords,
-        category: body.category,
-        minPrice: body.minPrice,
-        maxPrice: body.maxPrice,
-        sortBy: body.sortBy,
-        amazonDomain: marketplace,
-        page: body.page || 1,
-      };
-
-      const result = await searchProductsRainforest(filters);
-
-      if (result.success) {
-        products = result.data.map(p => toAnalyzableProduct(p, body.category));
-        totalResults = result.totalResults;
-        source = 'rainforest';
-      } else {
-        // Both APIs failed
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: result.error.message,
-          } as SearchResponse),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // If neither API is configured
-    if (products.length === 0 && !isPaapiConfigured() && !isRainforestConfigured()) {
+    // Check if RapidAPI is configured (search is not available in Creators API)
+    if (!isRainforestConfigured()) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No search API configured. Set PA-API or Rainforest API credentials.',
+          error: 'Search API not configured. Set RAPIDAPI_KEY environment variable.',
         } as SearchResponse),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // Search using RapidAPI
+    const filters: RainforestSearchFilters = {
+      keywords: body.keywords,
+      category: body.category,
+      minPrice: body.minPrice,
+      maxPrice: body.maxPrice,
+      sortBy: body.sortBy,
+      amazonDomain: marketplace,
+      page: body.page || 1,
+    };
+
+    const result = await searchProductsRainforest(filters);
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: result.error.message,
+        } as SearchResponse),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    products = result.data.map(p => toAnalyzableProduct(p, body.category));
+    totalResults = result.totalResults;
 
     // Rank products by quick score
     const rankedProducts = rankProducts(products);
@@ -121,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         products: rankedProducts,
         totalResults,
-        source,
+        source: 'rapidapi',
       } as SearchResponse),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

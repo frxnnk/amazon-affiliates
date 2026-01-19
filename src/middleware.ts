@@ -5,6 +5,8 @@ const isPublicAdminRoute = createRouteMatcher([
   '/admin/login',
   '/admin/sso-callback(.*)',
   '/admin/unauthorized',
+  // API status endpoint (for diagnostics)
+  '/api/admin/api-status',
   // Agent monitoring endpoints (public for SSE and dashboard)
   '/api/admin/agents/status',
   '/api/admin/agents/events',

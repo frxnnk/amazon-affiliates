@@ -5,8 +5,10 @@
  * Provides scoring, recommendations, and insights.
  */
 
-import type { PAAPIProductData } from './amazon-paapi';
 import type { RainforestProductData } from './rainforest-api';
+
+// RainforestProductData is used as the unified type for all API sources
+// (Creators API data is converted to this format by the adapter)
 
 const OPENAI_API_BASE = 'https://api.openai.com/v1';
 
@@ -88,13 +90,14 @@ function getApiKey(): string {
 }
 
 /**
- * Convert PA-API or Rainforest product to analyzable format
+ * Convert product data to analyzable format
+ * Works with RainforestProductData (which is the unified format from the adapter)
  */
 export function toAnalyzableProduct(
-  product: PAAPIProductData | RainforestProductData,
+  product: RainforestProductData,
   category?: string
 ): AnalyzableProduct {
-  const rfProduct = product as RainforestProductData;
+  const rfProduct = product;
 
   return {
     asin: product.asin,

@@ -1,13 +1,13 @@
 /**
  * API Endpoint: Curated Deals Management
- * 
+ *
  * GET /api/admin/curated-deals - Get all curated deals
  * POST /api/admin/curated-deals - Create a new curated deal
  */
 
 import type { APIRoute } from 'astro';
 import { getAllCuratedDeals, saveCuratedDeal } from '@lib/db';
-import { getProductByAsin, type PAAPIConfig } from '@lib/amazon-paapi';
+import { getProduct } from '@lib/amazon-api-adapter';
 
 export const prerender = false;
 
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
     const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
     const domain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
 
-    // Try to fetch product data from PA-API
+    // Try to fetch product data using unified adapter
     let productData: {
       title?: string;
       brand?: string;
@@ -73,8 +73,8 @@ export const POST: APIRoute = async ({ request }) => {
     } = {};
 
     try {
-      const result = await getProductByAsin(body.asin, marketplace);
-      if (result.success) {
+      const result = await getProduct(body.asin, marketplace);
+      if (result.success && result.data) {
         productData = {
           title: result.data.title,
           brand: result.data.brand || undefined,
