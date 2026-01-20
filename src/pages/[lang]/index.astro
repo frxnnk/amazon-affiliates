@@ -272,6 +272,7 @@ const t = texts[lang];
                       <div class="skel-text small"></div>
                       <div class="skel-text large"></div>
                       <div class="skel-text medium"></div>
+                      <div class="skel-price"></div>
                     </div>
                   </div>
                 ))}
@@ -542,7 +543,7 @@ const t = texts[lang];
 
         function showState(state) {
           searchInitial.style.display = state === 'initial' ? 'block' : 'none';
-          searchSkeleton.style.display = state === 'loading' ? 'flex' : 'none';
+          searchSkeleton.style.display = state === 'loading' ? 'block' : 'none';
           searchResults.style.display = state === 'results' ? 'block' : 'none';
           searchEmpty.style.display = state === 'empty' ? 'flex' : 'none';
         }
@@ -579,7 +580,9 @@ const t = texts[lang];
         function renderResults(products) {
           const resultsGrid = document.getElementById('results-grid');
           if (!resultsGrid) return;
-          
+
+          const addToCartText = lang === 'es' ? 'Agregar' : 'Add';
+
           resultsGrid.innerHTML = products.map(p => {
             const stars = p.rating ? renderStars(p.rating) : '';
             const reviewsText = p.totalReviews ? `<span class="result-reviews-count">(${formatNumber(p.totalReviews)})</span>` : '';
@@ -589,29 +592,84 @@ const t = texts[lang];
             const imageUrl = p.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23f3f4f6" width="100" height="100"/></svg>';
 
             return `
-              <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="result-item">
-                <div class="result-item-img">
-                  ${discount}
-                  <img src="${imageUrl}" alt="${p.title || ''}" loading="lazy" />
-                </div>
-                <div class="result-item-body">
-                  ${p.brand ? `<span class="result-item-brand">${p.brand}</span>` : ''}
-                  <h4 class="result-item-title">${p.title || 'Producto'}</h4>
-                  ${stars || reviewsText ? `
-                    <div class="result-item-meta">
-                      ${stars}
-                      ${reviewsText}
-                    </div>
-                  ` : ''}
-                  <div class="result-item-pricing">
-                    <span class="result-item-price">${p.formattedPrice || '---'}</span>
-                    ${oldPrice}
-                    ${prime}
+              <div class="result-item-wrap">
+                <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="result-item">
+                  <div class="result-item-img">
+                    ${discount}
+                    <img src="${imageUrl}" alt="${p.title || ''}" loading="lazy" />
                   </div>
-                </div>
-              </a>
+                  <div class="result-item-body">
+                    ${p.brand ? `<span class="result-item-brand">${p.brand}</span>` : ''}
+                    <h4 class="result-item-title">${p.title || 'Producto'}</h4>
+                    ${stars || reviewsText ? `
+                      <div class="result-item-meta">
+                        ${stars}
+                        ${reviewsText}
+                      </div>
+                    ` : ''}
+                    <div class="result-item-pricing">
+                      <span class="result-item-price">${p.formattedPrice || '---'}</span>
+                      ${oldPrice}
+                      ${prime}
+                    </div>
+                  </div>
+                </a>
+                <button
+                  type="button"
+                  class="result-cart-btn"
+                  data-asin="${p.asin || ''}"
+                  data-title="${(p.title || '').replace(/"/g, '&quot;')}"
+                  data-brand="${(p.brand || '').replace(/"/g, '&quot;')}"
+                  data-image="${p.image || ''}"
+                  data-price="${p.formattedPrice || ''}"
+                  data-affiliate-url="${p.affiliateUrl || ''}"
+                  aria-label="${addToCartText}"
+                  title="${addToCartText}"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  <span class="cart-plus">+</span>
+                </button>
+              </div>
             `;
           }).join('');
+
+          // Add cart button event listeners
+          resultsGrid.querySelectorAll('.result-cart-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              handleSearchAddToCart(btn);
+            });
+          });
+        }
+
+        // Handle add to cart from search results
+        function handleSearchAddToCart(btn) {
+          if (!window.cart?.add) {
+            console.warn('Cart API not available');
+            return;
+          }
+
+          const product = {
+            asin: btn.dataset.asin || '',
+            productId: btn.dataset.asin || '',
+            title: btn.dataset.title || '',
+            brand: btn.dataset.brand || '',
+            image: btn.dataset.image || '',
+            price: btn.dataset.price || '',
+            currency: 'USD',
+            affiliateUrl: btn.dataset.affiliateUrl || '',
+            marketplace: 'amazon.com',
+          };
+
+          window.cart.add(product);
+
+          // Visual feedback
+          btn.classList.add('added');
+          setTimeout(() => btn.classList.remove('added'), 1500);
         }
 
         function formatNumber(num) {
@@ -1346,6 +1404,11 @@ const t = texts[lang];
   }
 
   /* Loading Skeletons - NEO-BRUTALIST */
+  .search-loading-state {
+    display: block;
+    width: 100%;
+  }
+
   .search-results-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1357,35 +1420,50 @@ const t = texts[lang];
     border: 2px solid var(--color-brutal-black, #1A1A1A);
     box-shadow: 3px 3px 0 var(--color-brutal-black, #1A1A1A);
     overflow: hidden;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: brutal-pulse 1.2s ease-in-out infinite alternate;
   }
 
   .skel-image {
     width: 100%;
     aspect-ratio: 1;
-    background: rgba(26, 26, 26, 0.08);
+    min-height: 120px;
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.06) 0%, rgba(26, 26, 26, 0.12) 100%);
     border-bottom: 2px solid var(--color-brutal-black, #1A1A1A);
   }
 
-  .skel-content { padding: 12px; }
+  .skel-content {
+    padding: 12px;
+  }
 
   .skel-text {
     height: 10px;
-    background: rgba(26, 26, 26, 0.15);
+    background: rgba(26, 26, 26, 0.12);
     margin-bottom: 8px;
+    border: 1px solid rgba(26, 26, 26, 0.15);
   }
 
   .skel-text.small { width: 40%; }
   .skel-text.medium { width: 60%; }
   .skel-text.large { width: 90%; }
-  .skel-text:last-child { margin-bottom: 0; }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  .skel-price {
+    width: 50%;
+    height: 24px;
+    background: var(--color-brutal-yellow, #FFE14D);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    margin-top: 10px;
+  }
+
+  @keyframes brutal-pulse {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
   }
 
   /* Results - NEO-BRUTALIST */
+  .result-item-wrap {
+    position: relative;
+  }
+
   .result-item {
     display: flex;
     flex-direction: column;
@@ -1550,6 +1628,72 @@ const t = texts[lang];
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-radius: 0;
+  }
+
+  /* Cart Button in Search Results */
+  .result-cart-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--color-cream, #FFFEF9);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    color: var(--color-brutal-black, #1A1A1A);
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--color-brutal-black, #1A1A1A);
+    transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    z-index: 5;
+  }
+
+  .result-cart-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .result-cart-btn .cart-plus {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    background: var(--color-brutal-orange, #FF6B35);
+    border: 2px solid var(--color-brutal-black, #1A1A1A);
+    border-radius: 50%;
+    font-size: 0.625rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .result-cart-btn:hover {
+    background: var(--color-brutal-orange, #FF6B35);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .result-cart-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--color-brutal-black, #1A1A1A);
+  }
+
+  .result-cart-btn.added {
+    background: #22c55e;
+    color: white;
+  }
+
+  .result-cart-btn.added .cart-plus {
+    background: #22c55e;
+  }
+
+  .result-cart-btn.added .cart-plus::after {
+    content: '✓';
+    font-size: 0.5rem;
   }
 
   /* Empty State - NEO-BRUTALIST */

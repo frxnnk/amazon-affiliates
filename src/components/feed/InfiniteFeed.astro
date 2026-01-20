@@ -170,7 +170,7 @@ const categories = [
 
   <div class="feed-scroll" id="reel-slides">
     
-    <!-- Skeleton -->
+    <!-- Skeleton for Feed Mode (vertical slides) -->
     <div class="skeleton-wrap" id="skeleton-container">
       {[1, 2].map(() => (
         <article class="slide skeleton-slide">
@@ -190,6 +190,23 @@ const categories = [
           </div>
         </article>
       ))}
+    </div>
+
+    <!-- Skeleton for Search Mode (grid cards) -->
+    <div class="search-skeleton-wrap hide" id="search-skeleton-container">
+      <div class="search-skeleton-grid">
+        {[1, 2, 3, 4, 5, 6].map(() => (
+          <div class="search-skel-card">
+            <div class="search-skel-image"></div>
+            <div class="search-skel-body">
+              <div class="search-skel-text small"></div>
+              <div class="search-skel-text large"></div>
+              <div class="search-skel-text medium"></div>
+              <div class="search-skel-price"></div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
     
     <!-- Scroll sentinel for infinite loading detection -->
@@ -232,6 +249,7 @@ class Feed {
     this.container = document.getElementById('reel-feed');
     this.scroll = document.getElementById('reel-slides');
     this.skeleton = document.getElementById('skeleton-container');
+    this.searchSkeleton = document.getElementById('search-skeleton-container');
     this.loader = document.getElementById('reel-loader');
     this.sentinel = document.getElementById('scroll-sentinel');
     this.endEl = document.getElementById('reel-end');
@@ -964,7 +982,18 @@ class Feed {
     this.seen.clear();
     this.hasMore = true;
     this.scroll?.querySelectorAll('.slide:not(.skeleton-slide)').forEach(s => s.remove());
-    this.skeleton?.classList.remove('hide');
+
+    // Show appropriate skeleton based on search state
+    if (query && query.length > 0) {
+      // Search mode: show grid skeleton, hide feed skeleton
+      this.skeleton?.classList.add('hide');
+      this.searchSkeleton?.classList.remove('hide');
+    } else {
+      // Feed mode: show feed skeleton, hide search skeleton
+      this.searchSkeleton?.classList.add('hide');
+      this.skeleton?.classList.remove('hide');
+    }
+
     this.endEl?.classList.remove('show');
     this.load();
   }
@@ -993,8 +1022,9 @@ class Feed {
     // Add a special class for pasted products
     slide.classList.add('slide-pasted');
 
-    // Hide skeleton if visible
+    // Hide skeletons if visible
     this.skeleton?.classList.add('hide');
+    this.searchSkeleton?.classList.add('hide');
 
     // Insert at the top of the feed (after any skeleton)
     const firstSlide = this.scroll?.querySelector('.slide:not(.skeleton-slide)');
@@ -1070,6 +1100,7 @@ class Feed {
         this.render(newProducts);
         this.page++;
         this.skeleton?.classList.add('hide');
+        this.searchSkeleton?.classList.add('hide');
       }
 
       // Always update hasMore from API response
@@ -1088,6 +1119,7 @@ class Feed {
         console.log('[Feed] No more products to load');
         this.endEl?.classList.add('show');
         this.skeleton?.classList.add('hide');
+        this.searchSkeleton?.classList.add('hide');
       }
 
       // Dispatch search results event to clear loading state
@@ -1096,6 +1128,7 @@ class Feed {
       console.error(e);
       this.errorEl?.classList.add('show');
       this.skeleton?.classList.add('hide');
+      this.searchSkeleton?.classList.add('hide');
       // Still clear search loading on error
       window.dispatchEvent(new CustomEvent('search:results', { detail: { count: 0, error: true } }));
     } finally {
