@@ -48,8 +48,8 @@ Desktop.ini
 # JetBrains IDE
 .idea/
 
-# VS Code (optional - uncomment if you don't want to share settings)
-# .vscode/
+# VS Code
+.vscode/
 
 # Test coverage
 coverage/
@@ -72,3 +72,22 @@ playwright/.cache/
 
 .vercel
 nul
+
+# Manual QA artifacts
+responsive-screenshots/
+clear-cache.sql
+temp_feed.html
+test-reviews-feed.mjs
+test-reviews-ui.mjs
+lighthouse-a11y-report.json
+amazon-reviews-loaded.png
+current-state.png
+desktop-cart-test.png
+final-ui-test.png
+product-review-test.png
+feed-*.png
+filter-*.png
+mobile-*.png
+region-*.png
+reviews-*.png
+test-*.png
