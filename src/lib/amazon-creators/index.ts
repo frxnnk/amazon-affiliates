@@ -29,6 +29,7 @@ export {
   getItem,
   getItems,
   getItemsBatched,
+  searchItems,
   calculateDiscount,
 } from './client';
 
@@ -57,16 +58,17 @@ export {
 
 // Type exports
 export type {
-  // OAuth types
-  OAuthConfig,
-  OAuthToken,
-  OAuthTokenResponse,
   // Region types
   RegionName,
   RegionConfig,
 } from './regions';
 
 export type {
+  OAuthConfig,
+  OAuthToken,
+  OAuthTokenResponse,
+  SearchItemsParams,
+  SearchItemsResult,
   // Request types
   ItemIdType,
   CreatorsResource,

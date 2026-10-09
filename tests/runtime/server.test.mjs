@@ -53,8 +53,11 @@ test('built Node server serves requests and exits cleanly on SIGTERM', async () 
       database.prepare('INSERT INTO Products (productId,asin,title,brand,description,price,affiliateUrl,featuredImageUrl,status) VALUES (?,?,?,?,?,?,?,?,?)')
         .run('runtime-db-marker', 'TEST000001', 'Runtime Database Marker', 'Test', 'Only in the isolated test database', 25, 'https://example.invalid/product', 'https://example.invalid/image.png', 'published');
     } finally { database.close(); }
-    const feed = await (await fetch(`${base}/api/feed/products?lang=en`)).json();
-    assert.ok(feed.products.some(product => product.productId === 'runtime-db-marker'), output);
+    const feedResponse = await fetch(`${base}/api/feed/products?lang=en`);
+    assert.equal(feedResponse.status, 503);
+    const feed = await feedResponse.json();
+    assert.equal(feed.errorCode, 'CREATORS_AUTH');
+    assert.deepEqual(feed.products, [], 'The public feed must not fall back to the stored catalog');
     for (const path of ['/api/admin/agents/run', '/api/admin/telegram/test', '/api/cron/agent-orchestrator', '/api/debug/clear-video-cache']) {
       const response = await fetch(`${base}${path}`, { method: 'POST', headers: { origin: base, 'content-type': 'application/json' }, body: '{}', redirect: 'manual' });
       assert.equal(response.status, 401, `${path}: ${output}`);
@@ -73,16 +76,20 @@ test('built Node server serves requests and exits cleanly on SIGTERM', async () 
     child = launch();
     child.stdout.on('data', chunk => { output += chunk; });
     child.stderr.on('data', chunk => { output += chunk; });
-    let persisted = false;
+    let restarted = false;
     for (let i = 0; i < 80; i++) {
       try {
-        const feed = await (await fetch(`${base}/api/feed/products?lang=en`)).json();
-        persisted = feed.products.some(product => product.productId === 'runtime-db-marker');
+        restarted = (await fetch(`${base}/api/health`)).ok;
       } catch {}
-      if (persisted || child.exitCode !== null) break;
+      if (restarted || child.exitCode !== null) break;
       await new Promise(done => setTimeout(done, 100));
     }
-    assert.equal(persisted, true, output);
+    assert.equal(restarted, true, output);
+    const reopened = new DatabaseSync(join(dataDir, 'rewardhive.db'));
+    try {
+      assert.equal(reopened.prepare('SELECT title FROM Products WHERE productId = ?')
+        .get('runtime-db-marker').title, 'Runtime Database Marker');
+    } finally { reopened.close(); }
     assert.doesNotMatch(output, /Outbound HTTP disabled/);
   } finally {
     if (child.exitCode === null) { child.kill(); await once(child, 'exit'); }

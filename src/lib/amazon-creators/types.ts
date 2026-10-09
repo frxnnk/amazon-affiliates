@@ -1,358 +1,66 @@
-/**
- * Amazon Creators API Type Definitions
- *
- * Based on Creators API v2.1/v2.2/v2.3 specification.
- * Reference: https://developer.amazon.com/docs/creators-api
- */
-
 import type { RegionName } from './regions';
-
-// ============================================================================
-// OAuth Types
-// ============================================================================
-
-export interface OAuthConfig {
-  credentialId: string;
-  credentialSecret: string;
-}
-
-export interface OAuthToken {
-  accessToken: string;
-  version: string;
-  expiresAt: Date;
-  region: RegionName;
-}
-
-export interface OAuthTokenResponse {
-  access_token: string;
-  expires_in: number;
-  token_type: 'Bearer';
-  version: string;
-}
-
-// ============================================================================
-// API Request Types
-// ============================================================================
-
+export interface OAuthConfig { credentialId: string; credentialSecret: string }
+export interface OAuthToken { accessToken: string; version: string; expiresAt: Date; region: RegionName }
+export interface OAuthTokenResponse { access_token: string; expires_in: number; token_type?: string }
 export type ItemIdType = 'ASIN';
-
-/**
- * Available resources to request from GetItems endpoint
- */
 export type CreatorsResource =
-  // Images
-  | 'images.primary.small'
-  | 'images.primary.medium'
-  | 'images.primary.large'
-  | 'images.primary.highRes'
-  | 'images.variants.small'
-  | 'images.variants.medium'
-  | 'images.variants.large'
-  | 'images.variants.highRes'
-  // Item Info
-  | 'itemInfo.title'
-  | 'itemInfo.features'
-  | 'itemInfo.byLineInfo'
-  | 'itemInfo.contentInfo'
-  | 'itemInfo.classifications'
-  | 'itemInfo.externalIds'
-  | 'itemInfo.manufactureInfo'
-  | 'itemInfo.productInfo'
-  | 'itemInfo.technicalInfo'
-  // Offers V2 (new in Creators API)
-  | 'offersV2.listings.price'
-  | 'offersV2.listings.availability'
-  | 'offersV2.listings.condition'
-  | 'offersV2.listings.dealDetails'
-  | 'offersV2.listings.isBuyBoxWinner'
-  | 'offersV2.listings.merchantInfo'
-  // Browse
-  | 'browseNodeInfo.browseNodes'
-  | 'browseNodeInfo.browseNodes.ancestor'
-  | 'browseNodeInfo.browseNodes.salesRank'
-  // Reviews
-  | 'customerReviews.count'
-  | 'customerReviews.starRating'
-  // Other
-  | 'parentASIN';
-
+  | 'images.primary.small' | 'images.primary.medium' | 'images.primary.large' | 'images.primary.highRes'
+  | 'images.variants.small' | 'images.variants.medium' | 'images.variants.large' | 'images.variants.highRes'
+  | 'itemInfo.title' | 'itemInfo.features' | 'itemInfo.byLineInfo' | 'itemInfo.classifications'
+  | 'itemInfo.contentInfo' | 'itemInfo.externalIds' | 'itemInfo.manufactureInfo' | 'itemInfo.productInfo' | 'itemInfo.technicalInfo'
+  | 'offersV2.listings.price' | 'offersV2.listings.availability' | 'offersV2.listings.condition'
+  | 'offersV2.listings.dealDetails' | 'offersV2.listings.isBuyBoxWinner' | 'offersV2.listings.merchantInfo'
+  | 'browseNodeInfo.browseNodes' | 'browseNodeInfo.browseNodes.ancestor' | 'browseNodeInfo.browseNodes.salesRank'
+  | 'customerReviews.count' | 'customerReviews.starRating' | 'parentASIN';
 export interface GetItemsRequest {
-  itemIds: string[];
-  itemIdType: ItemIdType;
-  marketplace: string;
-  partnerTag: string;
-  resources: CreatorsResource[];
+  itemIds: string[]; itemIdType: ItemIdType; marketplace: string; partnerTag: string; resources: CreatorsResource[];
 }
-
-// ============================================================================
-// API Response Types
-// ============================================================================
-
-export interface ImageSize {
-  URL: string;
-  Height: number;
-  Width: number;
+export interface SearchItemsParams {
+  keywords: string; searchIndex?: string; browseNodeId?: string; itemCount?: number; itemPage?: number;
+  minPrice?: number; maxPrice?: number; sortBy?: string;
+  minSavingPercent?: number; deliveryFlags?: Array<'Prime'>;
 }
-
-export interface ItemImages {
-  Primary?: {
-    Small?: ImageSize;
-    Medium?: ImageSize;
-    Large?: ImageSize;
-    HighRes?: ImageSize;
-  };
-  Variants?: Array<{
-    Small?: ImageSize;
-    Medium?: ImageSize;
-    Large?: ImageSize;
-    HighRes?: ImageSize;
-  }>;
-}
-
+export interface ImageSize { url?: string; height?: number; width?: number }
+interface ImageSet { small?: ImageSize; medium?: ImageSize; large?: ImageSize; hiRes?: ImageSize }
+export interface ItemImages { primary?: ImageSet; variants?: ImageSet[] }
+interface DisplayValue { displayValue?: string }
 export interface ItemInfo {
-  Title?: {
-    DisplayValue: string;
-    Label: string;
-    Locale: string;
-  };
-  Features?: {
-    DisplayValues: string[];
-    Label: string;
-    Locale: string;
-  };
-  ByLineInfo?: {
-    Brand?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    Manufacturer?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-  };
-  ProductInfo?: {
-    Color?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    Size?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    ItemDimensions?: {
-      Height?: { DisplayValue: number; Unit: string };
-      Length?: { DisplayValue: number; Unit: string };
-      Width?: { DisplayValue: number; Unit: string };
-      Weight?: { DisplayValue: number; Unit: string };
-    };
-  };
-  TechnicalInfo?: {
-    Formats?: {
-      DisplayValues: string[];
-      Label: string;
-      Locale: string;
-    };
-  };
-  Classifications?: {
-    Binding?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    ProductGroup?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-  };
-  ManufactureInfo?: {
-    ItemPartNumber?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    Model?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-    Warranty?: {
-      DisplayValue: string;
-      Label: string;
-      Locale: string;
-    };
-  };
+  title?: DisplayValue; features?: { displayValues?: string[] };
+  byLineInfo?: { brand?: DisplayValue; manufacturer?: DisplayValue };
 }
-
-export interface PriceInfo {
-  Amount: number;
-  Currency: string;
-  DisplayAmount: string;
-  PricePerUnit?: number;
-  Savings?: {
-    Amount: number;
-    Currency: string;
-    DisplayAmount: string;
-    Percentage: number;
-  };
-}
-
+interface Money { amount?: number; currency?: string; displayAmount?: string }
+export interface PriceInfo { money?: Money; savings?: { money?: Money; percentage?: number } }
 export interface OfferListing {
-  Price?: PriceInfo;
-  SavingBasis?: PriceInfo;
-  Availability?: {
-    MaxOrderQuantity?: number;
-    Message?: string;
-    MinOrderQuantity?: number;
-    Type?: string;
-  };
-  Condition?: {
-    Value: string;
-    SubCondition?: {
-      Value: string;
-    };
-  };
-  IsBuyBoxWinner?: boolean;
-  MerchantInfo?: {
-    DefaultShippingCountry?: string;
-    FeedbackCount?: number;
-    FeedbackRating?: number;
-    Id?: string;
-    Name?: string;
-  };
-  DealDetails?: {
-    AccessDeniedMessage?: string;
-    DealEndTime?: string;
-    DealStartTime?: string;
-    DealType?: string;
-    PercentClaimed?: number;
-  };
+  price?: PriceInfo; savingBasis?: { money?: Money }; isBuyBoxWinner?: boolean;
+  availability?: { message?: string; type?: string };
+  dealDetails?: { dealType?: string; dealEndTime?: string };
 }
-
-export interface OffersV2 {
-  Listings?: OfferListing[];
-  Summaries?: Array<{
-    Condition?: { Value: string };
-    HighestPrice?: PriceInfo;
-    LowestPrice?: PriceInfo;
-    OfferCount?: number;
-  }>;
-}
-
-export interface CustomerReviews {
-  Count?: number;
-  StarRating?: {
-    Value: number;
-  };
-}
-
-export interface BrowseNode {
-  Id: string;
-  DisplayName: string;
-  ContextFreeName?: string;
-  IsRoot?: boolean;
-  Ancestor?: BrowseNode;
-  SalesRank?: number;
-}
-
-export interface BrowseNodeInfo {
-  BrowseNodes?: BrowseNode[];
-}
-
+export interface OffersV2 { listings?: OfferListing[] }
+export interface CustomerReviews { count?: number; starRating?: { value?: number } }
+export interface BrowseNode { id?: string; displayName?: string; contextFreeName?: string }
+export interface BrowseNodeInfo { browseNodes?: BrowseNode[] }
 export interface CreatorsApiItem {
-  ASIN: string;
-  DetailPageURL?: string;
-  Images?: ItemImages;
-  ItemInfo?: ItemInfo;
-  OffersV2?: OffersV2;
-  CustomerReviews?: CustomerReviews;
-  BrowseNodeInfo?: BrowseNodeInfo;
-  ParentASIN?: string;
+  asin?: string; detailPageURL?: string; images?: ItemImages; itemInfo?: ItemInfo;
+  offersV2?: OffersV2; customerReviews?: CustomerReviews; browseNodeInfo?: BrowseNodeInfo; parentASIN?: string;
 }
-
 export interface GetItemsResponse {
-  ItemsResult?: {
-    Items?: CreatorsApiItem[];
-  };
-  Errors?: Array<{
-    Code: string;
-    Message: string;
-  }>;
+  itemsResult?: { items?: CreatorsApiItem[] };
+  searchResult?: { items?: CreatorsApiItem[]; totalResultCount?: number };
+  errors?: Array<{ code?: string; message?: string }>;
 }
-
-// ============================================================================
-// Normalized Product Data (for adapter)
-// ============================================================================
-
 export interface CreatorsProductData {
-  asin: string;
-  title: string;
-  brand: string | null;
-  price: number | null;
-  originalPrice: number | null;
-  currency: string;
-  rating: number | null;
-  totalReviews: number | null;
-  imageUrl: string | null;
-  images: string[];
-  features: string[];
-  description: string | null;
-  url: string;
-  availability: string | null;
-  isBuyBoxWinner: boolean;
-  dealType: string | null;
-  dealEndTime: string | null;
-  categories: string[];
+  asin: string; title: string; brand: string | null; price: number | null; originalPrice: number | null;
+  currency: string; rating: number | null; totalReviews: number | null; imageUrl: string | null;
+  images: string[]; features: string[]; description: string | null; url: string; availability: string | null;
+  isBuyBoxWinner: boolean; dealType: string | null; dealEndTime: string | null; categories: string[];
 }
-
-// ============================================================================
-// Result Types
-// ============================================================================
-
-export interface CreatorsError {
-  code: string;
-  message: string;
-}
-
-export type CreatorsResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: CreatorsError };
-
+export interface CreatorsError { code: string; message: string }
+export type CreatorsResult<T> = { success: true; data: T } | { success: false; error: CreatorsError };
 export type GetItemsResult = CreatorsResult<CreatorsProductData[]>;
-
-// ============================================================================
-// Default Resources
-// ============================================================================
-
-/**
- * Default resources to request for product details
- * Includes all commonly needed fields
- */
+export type SearchItemsResult = { success: true; data: CreatorsProductData[]; totalResults?: number } | { success: false; error: CreatorsError };
+// Request only the catalog fields used by the storefront; omit review resources.
 export const DEFAULT_RESOURCES: CreatorsResource[] = [
-  // Images
-  'images.primary.large',
-  'images.primary.highRes',
-  'images.variants.large',
-  // Item Info
-  'itemInfo.title',
-  'itemInfo.features',
-  'itemInfo.byLineInfo',
-  'itemInfo.classifications',
-  'itemInfo.productInfo',
-  // Offers V2
-  'offersV2.listings.price',
-  'offersV2.listings.availability',
-  'offersV2.listings.condition',
-  'offersV2.listings.dealDetails',
-  'offersV2.listings.isBuyBoxWinner',
-  'offersV2.listings.merchantInfo',
-  // Reviews
-  'customerReviews.count',
-  'customerReviews.starRating',
-  // Browse
-  'browseNodeInfo.browseNodes',
+  'images.primary.large', 'images.variants.large', 'itemInfo.title', 'itemInfo.features',
+  'itemInfo.byLineInfo', 'offersV2.listings.price', 'offersV2.listings.availability',
+  'offersV2.listings.isBuyBoxWinner', 'offersV2.listings.dealDetails', 'browseNodeInfo.browseNodes',
 ];

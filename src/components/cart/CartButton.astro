@@ -119,7 +119,7 @@ const { lang } = Astro.props;
     title: string;
     brand: string;
     image: string;
-    price: number;
+    price: number | null;
     currency: string;
     affiliateUrl: string;
     marketplace: string; // 'amazon.com' | 'amazon.es'
@@ -178,7 +178,7 @@ const { lang } = Astro.props;
     // Sanitize price to prevent NaN issues
     const sanitizedProduct = {
       ...product,
-      price: isNaN(product.price) ? 0 : product.price
+      price: typeof product.price === 'number' && Number.isFinite(product.price) && product.price >= 0 ? product.price : null
     };
 
     const items = getCartItems();

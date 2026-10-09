@@ -30,7 +30,7 @@ const texts = {
     loading: 'Cargando...',
     noMore: 'No hay más productos',
     retry: 'Reintentar',
-    error: 'Error al cargar',
+    error: 'El catálogo no está disponible en este momento. Inténtalo de nuevo más tarde.',
     buy: 'Ver en Amazon',
     addToCart: 'Agregar al carrito',
     addedToCart: 'Agregado al carrito',
@@ -40,7 +40,7 @@ const texts = {
     loading: 'Loading...',
     noMore: 'No more products',
     retry: 'Retry',
-    error: 'Failed to load',
+    error: 'The catalog is unavailable right now. Please try again later.',
     buy: 'View on Amazon',
     addToCart: 'Add to cart',
     addedToCart: 'Added to cart',
@@ -91,7 +91,7 @@ const categories = [
 ];
 ---
 
-<div class="feed" id="reel-feed" data-lang={lang} data-category={category}>
+<div class="feed" id="reel-feed" data-catalog-texts={JSON.stringify(t)} data-lang={lang} data-category={category}>
   
   <!-- Floating Top Controls Bar - Search, Sections, Filters, Category -->
   <div class="feed-controls" id="feed-controls">
@@ -243,7 +243,10 @@ const categories = [
   
 </div>
 
-<script define:vars={{ lang, t: texts[lang] }}>
+<script>
+// @ts-nocheck -- Existing feed controller uses browser DOM state.
+import { escapeHtml, safeCatalogUrl, formatCatalogPrice, readCatalogResponse, catalogUnavailableMessage } from '../../lib/catalog-ui.mjs';
+const t = JSON.parse(document.getElementById('reel-feed')?.dataset.catalogTexts || '{}');
 class Feed {
   constructor() {
     this.container = document.getElementById('reel-feed');
@@ -297,20 +300,9 @@ class Feed {
     if (this.container) this.init();
   }
 
-  // Get region from localStorage or default based on lang
-  getRegionFromStorage() {
-    try {
-      const saved = localStorage.getItem('preferredRegion');
-      if (saved) {
-        const region = JSON.parse(saved);
-        return region.code || (this.lang === 'es' ? 'ES' : 'US');
-      }
-    } catch (e) {
-      console.error('[Feed] Error reading region:', e);
-    }
-    return this.lang === 'es' ? 'ES' : 'US';
-  }
-  
+  // Marketplace availability is independent of interface language.
+  getRegionFromStorage() { return 'US'; }
+
   async init() {
     this.setupEvents();
     this.setupVideoObserver();
@@ -322,7 +314,6 @@ class Feed {
 
   // Setup IntersectionObserver for infinite scroll (more reliable than scroll events with snap)
   setupInfiniteScrollObserver() {
-    console.log('[Feed] Setting up infinite scroll...', { sentinel: !!this.sentinel, scroll: !!this.scroll });
 
     if (!this.sentinel || !this.scroll) {
       console.warn('[Feed] Missing sentinel or scroll container!');
@@ -331,9 +322,7 @@ class Feed {
 
     this.infiniteScrollObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        console.log('[Feed] Observer entry:', { isIntersecting: entry.isIntersecting, loading: this.loading, hasMore: this.hasMore });
         if (entry.isIntersecting && !this.loading && this.hasMore) {
-          console.log('[Feed] Sentinel visible - triggering load');
           this.load();
         }
       });
@@ -344,7 +333,6 @@ class Feed {
     });
 
     this.infiniteScrollObserver.observe(this.sentinel);
-    console.log('[Feed] Infinite scroll observer initialized');
   }
 
   // Setup observer for tracking product views
@@ -425,7 +413,6 @@ class Feed {
           })
         });
       }
-      console.log(`[Feed] Tracked ${views.length} product views with engagement data`);
     } catch (error) {
       // Silently fail - view tracking is not critical
       console.warn('[Feed] Failed to track views:', error);
@@ -448,7 +435,6 @@ class Feed {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(signal)
       }).catch(() => {}); // Silent fail
-      console.log(`[Feed] Tracked ${type} for ${asin.slice(-6)}`);
     } else {
       // Queue low-value signals
       this.pendingViews.push(signal);
@@ -563,6 +549,9 @@ class Feed {
   }
 
   reloadFeed() {
+    this.requestController?.abort();
+    this.requestId = (this.requestId || 0) + 1;
+    this.loading = false;
     this.page = 1;
     this.products = [];
     this.seen.clear();
@@ -941,10 +930,9 @@ class Feed {
 
     // Listen for region changes (from RegionSelector)
     window.addEventListener('region:change', (e) => {
-      const newRegion = e.detail?.code;
+      const newRegion = 'US';
       if (newRegion && newRegion !== this.region) {
         this.region = newRegion;
-        console.log('[Feed] Region changed to:', newRegion);
         // Note: RegionSelector already reloads the page, but we save it here for consistency
       }
     });
@@ -963,6 +951,9 @@ class Feed {
   }
   
   changeCategory(cat) {
+    this.requestController?.abort();
+    this.requestId = (this.requestId || 0) + 1;
+    this.loading = false;
     this.category = cat;
     this.page = 1;
     this.products = [];
@@ -976,6 +967,9 @@ class Feed {
 
   // Handle search query changes
   changeSearch(query) {
+    this.requestController?.abort();
+    this.requestId = (this.requestId || 0) + 1;
+    this.loading = false;
     this.searchQuery = query;
     this.page = 1;
     this.products = [];
@@ -1000,7 +994,6 @@ class Feed {
 
   // Insert a product from Amazon link at the top of the feed
   insertAmazonProduct(product) {
-    console.log('[Feed] Inserting Amazon product:', product.title);
 
     // Don't add if we've already seen this product
     if (this.seen.has(product.asin)) {
@@ -1052,6 +1045,8 @@ class Feed {
   async load() {
     if (this.loading || !this.hasMore) return;
 
+    const requestId = this.requestId = (this.requestId || 0) + 1;
+    this.requestController = new AbortController();
     this.loading = true;
     this.loader?.classList.add('show');
     this.errorEl?.classList.remove('show');
@@ -1064,35 +1059,20 @@ class Feed {
       let filterParams = '';
       if (this.currentFilters) {
         const f = this.currentFilters;
-        if (f.minPrice) filterParams += `&minPrice=${f.minPrice}`;
-        if (f.maxPrice) filterParams += `&maxPrice=${f.maxPrice}`;
-        if (f.minRating) filterParams += `&minRating=${f.minRating}`;
-        if (f.sortBy && f.sortBy !== 'relevance') filterParams += `&sortBy=${f.sortBy}`;
+        if (typeof f.minPrice === 'number' && Number.isFinite(f.minPrice) && f.minPrice >= 0) filterParams += `&minPrice=${f.minPrice}`;
+        if (typeof f.maxPrice === 'number' && Number.isFinite(f.maxPrice) && f.maxPrice >= 0) filterParams += `&maxPrice=${f.maxPrice}`;
+        if (['price_asc', 'price_desc'].includes(f.sortBy)) filterParams += `&sortBy=${f.sortBy}`;
         if (f.dealsOnly) filterParams += `&dealsOnly=true`;
         if (f.primeOnly) filterParams += `&primeOnly=true`;
       }
 
-      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&region=${this.region}&limit=5${exclude}${searchParam}${filterParams}`);
-      const data = await res.json();
+      const res = await fetch(`/api/feed/products?page=${this.page}&category=${this.category}&lang=${this.lang}&region=${this.region}&limit=5${exclude}${searchParam}${filterParams}`, { signal: this.requestController.signal });
+      const data = await readCatalogResponse(res, this.lang);
+      if (requestId !== this.requestId) return;
       
-      if (!data.success) throw new Error(data.error);
-      
-      // Debug: Log video availability
-      console.log('[Feed] ===== VIDEO DEBUG =====');
-      console.log('[Feed] videoStats:', data.videoStats);
-      console.log('[Feed] mediaMode:', this.mediaMode);
-      const productsWithVideo = data.products.filter(p => p.youtubeVideo?.videoId);
-      console.log(`[Feed] Total products: ${data.products.length}`);
-      console.log(`[Feed] Products with video: ${productsWithVideo.length}`);
-      if (productsWithVideo.length > 0) {
-        console.log('[Feed] First video:', productsWithVideo[0].youtubeVideo);
-      }
-      console.log('[Feed] ========================');
-
       const newProducts = data.products.filter(p => !this.seen.has(p.asin));
 
       // Debug logging
-      console.log(`[Feed] Loaded page ${this.page}: ${data.products.length} total, ${newProducts.length} new, hasMore=${data.hasMore}`);
 
       if (newProducts.length > 0) {
         newProducts.forEach(p => this.seen.add(p.asin));
@@ -1108,7 +1088,6 @@ class Feed {
 
       // If no new products but API returned products (all duplicates), try next page
       if (newProducts.length === 0 && data.products.length > 0 && data.hasMore) {
-        console.log('[Feed] All products were duplicates, loading next page...');
         this.page++;
         this.loading = false;
         this.loader?.classList.remove('show');
@@ -1116,7 +1095,6 @@ class Feed {
       }
 
       if (!this.hasMore) {
-        console.log('[Feed] No more products to load');
         this.endEl?.classList.add('show');
         this.skeleton?.classList.add('hide');
         this.searchSkeleton?.classList.add('hide');
@@ -1125,15 +1103,19 @@ class Feed {
       // Dispatch search results event to clear loading state
       window.dispatchEvent(new CustomEvent('search:results', { detail: { count: newProducts.length } }));
     } catch (e) {
-      console.error(e);
+      if (requestId !== this.requestId || e.name === 'AbortError') return;
+      const message = this.errorEl?.querySelector('p');
+      if (message) message.textContent = catalogUnavailableMessage(this.lang);
       this.errorEl?.classList.add('show');
       this.skeleton?.classList.add('hide');
       this.searchSkeleton?.classList.add('hide');
       // Still clear search loading on error
       window.dispatchEvent(new CustomEvent('search:results', { detail: { count: 0, error: true } }));
     } finally {
-      this.loading = false;
-      this.loader?.classList.remove('show');
+      if (requestId === this.requestId) {
+        this.loading = false;
+        this.loader?.classList.remove('show');
+      }
     }
   }
   
@@ -1155,76 +1137,18 @@ class Feed {
     el.dataset.asin = p.asin;
     el.dataset.category = p.category || this.category;
     
-    const discount = p.discountPercent || (p.originalPrice 
-      ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) 
-      : 0);
-    
-    const price = new Intl.NumberFormat(this.lang === 'es' ? 'es-ES' : 'en-US', {
-      style: 'currency', currency: p.currency || 'EUR'
-    }).format(p.price);
-    
-    const oldPrice = p.originalPrice ? new Intl.NumberFormat(this.lang === 'es' ? 'es-ES' : 'en-US', {
-      style: 'currency', currency: p.currency || 'EUR'
-    }).format(p.originalPrice) : '';
-    
-    // Check if product has YouTube video - always show video if available
-    const hasVideo = p.youtubeVideo && p.youtubeVideo.videoId;
-    const showVideo = hasVideo; // Always prefer video when available
-    const thumbUrl = p.youtubeVideo?.thumbnail || `https://i.ytimg.com/vi/${p.youtubeVideo?.videoId}/maxresdefault.jpg`;
-    
-    // Update slide class if showing video
-    if (showVideo) {
-      // Only use portrait (short) style if explicitly marked as short, otherwise landscape
-      const isShort = p.youtubeVideo.isShort === true;
-      el.className = isShort ? 'slide slide-video' : 'slide slide-video slide-video-landscape';
-      el.dataset.videoId = p.youtubeVideo.videoId;
-    }
-    
-    const mediaContent = showVideo 
-      ? `<div class="video-fullscreen">
-          <div class="video-loading">
-            <img src="${thumbUrl}" alt="" class="video-thumb" />
-            <div class="video-loader-overlay">
-              <div class="video-spinner"></div>
-            </div>
-          </div>
-          <iframe 
-            src="" 
-            title="${p.youtubeVideo.title}"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-            class="video-iframe"
-            data-video-id="${p.youtubeVideo.videoId}"
-          ></iframe>
-          <div class="video-tap-area" title="${this.lang === 'es' ? 'Tocar para pausar' : 'Tap to pause'}"></div>
-          <div class="video-pause-indicator">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-            </svg>
-          </div>
-          <div class="video-channel">
-            <svg viewBox="0 0 24 24" fill="#ff0000" width="16" height="16">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-              <polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/>
-            </svg>
-            <span>${p.youtubeVideo.channelTitle || 'YouTube'}</span>
-          </div>
-          <button class="video-sound-btn" data-muted="false" title="${this.lang === 'es' ? 'Silenciar' : 'Mute'}">
-            <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
-              <line x1="22" y1="9" x2="16" y2="15"/>
-              <line x1="16" y1="9" x2="22" y2="15"/>
-            </svg>
-            <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            </svg>
-          </button>
-        </div>`
-      : `<img src="${p.featuredImage?.url || ''}" alt="${p.title}" loading="lazy" class="product-img" />`;
-    
+    const hasPrice = typeof p.price === 'number' && Number.isFinite(p.price) && p.price >= 0;
+    const hasOriginalPrice = hasPrice && typeof p.originalPrice === 'number' && p.originalPrice > p.price;
+    const discount = hasOriginalPrice ? Math.round((1 - p.price / p.originalPrice) * 100) : 0;
+    const price = escapeHtml(formatCatalogPrice(p.price, p.currency, this.lang));
+    const oldPrice = hasOriginalPrice ? escapeHtml(formatCatalogPrice(p.originalPrice, p.currency, this.lang)) : '';
+    const imageUrl = safeCatalogUrl(p.featuredImage?.url);
+    const affiliateUrl = escapeHtml(safeCatalogUrl(p.affiliateUrl));
+    const showVideo = false;
+    const mediaContent = imageUrl
+      ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(p.title)}" loading="lazy" class="product-img" />`
+      : `<div class="product-img" role="img" aria-label="${this.lang === 'es' ? 'Imagen no disponible' : 'Image unavailable'}"></div>`;
+
     // Build badges HTML - includes new MCP badges
     const badges = p.badges || [];
     const badgesHtml = `
@@ -1262,20 +1186,20 @@ class Feed {
       </div>
 
       <div class="slide-sidebar">
-        <button class="action share-btn" data-url="${p.affiliateUrl}">
+        <button class="action share-btn" data-url="${affiliateUrl}" ${affiliateUrl ? '' : 'disabled'}>
           <svg viewBox="0 0 24 24"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684zm0-9.316a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z"/></svg>
         </button>
-        <button class="action save-btn" data-asin="${p.asin}">
+        <button class="action save-btn" data-asin="${escapeHtml(p.asin)}">
           <svg viewBox="0 0 24 24"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/></svg>
         </button>
       </div>
 
       <div class="slide-footer">
         <div class="footer-top-row">
-          <span class="brand">${p.brand || ''}</span>
+          <span class="brand">${escapeHtml(p.brand)}</span>
           ${badgesHtml}
         </div>
-        <h2 class="title" title="${p.title.replace(/"/g, '&quot;')}">${this.truncateTitle(p.title)}</h2>
+        <h2 class="title" title="${escapeHtml(p.title)}">${escapeHtml(this.truncateTitle(p.title))}</h2>
         ${this.getRatingHtml(p)}
         ${this.getReviewsHtml(p)}
         <div class="pricing">
@@ -1285,16 +1209,16 @@ class Feed {
         </div>
         ${this.getPriceContextHtml(p)}
         <div class="cta-row">
-          <button type="button" class="add-cart-btn" data-add-to-cart
-            data-asin="${p.asin || ''}"
-            data-product-id="${p.productId || p.asin || ''}"
-            data-title="${(p.title || '').replace(/"/g, '&quot;')}"
-            data-brand="${(p.brand || '').replace(/"/g, '&quot;')}"
-            data-image="${p.featuredImage?.url || ''}"
-            data-price="${p.price || 0}"
-            data-currency="${p.currency || 'EUR'}"
-            data-affiliate-url="${p.affiliateUrl || ''}"
-            data-marketplace="${p.affiliateUrl?.includes('amazon.es') ? 'amazon.es' : 'amazon.com'}"
+          <button type="button" class="add-cart-btn" data-add-to-cart ${affiliateUrl ? '' : 'disabled'}
+            data-asin="${escapeHtml(p.asin)}"
+            data-product-id="${escapeHtml(p.productId || p.asin)}"
+            data-title="${escapeHtml(p.title)}"
+            data-brand="${escapeHtml(p.brand)}"
+            data-image="${escapeHtml(imageUrl)}"
+            data-price="${hasPrice ? p.price : ''}"
+            data-currency="${escapeHtml(p.currency)}"
+            data-affiliate-url="${affiliateUrl}"
+            data-marketplace="amazon.com"
             aria-label="${this.texts.addToCart || 'Agregar al carrito'}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cart-icon">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -1304,11 +1228,11 @@ class Feed {
             <span class="cart-label">${this.lang === 'es' ? 'Carrito' : 'Cart'}</span>
             <span class="plus-badge">+</span>
           </button>
-          <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="cta">
+          ${affiliateUrl ? `<a href="${affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow sponsored" class="cta">
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
             ${this.texts.buy}
             <svg viewBox="0 0 20 20" fill="currentColor" class="arrow"><path d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
-          </a>
+          </a>` : ''}
         </div>
       </div>
     `;
@@ -1454,15 +1378,15 @@ class Feed {
 
       // Get product data from data attributes
       const btn = e.currentTarget;
-      const parsedPrice = parseFloat(btn.dataset.price || '0');
+      const parsedPrice = parseFloat(btn.dataset.price);
       const product = {
         asin: btn.dataset.asin || '',
         productId: btn.dataset.productId || '',
         title: btn.dataset.title || '',
         brand: btn.dataset.brand || '',
         image: btn.dataset.image || '',
-        price: isNaN(parsedPrice) ? 0 : parsedPrice,
-        currency: btn.dataset.currency || 'EUR',
+        price: Number.isFinite(parsedPrice) ? parsedPrice : '',
+        currency: btn.dataset.currency || '',
         affiliateUrl: btn.dataset.affiliateUrl || '',
         marketplace: btn.dataset.marketplace || 'amazon.com',
       };
@@ -1512,7 +1436,7 @@ class Feed {
   }
 
   getRatingHtml(p) {
-    if (!p.rating) return '';
+    if (typeof p.rating !== 'number' || !Number.isFinite(p.rating) || p.rating <= 0 || p.rating > 5) return '';
     const stars = Math.round(p.rating);
     const reviewsText = this.lang === 'es' ? 'opiniones' : 'reviews';
     const hasReviews = p.topReviews && p.topReviews.reviews && p.topReviews.reviews.length > 0;
@@ -1660,10 +1584,8 @@ class Feed {
     const threshold = clientHeight * 2;
 
     // Debug logging
-    console.log(`[Feed] checkPreload: distanceFromBottom=${Math.round(distanceFromBottom)}, threshold=${Math.round(threshold)}, slides=${slides.length}, hasMore=${this.hasMore}, loading=${this.loading}`);
 
     if (distanceFromBottom <= threshold) {
-      console.log('[Feed] Loading more products...');
       this.load();
     }
   }

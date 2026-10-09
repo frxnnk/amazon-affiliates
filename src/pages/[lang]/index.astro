@@ -25,8 +25,8 @@ if (!validLangs.includes(lang)) {
 const siteTitle = siteConfig.site.name;
 const pageTitle = siteConfig.site.tagline[lang];
 const metaDescription = lang === 'es'
-  ? 'Descubre los mejores productos de Amazon con ofertas exclusivas y precios actualizados.'
-  : 'Discover the best Amazon products with exclusive deals and updated prices.';
+  ? 'Encuentra tu próxima compra. Explora productos de Amazon Estados Unidos y guarda tus favoritos.'
+  : 'Find your next purchase. Explore products from Amazon US and save your favorites.';
 
 const trendingSearches = lang === 'es' 
   ? ['iPhone 15', 'AirPods Pro', 'PS5', 'MacBook', 'Samsung Galaxy', 'Xiaomi']
@@ -101,7 +101,7 @@ const t = texts[lang];
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="feed-mode">
+  <body class="feed-mode" data-catalog-texts={JSON.stringify(t)}>
     
     <!-- Floating Header (only visible in search/profile on mobile, always on desktop) -->
     <header class="header hidden" id="app-header">
@@ -392,8 +392,12 @@ const t = texts[lang];
       </button>
     </nav>
 
-    <script define:vars={{ lang, t: texts[lang] }}>
-      document.addEventListener('DOMContentLoaded', () => {
+    <script>
+      // @ts-nocheck -- Existing home controller uses browser DOM state.
+      import { escapeHtml, safeCatalogUrl, formatCatalogPrice, readCatalogResponse, catalogUnavailableMessage } from '../../lib/catalog-ui.mjs';
+      const lang = document.documentElement.lang;
+      const t = JSON.parse(document.body.dataset.catalogTexts || '{}');
+      function initHome() {
         // ============ NAVIGATION ============
         const nav = document.getElementById('bottom-nav');
         const header = document.getElementById('app-header');
@@ -488,6 +492,8 @@ const t = texts[lang];
         const clearHistory = document.getElementById('clear-history');
         
         let searchTimeout;
+        let searchController;
+        let searchVersion = 0;
         const HISTORY_KEY = 'rewardHive_searchHistory';
         const MAX_HISTORY = 5;
 
@@ -518,9 +524,9 @@ const t = texts[lang];
           
           recentSection.style.display = 'block';
           recentChips.innerHTML = history.map(term => `
-            <button class="search-tag recent-tag" data-query="${term}">
-              <span class="tag-text">${term}</span>
-              <span class="tag-remove" data-remove="${term}">×</span>
+            <button class="search-tag recent-tag" data-query="${escapeHtml(term)}">
+              <span class="tag-text">${escapeHtml(term)}</span>
+              <span class="tag-remove" data-remove="${escapeHtml(term)}">×</span>
             </button>
           `).join('');
 
@@ -545,35 +551,39 @@ const t = texts[lang];
           searchInitial.style.display = state === 'initial' ? 'block' : 'none';
           searchSkeleton.style.display = state === 'loading' ? 'block' : 'none';
           searchResults.style.display = state === 'results' ? 'block' : 'none';
-          searchEmpty.style.display = state === 'empty' ? 'flex' : 'none';
+          searchEmpty.style.display = state === 'empty' || state === 'error' ? 'flex' : 'none';
+          searchEmpty.querySelector('.empty-text').textContent = state === 'error' ? catalogUnavailableMessage(lang) : t.noResults;
+          searchEmpty.querySelector('.empty-hint').textContent = state === 'error' ? '' : t.tryDifferent;
         }
 
         async function performSearch(query) {
-          if (!query || query.length < 2) {
+          searchController?.abort();
+          const version = ++searchVersion;
+          if (!query || query.trim().length < 2) {
             showState('initial');
-            searchWrap.classList.remove('has-value');
+            searchWrap.classList.remove('has-value', 'is-loading');
             return;
           }
-
+          searchController = new AbortController();
           searchWrap.classList.add('has-value', 'is-loading');
           showState('loading');
-
           try {
-            const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&lang=${lang}`);
-            const data = await res.json();
-
-            searchWrap.classList.remove('is-loading');
-
-            if (data.success && data.products?.length) {
+            const params = new URLSearchParams({ q: query.trim(), lang, region: 'US' });
+            const res = await fetch(`/api/search?${params}`, { signal: searchController.signal });
+            const data = await readCatalogResponse(res, lang);
+            if (version !== searchVersion) return;
+            if (data.products.length) {
               saveSearchHistory(query);
               renderResults(data.products);
               showState('results');
             } else {
               showState('empty');
             }
-          } catch {
-            searchWrap.classList.remove('is-loading');
-            showState('empty');
+          } catch (error) {
+            if (version !== searchVersion || error.name === 'AbortError') return;
+            showState('error');
+          } finally {
+            if (version === searchVersion) searchWrap.classList.remove('is-loading');
           }
         }
 
@@ -584,23 +594,28 @@ const t = texts[lang];
           const addToCartText = lang === 'es' ? 'Agregar' : 'Add';
 
           resultsGrid.innerHTML = products.map(p => {
-            const stars = p.rating ? renderStars(p.rating) : '';
-            const reviewsText = p.totalReviews ? `<span class="result-reviews-count">(${formatNumber(p.totalReviews)})</span>` : '';
-            const discount = p.discount > 0 ? `<span class="result-badge">-${p.discount}%</span>` : '';
+            const stars = typeof p.rating === 'number' && p.rating > 0 && p.rating <= 5 ? renderStars(p.rating) : '';
+            const reviewsText = typeof p.totalReviews === 'number' && p.totalReviews > 0 ? `<span class="result-reviews-count">(${formatNumber(p.totalReviews)})</span>` : '';
+            const hasPrice = typeof p.price === 'number' && Number.isFinite(p.price) && p.price >= 0;
+            const hasOriginalPrice = hasPrice && typeof p.originalPrice === 'number' && p.originalPrice > p.price;
+            const percent = hasOriginalPrice ? Math.round((1 - p.price / p.originalPrice) * 100) : 0;
+            const discount = percent > 0 ? `<span class="result-badge">-${percent}%</span>` : '';
             const prime = p.isPrime ? '<span class="result-prime-badge">Prime</span>' : '';
-            const oldPrice = p.formattedOriginalPrice ? `<span class="result-item-old">${p.formattedOriginalPrice}</span>` : '';
-            const imageUrl = p.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23f3f4f6" width="100" height="100"/></svg>';
+            const oldPrice = hasOriginalPrice ? `<span class="result-item-old">${escapeHtml(formatCatalogPrice(p.originalPrice, p.currency, lang))}</span>` : '';
+            const price = escapeHtml(formatCatalogPrice(p.price, p.currency, lang));
+            const imageUrl = escapeHtml(safeCatalogUrl(p.image || p.featuredImage?.url));
+            const affiliateUrl = escapeHtml(safeCatalogUrl(p.affiliateUrl));
 
             return `
               <div class="result-item-wrap">
-                <a href="${p.affiliateUrl}" target="_blank" rel="noopener noreferrer nofollow" class="result-item">
+                <a ${affiliateUrl ? `href="${affiliateUrl}"` : 'aria-disabled="true"'} target="_blank" rel="noopener noreferrer nofollow" class="result-item">
                   <div class="result-item-img">
                     ${discount}
-                    <img src="${imageUrl}" alt="${p.title || ''}" loading="lazy" />
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(p.title)}" loading="lazy" />` : '<div aria-hidden="true"></div>'}
                   </div>
                   <div class="result-item-body">
-                    ${p.brand ? `<span class="result-item-brand">${p.brand}</span>` : ''}
-                    <h4 class="result-item-title">${p.title || 'Producto'}</h4>
+                    ${p.brand ? `<span class="result-item-brand">${escapeHtml(p.brand)}</span>` : ''}
+                    <h4 class="result-item-title">${escapeHtml(p.title || (lang === 'es' ? 'Producto' : 'Product'))}</h4>
                     ${stars || reviewsText ? `
                       <div class="result-item-meta">
                         ${stars}
@@ -608,7 +623,7 @@ const t = texts[lang];
                       </div>
                     ` : ''}
                     <div class="result-item-pricing">
-                      <span class="result-item-price">${p.formattedPrice || '---'}</span>
+                      <span class="result-item-price">${price}</span>
                       ${oldPrice}
                       ${prime}
                     </div>
@@ -616,13 +631,14 @@ const t = texts[lang];
                 </a>
                 <button
                   type="button"
-                  class="result-cart-btn"
-                  data-asin="${p.asin || ''}"
-                  data-title="${(p.title || '').replace(/"/g, '&quot;')}"
-                  data-brand="${(p.brand || '').replace(/"/g, '&quot;')}"
-                  data-image="${p.image || ''}"
-                  data-price="${p.formattedPrice || ''}"
-                  data-affiliate-url="${p.affiliateUrl || ''}"
+                  class="result-cart-btn" ${affiliateUrl ? '' : 'disabled'}
+                  data-asin="${escapeHtml(p.asin)}"
+                  data-title="${escapeHtml(p.title)}"
+                  data-brand="${escapeHtml(p.brand)}"
+                  data-image="${imageUrl}"
+                  data-price="${hasPrice ? p.price : ''}"
+                  data-currency="${escapeHtml(p.currency)}"
+                  data-affiliate-url="${affiliateUrl}"
                   aria-label="${addToCartText}"
                   title="${addToCartText}"
                 >
@@ -659,8 +675,8 @@ const t = texts[lang];
             title: btn.dataset.title || '',
             brand: btn.dataset.brand || '',
             image: btn.dataset.image || '',
-            price: btn.dataset.price || '',
-            currency: 'USD',
+            price: btn.dataset.price ? Number(btn.dataset.price) : null,
+            currency: btn.dataset.currency || '',
             affiliateUrl: btn.dataset.affiliateUrl || '',
             marketplace: 'amazon.com',
           };
@@ -694,6 +710,9 @@ const t = texts[lang];
         }
 
         searchInput?.addEventListener('input', (e) => {
+          searchController?.abort();
+          searchVersion++;
+          searchWrap.classList.remove('is-loading');
           clearTimeout(searchTimeout);
           const q = e.target.value.trim();
           
@@ -713,6 +732,8 @@ const t = texts[lang];
         searchInput?.addEventListener('blur', () => searchWrap?.classList.remove('focused'));
 
         searchClear?.addEventListener('click', () => {
+          clearTimeout(searchTimeout);
+          performSearch('');
           searchInput.value = '';
           searchWrap.classList.remove('has-value');
           showState('initial');
@@ -800,16 +821,17 @@ const t = texts[lang];
           } else {
             const cardsHtml = saved.map(item => {
               const isOldFormat = typeof item === 'string';
-              const asin = isOldFormat ? item : item.asin;
-              const title = isOldFormat ? asin : (item.title || 'Producto');
-              const brand = isOldFormat ? '' : (item.brand || '');
-              const image = isOldFormat ? '' : (item.image || '');
-              const price = isOldFormat ? '' : (item.price || '');
-              const url = isOldFormat ? 'https://www.amazon.com/dp/' + asin + '?tag=rewardhive-20' : (item.affiliateUrl || '#');
+              const rawAsin = isOldFormat ? item : item.asin;
+              const asin = escapeHtml(rawAsin);
+              const title = isOldFormat ? String(rawAsin) : (item.title || 'Producto');
+              const brand = isOldFormat ? '' : escapeHtml(item.brand);
+              const image = isOldFormat ? '' : escapeHtml(safeCatalogUrl(item.image));
+              const price = isOldFormat ? '' : escapeHtml(item.price);
+              const url = escapeHtml(safeCatalogUrl(isOldFormat ? 'https://www.amazon.com/dp/' + encodeURIComponent(rawAsin) + '?tag=rewardhive-20' : item.affiliateUrl));
               
               let imgHtml = '';
               if (image) {
-                imgHtml = '<img src="' + image + '" alt="' + title + '" loading="lazy" />';
+                imgHtml = '<img src="' + image + '" alt="' + escapeHtml(title) + '" loading="lazy" />';
               } else {
                 imgHtml = '<div class="saved-item-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/></svg></div>';
               }
@@ -819,7 +841,7 @@ const t = texts[lang];
               
               return '<a href="' + url + '" target="_blank" rel="noopener noreferrer nofollow" class="saved-item" data-asin="' + asin + '">' +
                 '<div class="saved-item-img">' + imgHtml + '</div>' +
-                '<div class="saved-item-info">' + brandHtml + '<h4 class="saved-item-title">' + truncateTitle(title, 60) + '</h4>' + priceHtml + '</div>' +
+                '<div class="saved-item-info">' + brandHtml + '<h4 class="saved-item-title">' + escapeHtml(truncateTitle(title, 60)) + '</h4>' + priceHtml + '</div>' +
                 '<button class="saved-item-remove" data-asin="' + asin + '" title="' + (lang === 'es' ? 'Eliminar' : 'Remove') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 18L18 6M6 6l12 12"/></svg></button>' +
               '</a>';
             }).join('');
@@ -847,7 +869,8 @@ const t = texts[lang];
         loadProfileUserName();
         updateSavedCount();
         loadSavedProducts();
-      });
+      }
+      initHome();
     </script>
   </body>
 </html>
