@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request }) => {
         const { product, score, validation, aiAnalysis } = deal;
         
         // Build affiliate URL
-        const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+        const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
         const domain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
         const affiliateUrl = `https://www.${domain}/dp/${product.asin}?tag=${affiliateTag}`;
 

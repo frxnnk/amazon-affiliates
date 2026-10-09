@@ -32,7 +32,7 @@ const REQUEST_TIMEOUT_MS = 5000;
  * Get partner tag from environment or use default
  */
 function getPartnerTag(): string {
-  return process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+  return process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
 }
 
 /**

@@ -758,7 +758,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     };
 
     // Get affiliate tag from environment
-    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
     const marketplace = REGION_TO_MARKETPLACE[region] || (lang === 'es' ? 'es' : 'com');
     const defaultCurrency = REGION_TO_CURRENCY[region] || (lang === 'es' ? 'EUR' : 'USD');
 

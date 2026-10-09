@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get affiliate tag
-    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
 
     // Get active keywords
     const keywords = await getDealAgentKeywords(true); // active only
