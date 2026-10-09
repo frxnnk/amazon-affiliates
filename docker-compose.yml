@@ -1,0 +1,32 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PUBLIC_CLERK_PUBLISHABLE_KEY: ${PUBLIC_CLERK_PUBLISHABLE_KEY}
+        PUBLIC_CLERK_SIGN_IN_URL: ${PUBLIC_CLERK_SIGN_IN_URL:-}
+        PUBLIC_CLERK_SIGN_UP_URL: ${PUBLIC_CLERK_SIGN_UP_URL:-}
+        PUBLIC_CLERK_AFTER_SIGN_IN_URL: ${PUBLIC_CLERK_AFTER_SIGN_IN_URL:-}
+        PUBLIC_CLERK_AFTER_SIGN_UP_URL: ${PUBLIC_CLERK_AFTER_SIGN_UP_URL:-}
+        ASTRO_DB_REMOTE_URL: ${ASTRO_DB_REMOTE_URL}
+    expose:
+      - "4321"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "4321"
+      DATA_DIR: /data
+    volumes:
+      - rewardhive-data:/data
+    restart: unless-stopped
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4321/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  rewardhive-data: {}
