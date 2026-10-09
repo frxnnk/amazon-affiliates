@@ -24,7 +24,7 @@ import {
 } from './rainforest-api';
 
 // Affiliate tag for building URLs
-const AFFILIATE_TAG = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
+const AFFILIATE_TAG = process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
 
 // Cache duration in hours
 const CACHE_HOURS_SEARCH = 4;

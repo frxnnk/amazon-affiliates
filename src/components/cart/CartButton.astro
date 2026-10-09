@@ -175,20 +175,26 @@ const { lang } = Astro.props;
 
   // Add to cart
   function addToCart(product: Omit<CartItem, 'quantity' | 'addedAt'>): boolean {
+    // Sanitize price to prevent NaN issues
+    const sanitizedProduct = {
+      ...product,
+      price: isNaN(product.price) ? 0 : product.price
+    };
+
     const items = getCartItems();
     const cartMarketplace = getCartMarketplace();
 
     // Check if mixing regions
-    if (cartMarketplace && product.marketplace && cartMarketplace !== product.marketplace) {
+    if (cartMarketplace && sanitizedProduct.marketplace && cartMarketplace !== sanitizedProduct.marketplace) {
       const currentLang = document.documentElement.lang || 'en';
       const message = currentLang === 'es'
-        ? `Tu carrito tiene productos de ${cartMarketplace}. ¿Quieres vaciar el carrito y agregar este producto de ${product.marketplace}?`
-        : `Your cart has products from ${cartMarketplace}. Do you want to clear the cart and add this product from ${product.marketplace}?`;
+        ? `Tu carrito tiene productos de ${cartMarketplace}. ¿Quieres vaciar el carrito y agregar este producto de ${sanitizedProduct.marketplace}?`
+        : `Your cart has products from ${cartMarketplace}. Do you want to clear the cart and add this product from ${sanitizedProduct.marketplace}?`;
 
       if (confirm(message)) {
         // Clear cart and add new product
         const newItems: CartItem[] = [{
-          ...product,
+          ...sanitizedProduct,
           quantity: 1,
           addedAt: Date.now()
         }];
@@ -198,13 +204,13 @@ const { lang } = Astro.props;
       return false;
     }
 
-    const existing = items.find(item => item.asin === product.asin);
+    const existing = items.find(item => item.asin === sanitizedProduct.asin);
 
     if (existing) {
       existing.quantity += 1;
     } else {
       items.push({
-        ...product,
+        ...sanitizedProduct,
         quantity: 1,
         addedAt: Date.now()
       });

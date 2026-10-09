@@ -36,23 +36,8 @@ export const POST: APIRoute = async ({ request }) => {
   const startTime = Date.now();
 
   try {
-    // Security check
-    const cronSecret = import.meta.env.CRON_SECRET || process.env.CRON_SECRET;
-    const authHeader = request.headers.get('Authorization');
+    // Authentication is enforced centrally by middleware.
     const cronHeader = request.headers.get('x-cron-secret');
-
-    // Allow if: has valid cron secret, or is admin (has auth header), or no security configured
-    const isAuthorized =
-      (cronSecret && cronHeader === cronSecret) ||
-      (authHeader && authHeader.startsWith('Bearer ')) ||
-      !cronSecret;
-
-    if (!isAuthorized) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' } as CronResponse), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     // Parse request body for optional configuration
     let body: {

@@ -18,8 +18,8 @@ const tokenCache: Map<RegionName, OAuthToken> = new Map();
  * Get OAuth configuration from environment variables
  */
 export function getOAuthConfig(): OAuthConfig | null {
-  const credentialId = import.meta.env.AMAZON_CREATORS_CREDENTIAL_ID;
-  const credentialSecret = import.meta.env.AMAZON_CREATORS_CREDENTIAL_SECRET;
+  const credentialId = process.env.AMAZON_CREATORS_CREDENTIAL_ID;
+  const credentialSecret = process.env.AMAZON_CREATORS_CREDENTIAL_SECRET;
 
   if (!credentialId || !credentialSecret) {
     return null;

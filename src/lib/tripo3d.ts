@@ -60,7 +60,7 @@ export interface TaskStatusResult {
  * Get API key from environment
  */
 function getApiKey(): string {
-  const apiKey = import.meta.env.TRIPO_API_KEY || process.env.TRIPO_API_KEY;
+  const apiKey = process.env.TRIPO_API_KEY;
   if (!apiKey) {
     throw new Error('TRIPO_API_KEY environment variable is not set');
   }

@@ -25,7 +25,7 @@ interface ConnectionResults {
 
 // Test RapidAPI connection
 async function testRapidAPI(): Promise<ConnectionResult> {
-  const apiKey = import.meta.env.RAPIDAPI_KEY || process.env.RAPIDAPI_KEY;
+  const apiKey = process.env.RAPIDAPI_KEY;
 
   if (!apiKey) {
     return { ok: false, message: 'No configurado' };
@@ -70,7 +70,7 @@ async function testRapidAPI(): Promise<ConnectionResult> {
 
 // Test OpenAI connection
 async function testOpenAI(): Promise<ConnectionResult> {
-  const apiKey = import.meta.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return { ok: false, message: 'No configurado' };
@@ -105,7 +105,7 @@ async function testOpenAI(): Promise<ConnectionResult> {
 
 // Test YouTube API connection
 async function testYouTube(): Promise<ConnectionResult> {
-  const apiKey = import.meta.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
+  const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey) {
     return { ok: false, message: 'No configurado' };
@@ -143,7 +143,7 @@ async function testYouTube(): Promise<ConnectionResult> {
 
 // Test Telegram Bot connection
 async function testTelegram(): Promise<ConnectionResult> {
-  const botToken = import.meta.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!botToken || botToken === 'tu_token_de_botfather') {
     return { ok: false, message: 'No configurado' };

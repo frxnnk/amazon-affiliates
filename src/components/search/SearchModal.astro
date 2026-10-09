@@ -910,8 +910,8 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
               data-title="${item.title.replace(/"/g, '&quot;')}"
               data-brand="${item.brand?.replace(/"/g, '&quot;') || ''}"
               data-image="${item.featuredImage?.url || ''}"
-              data-price="${item.price}"
-              data-currency="${item.currency}"
+              data-price="${item.price || 0}"
+              data-currency="${item.currency || 'USD'}"
               aria-label="${addToCartText}"
               title="${addToCartText}"
             >
@@ -943,13 +943,14 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
       return;
     }
 
+    const parsedPrice = parseFloat(btn.dataset.price || '0');
     const product = {
       asin: btn.dataset.asin || '',
       productId: btn.dataset.productId || '',
       title: btn.dataset.title || '',
       brand: btn.dataset.brand || '',
       image: btn.dataset.image || '',
-      price: parseFloat(btn.dataset.price || '0'),
+      price: isNaN(parsedPrice) ? 0 : parsedPrice,
       currency: btn.dataset.currency || 'USD',
       affiliateUrl: `/${currentLang}/products/${btn.dataset.productId}`,
       marketplace: 'amazon.com',

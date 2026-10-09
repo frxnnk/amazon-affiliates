@@ -62,7 +62,7 @@ export class DealHunterAgent extends BaseAgent {
     const keywordsToProcess = keywords.slice(0, config.maxKeywordsPerRun);
 
     // Get affiliate tag
-    const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
 
     // Process each keyword
     for (let i = 0; i < keywordsToProcess.length; i++) {
