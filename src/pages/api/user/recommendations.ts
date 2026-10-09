@@ -176,7 +176,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       });
       
       if (result.success && result.data && result.data.length > 0) {
-        const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+        const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'rewardhive-20';
         
         recommendations = result.data
           .filter(p => p.imageUrl && p.price && p.price > 0)
