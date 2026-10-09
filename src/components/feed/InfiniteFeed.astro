@@ -1454,13 +1454,14 @@ class Feed {
 
       // Get product data from data attributes
       const btn = e.currentTarget;
+      const parsedPrice = parseFloat(btn.dataset.price || '0');
       const product = {
         asin: btn.dataset.asin || '',
         productId: btn.dataset.productId || '',
         title: btn.dataset.title || '',
         brand: btn.dataset.brand || '',
         image: btn.dataset.image || '',
-        price: parseFloat(btn.dataset.price || '0'),
+        price: isNaN(parsedPrice) ? 0 : parsedPrice,
         currency: btn.dataset.currency || 'EUR',
         affiliateUrl: btn.dataset.affiliateUrl || '',
         marketplace: btn.dataset.marketplace || 'amazon.com',

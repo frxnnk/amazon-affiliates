@@ -4,13 +4,12 @@
  * POST /api/admin/generate-3d
  * 
  * Creates a 3D model from a product image using Tripo3D API.
- * The model is saved to /public/models/{productId}.glb
+ * Models are saved under DATA_DIR/models and served at /models/{productId}.glb
  */
 
 import type { APIRoute } from 'astro';
 import { createImageTo3DTask, getTaskStatus, waitForTask } from '@lib/tripo3d';
-import fs from 'fs/promises';
-import path from 'path';
+import { writeModel, validContentId } from '@lib/persistent-content';
 
 export const prerender = false;
 
@@ -25,7 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Parse request body
     const body: GenerateRequest = await request.json();
     
-    if (!body.productId || !body.imageUrl) {
+    if (!validContentId(body.productId) || !body.imageUrl) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -86,16 +85,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
       
       const modelBuffer = Buffer.from(await modelResponse.arrayBuffer());
-      const modelsDir = path.join(process.cwd(), 'public', 'models');
-      
-      // Ensure directory exists
-      await fs.mkdir(modelsDir, { recursive: true });
-      
-      const localPath = path.join(modelsDir, `${productId}.glb`);
-      await fs.writeFile(localPath, modelBuffer);
-      
-      const publicUrl = `/models/${productId}.glb`;
-      
+      const publicUrl = await writeModel(productId, modelBuffer);
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -136,6 +127,7 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     const taskId = url.searchParams.get('taskId');
     const productId = url.searchParams.get('productId');
+    if (productId && !validContentId(productId)) return Response.json({ error: 'Invalid product id' }, { status: 400 });
     
     if (!taskId) {
       return new Response(
@@ -155,12 +147,8 @@ export const GET: APIRoute = async ({ url }) => {
         const modelResponse = await fetch(status.modelUrl);
         if (modelResponse.ok) {
           const modelBuffer = Buffer.from(await modelResponse.arrayBuffer());
-          const modelsDir = path.join(process.cwd(), 'public', 'models');
-          await fs.mkdir(modelsDir, { recursive: true });
-          
-          const localPath = path.join(modelsDir, `${productId}.glb`);
-          await fs.writeFile(localPath, modelBuffer);
-          
+          await writeModel(productId, modelBuffer);
+
           return new Response(
             JSON.stringify({ 
               ...status,

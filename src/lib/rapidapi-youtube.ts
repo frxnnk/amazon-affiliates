@@ -60,7 +60,7 @@ const BLOCKED_CHANNELS = [
  * Check if RapidAPI YouTube is configured
  */
 export function isRapidAPIYouTubeConfigured(): boolean {
-  const apiKey = import.meta.env.RAPIDAPI_KEY || import.meta.env.RAINFOREST_API_KEY;
+  const apiKey = process.env.RAPIDAPI_KEY || process.env.RAINFOREST_API_KEY;
   return !!apiKey;
 }
 
@@ -186,7 +186,7 @@ export async function searchProductVideoRapidAPI(
   productName: string,
   lang: 'es' | 'en' = 'es'
 ): Promise<RapidAPIYouTubeResult> {
-  const apiKey = import.meta.env.RAPIDAPI_KEY || import.meta.env.RAINFOREST_API_KEY;
+  const apiKey = process.env.RAPIDAPI_KEY || process.env.RAINFOREST_API_KEY;
 
   if (!apiKey) {
     return {

@@ -82,5 +82,12 @@
     "description": "Design compelling homepage with featured products, popular lists, value proposition, and CTA for registration.",
     "tests": "npx playwright test tests/homepage.spec.ts - Homepage loads with all sections.",
     "status": true
+  },
+  {
+    "id": "openship_runtime",
+    "name": "OpenShip Node Runtime",
+    "description": "Prepare a Node SSR container with runtime secrets, persistent content, protected administration, and an opt-in disabled scheduler. Deployment and cutover are separate operational steps.",
+    "tests": "npm run test:unit; DEPLOY_TARGET=openship npm run build; npm run test:runtime; default Vercel build; private build sentinel scan.",
+    "status": true
   }
 ]

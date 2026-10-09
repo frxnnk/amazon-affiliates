@@ -82,7 +82,7 @@ const COMMISSION_RATES: Record<string, number> = {
  * Get API key from environment
  */
 function getApiKey(): string {
-  const apiKey = import.meta.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
   }

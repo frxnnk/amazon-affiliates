@@ -1686,13 +1686,14 @@ const truncatedDescription = shouldTruncate
         }
 
         // Get product data from data attributes
+        const parsedPrice = parseFloat(button.dataset.price || '0');
         const product = {
           asin: button.dataset.asin || '',
           productId: button.dataset.productId || '',
           title: button.dataset.title || '',
           brand: button.dataset.brand || '',
           image: button.dataset.image || '',
-          price: parseFloat(button.dataset.price || '0'),
+          price: isNaN(parsedPrice) ? 0 : parsedPrice,
           currency: button.dataset.currency || 'USD',
           affiliateUrl: button.dataset.affiliateUrl || '',
           marketplace: button.dataset.marketplace || 'amazon.com',

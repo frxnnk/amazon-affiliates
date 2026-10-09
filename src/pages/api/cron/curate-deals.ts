@@ -31,17 +31,6 @@ import { trackPrices } from '@lib/keepa-api';
 
 export const prerender = false;
 
-// Verify cron secret to prevent unauthorized access
-function verifyCronSecret(request: Request): boolean {
-  const cronSecret = import.meta.env.CRON_SECRET;
-  if (!cronSecret) return true; // No secret configured, allow all
-  
-  const authHeader = request.headers.get('Authorization');
-  const providedSecret = authHeader?.replace('Bearer ', '');
-  
-  return providedSecret === cronSecret;
-}
-
 interface CurationResult {
   success: boolean;
   dealsFound: number;
@@ -63,13 +52,7 @@ const DEFAULT_SEARCH_TERMS = [
 export const POST: APIRoute = async ({ request }) => {
   const startTime = Date.now();
   
-  // Verify authorization
-  if (!verifyCronSecret(request)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  // Authentication is enforced centrally by middleware.
 
   const result: CurationResult = {
     success: true,
@@ -252,7 +235,7 @@ export const POST: APIRoute = async ({ request }) => {
         const { product, score, validation, aiAnalysis } = deal;
         
         // Build affiliate URL
-        const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+        const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
         const domain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
         const affiliateUrl = `https://www.${domain}/dp/${product.asin}?tag=${affiliateTag}`;
 
@@ -325,8 +308,5 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-// Also support GET for manual triggering (with auth)
-export const GET: APIRoute = async ({ request }) => {
-  // Redirect to POST handler
-  return POST({ request } as any);
-};
+// Scheduled and manual runs use POST; GET cannot start external work.
+export const GET: APIRoute = () => new Response(null, { status: 405, headers: { Allow: 'POST' } });
