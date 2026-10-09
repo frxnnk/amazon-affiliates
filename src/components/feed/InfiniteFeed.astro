@@ -16,7 +16,6 @@ import { type Lang } from '@i18n/utils';
 import '@styles/feed-brutal.css';
 import FeedSearchBar from './FeedSearchBar.astro';
 import FilterPanel from './FilterPanel.astro';
-import RegionSelector from './RegionSelector.astro';
 
 interface Props {
   lang: Lang;
@@ -150,9 +149,6 @@ const categories = [
           </div>
         </div>
       </div>
-
-      <!-- Region/Currency Selector -->
-      <RegionSelector currentLang={lang} />
 
       <!-- Cart Button -->
       <button type="button" class="cart-ctrl" id="feed-cart-btn" aria-label={lang === 'es' ? 'Ver carrito' : 'View cart'}>
@@ -294,14 +290,11 @@ class Feed {
     // Filter state
     this.currentFilters = {};
 
-    // Region state (from localStorage)
-    this.region = this.getRegionFromStorage();
+    // The storefront uses Amazon US regardless of interface language.
+    this.region = 'US';
 
     if (this.container) this.init();
   }
-
-  // Marketplace availability is independent of interface language.
-  getRegionFromStorage() { return 'US'; }
 
   async init() {
     this.setupEvents();
@@ -925,15 +918,6 @@ class Feed {
     window.addEventListener('amazon:product', (e) => {
       if (e.detail?.product) {
         this.insertAmazonProduct(e.detail.product);
-      }
-    });
-
-    // Listen for region changes (from RegionSelector)
-    window.addEventListener('region:change', (e) => {
-      const newRegion = 'US';
-      if (newRegion && newRegion !== this.region) {
-        this.region = newRegion;
-        // Note: RegionSelector already reloads the page, but we save it here for consistency
       }
     });
 
