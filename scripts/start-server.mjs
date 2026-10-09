@@ -1,3 +1,10 @@
+import { initializeLocalDatabase } from './local-database.mjs';
+
+// Require explicit runtime configuration instead of silently using an old build URL.
+if (!process.env.ASTRO_DB_REMOTE_URL) throw new Error('ASTRO_DB_REMOTE_URL is required at runtime');
+if (process.env.ASTRO_DB_REMOTE_URL.startsWith('file:')) process.umask(0o077);
+await initializeLocalDatabase({ url: process.env.ASTRO_DB_REMOTE_URL, dataDir: process.env.DATA_DIR });
+
 // Start Astro explicitly so the container's PID 1 can drain HTTP requests.
 process.env.ASTRO_NODE_AUTOSTART = 'disabled';
 const { startServer } = await import('../dist/server/entry.mjs');

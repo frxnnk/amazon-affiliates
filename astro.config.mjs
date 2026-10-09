@@ -29,7 +29,11 @@ export default defineConfig({
   },
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    // Astro DB otherwise compiles this private URL. Node chooses its database at startup.
+    define: process.env.DEPLOY_TARGET === 'openship'
+      ? { 'import.meta.env.ASTRO_DB_REMOTE_URL': 'process.env.ASTRO_DB_REMOTE_URL' }
+      : undefined,
   },
 
   adapter: process.env.DEPLOY_TARGET === 'openship' ? node({ mode: 'standalone' }) : vercel(),
