@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Transform to feed product format
-    const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || '';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || '';
     const affiliateUrl = affiliateTag
       ? `https://www.amazon.${parsed.marketplace}/dp/${parsed.asin}?tag=${affiliateTag}`
       : `https://www.amazon.${parsed.marketplace}/dp/${parsed.asin}`;

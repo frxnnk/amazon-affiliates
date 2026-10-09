@@ -34,7 +34,7 @@ export interface YouTubeSearchResult {
  * Check if YouTube API is configured
  */
 export function isYouTubeConfigured(): boolean {
-  return !!import.meta.env.YOUTUBE_API_KEY;
+  return !!process.env.YOUTUBE_API_KEY;
 }
 
 /**
@@ -129,7 +129,7 @@ export async function searchProductVideo(
   lang: 'es' | 'en' = 'es',
   maxStrategies: number = 1
 ): Promise<YouTubeSearchResult> {
-  const apiKey = import.meta.env.YOUTUBE_API_KEY;
+  const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey) {
     return {

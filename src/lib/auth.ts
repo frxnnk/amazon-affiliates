@@ -4,7 +4,7 @@ import { clerkClient } from '@clerk/astro/server';
  * Get admin emails from environment
  */
 export function getAdminEmails(): string[] {
-  const emails = import.meta.env.ADMIN_EMAILS || '';
+  const emails = process.env.ADMIN_EMAILS || '';
   return emails.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean);
 }
 

@@ -26,10 +26,10 @@ export const GET: APIRoute = async ({ url }) => {
       adapterStatus: getAdapterStatus(),
     },
     environment: {
-      AMAZON_CREATORS_CREDENTIAL_ID: import.meta.env.AMAZON_CREATORS_CREDENTIAL_ID ? 'Set' : 'Missing',
-      AMAZON_CREATORS_CREDENTIAL_SECRET: import.meta.env.AMAZON_CREATORS_CREDENTIAL_SECRET ? 'Set' : 'Missing',
-      RAPIDAPI_KEY: import.meta.env.RAPIDAPI_KEY ? 'Set' : 'Missing',
-      AMAZON_PA_API_PARTNER_TAG: import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'Not set (using default)',
+      AMAZON_CREATORS_CREDENTIAL_ID: process.env.AMAZON_CREATORS_CREDENTIAL_ID ? 'Set' : 'Missing',
+      AMAZON_CREATORS_CREDENTIAL_SECRET: process.env.AMAZON_CREATORS_CREDENTIAL_SECRET ? 'Set' : 'Missing',
+      RAPIDAPI_KEY: process.env.RAPIDAPI_KEY ? 'Set' : 'Missing',
+      AMAZON_PA_API_PARTNER_TAG: process.env.AMAZON_PA_API_PARTNER_TAG || 'Not set (using default)',
     },
     testResult: null as null | {
       success: boolean;

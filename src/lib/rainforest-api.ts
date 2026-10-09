@@ -133,7 +133,7 @@ const CATEGORY_MAPPING: Record<string, string> = {
  */
 export function getRainforestConfig(): RainforestConfig | null {
   // Try RAPIDAPI_KEY first, then fall back to RAINFOREST_API_KEY for backwards compatibility
-  const apiKey = import.meta.env.RAPIDAPI_KEY || import.meta.env.RAINFOREST_API_KEY;
+  const apiKey = process.env.RAPIDAPI_KEY || process.env.RAINFOREST_API_KEY;
   
   if (!apiKey) {
     return null;

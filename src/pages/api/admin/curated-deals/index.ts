@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const marketplace = body.marketplace || 'com';
-    const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
     const domain = marketplace === 'es' ? 'amazon.es' : 'amazon.com';
 
     // Try to fetch product data using unified adapter
