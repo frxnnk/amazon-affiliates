@@ -7,6 +7,19 @@ database. Selecting a new empty local database does not migrate old remote data.
 the Vercel adapter and `vercel.json` for rollback. The Telegram converter is a
 separate application/repository and is not included in this image.
 
+## Production pushes
+
+The production source is `frxnnk/amazon-affiliates`, branch `master`. Push to
+`master` or merge a pull request into it to request deployment. Contributors
+need GitHub write access only; no OpenShip or Tailscale account is required.
+
+A private Mac LaunchAgent checks the branch through OpenShip every 60 seconds
+and starts the normal OpenShip build. Feature branches do not deploy production.
+Web and bot builds are serialized, so an existing build may delay the next one.
+A failed commit is recorded in OpenShip and is not retried every minute; push a
+fix or have the owner deliberately retry. Pause the watcher before a manual
+deployment. Runtime secrets and the persistent database stay in OpenShip.
+
 ## Build and run
 
 - Install: `npm ci` (Node 24).
