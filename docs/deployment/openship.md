@@ -9,7 +9,9 @@ separate application/repository and is not included in this image.
 
 - Install: `npm ci` (Node 24).
 - Build: `DEPLOY_TARGET=openship npm run build` (`astro build --remote`).
-- Start: `npm start` (`node dist/server/entry.mjs`).
+- Start: `npm start` (`node scripts/start-server.mjs`). The launcher drains HTTP
+  requests on SIGTERM/SIGINT, with a 100-second deadline inside Docker's
+  120-second stop grace period.
 - Container: repository `Dockerfile`, HTTP port **4321**, health **/api/health**.
 - OpenShip: a **services** project importing `docker-compose.yml`, one service
   named `web`. Keep external exposure disabled until HTTPS routing is ready.

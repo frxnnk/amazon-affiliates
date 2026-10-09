@@ -22,9 +22,10 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/src/content ./src/content
 COPY --from=build --chown=node:node /app/scripts/run-cron.mjs ./scripts/run-cron.mjs
+COPY --from=build --chown=node:node /app/scripts/start-server.mjs ./scripts/start-server.mjs
 RUN mkdir -p /data/content/lists /data/models && chown -R node:node /data
 USER node
 VOLUME ["/data"]
 EXPOSE 4321
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-CMD ["node", "dist/server/entry.mjs"]
+CMD ["node", "scripts/start-server.mjs"]
