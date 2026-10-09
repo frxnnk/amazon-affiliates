@@ -22,8 +22,8 @@ export const GET: APIRoute = async ({ url }) => {
     }
     // 1. Check configuration
     const configured = isYouTubeConfigured();
-    const apiKeyPrefix = import.meta.env.YOUTUBE_API_KEY
-      ? `${import.meta.env.YOUTUBE_API_KEY.substring(0, 8)}...`
+    const apiKeyPrefix = process.env.YOUTUBE_API_KEY
+      ? `${process.env.YOUTUBE_API_KEY.substring(0, 8)}...`
       : 'NOT SET';
 
     // 2. Get quota status

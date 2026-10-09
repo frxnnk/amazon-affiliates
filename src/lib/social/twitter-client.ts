@@ -37,10 +37,10 @@ export interface TweetData {
  * Check if Twitter is configured
  */
 export function isTwitterConfigured(): boolean {
-  const apiKey = import.meta.env.TWITTER_API_KEY || process.env.TWITTER_API_KEY;
-  const apiSecret = import.meta.env.TWITTER_API_SECRET || process.env.TWITTER_API_SECRET;
-  const accessToken = import.meta.env.TWITTER_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN;
-  const accessSecret = import.meta.env.TWITTER_ACCESS_SECRET || process.env.TWITTER_ACCESS_SECRET;
+  const apiKey = process.env.TWITTER_API_KEY;
+  const apiSecret = process.env.TWITTER_API_SECRET;
+  const accessToken = process.env.TWITTER_ACCESS_TOKEN;
+  const accessSecret = process.env.TWITTER_ACCESS_SECRET;
 
   return !!(apiKey && apiSecret && accessToken && accessSecret);
 }
@@ -49,10 +49,10 @@ export function isTwitterConfigured(): boolean {
  * Get Twitter configuration from environment
  */
 function getConfig(): TwitterConfig {
-  const apiKey = import.meta.env.TWITTER_API_KEY || process.env.TWITTER_API_KEY;
-  const apiSecret = import.meta.env.TWITTER_API_SECRET || process.env.TWITTER_API_SECRET;
-  const accessToken = import.meta.env.TWITTER_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN;
-  const accessSecret = import.meta.env.TWITTER_ACCESS_SECRET || process.env.TWITTER_ACCESS_SECRET;
+  const apiKey = process.env.TWITTER_API_KEY;
+  const apiSecret = process.env.TWITTER_API_SECRET;
+  const accessToken = process.env.TWITTER_ACCESS_TOKEN;
+  const accessSecret = process.env.TWITTER_ACCESS_SECRET;
 
   if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
     throw new Error('Twitter API credentials not configured');

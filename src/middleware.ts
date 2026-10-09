@@ -1,63 +1,27 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/astro/server';
+import { clerkMiddleware } from '@clerk/astro/server';
+import type { MiddlewareHandler } from 'astro';
+import { authorizeRequest, validCronSecret } from '@lib/request-authorization';
+import { clerkRuntimeEnv } from '@lib/clerk-runtime-env';
 
-const isProtectedRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
-const isPublicAdminRoute = createRouteMatcher([
-  '/admin/login',
-  '/admin/sso-callback(.*)',
-  '/admin/unauthorized',
-  // API status endpoint (for diagnostics)
-  '/api/admin/api-status',
-  // Agent monitoring endpoints (public for SSE and dashboard)
-  '/api/admin/agents/status',
-  '/api/admin/agents/events',
-  '/api/admin/agents/stream',
-  '/api/admin/agents/control',
-  '/api/admin/agents/run',
-  '/api/admin/agents/queue-content',
-  '/api/admin/agents/debug-queue',
-  '/api/admin/agents/reset-queue',
-  '/api/admin/agents/costs',
-  '/api/admin/test-connections',
-  '/api/admin/telegram/test',
-  // Cron endpoints (called by Vercel cron or manually)
-  '/api/cron/(.*)',
-]);
+const withClerk = clerkMiddleware((auth, context) =>
+  authorizeRequest(context.request, auth(), process.env.CRON_SECRET || '')
+);
 
-export const onRequest = clerkMiddleware((auth, context) => {
-  const pathname = new URL(context.request.url).pathname;
-
-  // Skip auth check for public admin routes
-  if (isPublicAdminRoute(context.request)) {
-    return;
-  }
-
-  // Protect admin routes
-  if (isProtectedRoute(context.request)) {
-    const { userId, sessionClaims } = auth();
-    const isApiRoute = pathname.startsWith('/api/');
-
-    // Not authenticated
-    if (!userId) {
-      if (isApiRoute) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return context.redirect('/admin/login');
-    }
-
-    // Check if user has admin role in Clerk metadata
-    const userRole = (sessionClaims?.metadata as { role?: string })?.role;
-
-    if (userRole !== 'admin') {
-      if (isApiRoute) {
-        return new Response(JSON.stringify({ error: 'Forbidden: Not an admin' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return context.redirect('/admin/unauthorized');
-    }
-  }
-});
+export const onRequest: MiddlewareHandler = (context, next) => {
+  const pathname = context.url.pathname;
+  // Liveness never queries Clerk, the database, or paid providers.
+  if (pathname === '/api/health') return next();
+  // Clerk 2.x reads this adapter context before import.meta.env. Supply private
+  // values at request time so the Node build never needs a Clerk secret.
+  const locals = context.locals as typeof context.locals & { runtime?: { env?: Record<string, unknown> } };
+  locals.runtime = { ...locals.runtime, env: clerkRuntimeEnv({
+    PUBLIC_CLERK_PUBLISHABLE_KEY: import.meta.env.PUBLIC_CLERK_PUBLISHABLE_KEY,
+    PUBLIC_CLERK_SIGN_IN_URL: import.meta.env.PUBLIC_CLERK_SIGN_IN_URL,
+    PUBLIC_CLERK_SIGN_UP_URL: import.meta.env.PUBLIC_CLERK_SIGN_UP_URL,
+    PUBLIC_CLERK_AFTER_SIGN_IN_URL: import.meta.env.PUBLIC_CLERK_AFTER_SIGN_IN_URL,
+    PUBLIC_CLERK_AFTER_SIGN_UP_URL: import.meta.env.PUBLIC_CLERK_AFTER_SIGN_UP_URL,
+  }, locals.runtime?.env) };
+  // A scheduler secret only authorizes cron routes, never admin APIs.
+  if (pathname.startsWith('/api/cron/') && validCronSecret(context.request, process.env.CRON_SECRET || '')) return next();
+  return withClerk(context, next);
+};

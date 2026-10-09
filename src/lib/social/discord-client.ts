@@ -60,7 +60,7 @@ const DISCORD_COLORS = {
  * Check if Discord webhook is configured
  */
 export function isDiscordConfigured(): boolean {
-  const webhookUrl = import.meta.env.DISCORD_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   return !!webhookUrl;
 }
 
@@ -68,7 +68,7 @@ export function isDiscordConfigured(): boolean {
  * Get webhook URL from environment
  */
 function getWebhookUrl(): string {
-  const webhookUrl = import.meta.env.DISCORD_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) {
     throw new Error('DISCORD_WEBHOOK_URL environment variable is not set');
   }

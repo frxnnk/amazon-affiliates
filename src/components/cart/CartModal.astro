@@ -514,23 +514,28 @@ const t = {
     itemsList?.classList.remove('hidden');
     footer?.classList.remove('hidden');
 
-    // Calculate total
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate total (handle NaN prices)
+    const total = items.reduce((sum, item) => {
+      const price = isNaN(item.price) ? 0 : item.price;
+      return sum + (price * item.quantity);
+    }, 0);
     const currency = items[0]?.currency || 'USD';
     if (totalAmount) {
       totalAmount.textContent = formatPrice(total, currency);
     }
 
-    // Render items
+    // Render items (sanitize prices)
     if (itemsList) {
-      itemsList.innerHTML = items.map(item => `
+      itemsList.innerHTML = items.map(item => {
+        const safePrice = isNaN(item.price) ? 0 : item.price;
+        return `
         <div class="cart-item" data-asin="${item.asin}">
           <img src="${item.image}" alt="${item.title}" class="item-image" />
           <div class="item-content">
             <span class="item-brand">${item.brand}</span>
             <h4 class="item-title">${item.title}</h4>
             <div class="item-price-row">
-              <span class="item-price">${formatPrice(item.price, item.currency)}</span>
+              <span class="item-price">${formatPrice(safePrice, item.currency)}</span>
               <div class="item-quantity">
                 <button type="button" class="qty-btn qty-minus" data-asin="${item.asin}" data-action="decrease">-</button>
                 <span class="qty-value">${item.quantity}</span>
@@ -544,7 +549,7 @@ const t = {
             </svg>
           </button>
         </div>
-      `).join('');
+      `}).join('');
 
       // Add styles for cart items
       const style = document.createElement('style');

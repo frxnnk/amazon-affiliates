@@ -47,23 +47,7 @@ function generateSlug(title: string): string {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    // Security check
-    const cronSecret = import.meta.env.CRON_SECRET || process.env.CRON_SECRET;
-    const authHeader = request.headers.get('Authorization');
-    const cronHeader = request.headers.get('x-cron-secret');
-
-    // Allow if: has valid cron secret, or is admin (has auth header), or no security configured
-    const isAuthorized = 
-      (cronSecret && cronHeader === cronSecret) ||
-      (authHeader && authHeader.startsWith('Bearer ')) ||
-      !cronSecret;
-
-    if (!isAuthorized) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // Authentication is enforced centrally by middleware.
 
     // Check if API is configured
     if (!isRainforestConfigured()) {
@@ -74,7 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get affiliate tag
-    const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+    const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
 
     // Get active keywords
     const keywords = await getDealAgentKeywords(true); // active only
