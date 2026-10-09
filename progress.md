@@ -245,3 +245,22 @@ This file tracks completed features and changes. Each entry includes the date, f
 - Empty state for when no articles exist yet
 
 **Tests:** `npm run dev` - Blog pages accessible at /[lang]/blog.
+
+
+---
+
+### 2026-10-09 - openship_runtime
+
+**Summary:** Prepared the web for a separate OpenShip deployment while preserving the default Vercel adapter. No production cutover has been performed by this change.
+
+**Changes:**
+- Saved the five existing cart/feed/search UI changes separately before migration.
+- Added a compatible Node standalone adapter, Docker image, liveness endpoint, and deployment guide.
+- Moved private provider configuration to runtime environment variables; image build only needs public Clerk configuration and the libSQL URL.
+- Protected administrative/debug APIs and cron jobs; required an authenticated admin or an exact cron secret.
+- Persisted lists and generated models under DATA_DIR, including runtime model serving and path validation.
+- Added a manual cron runner that stays disabled unless explicitly enabled. No schedule, messages, paid calls, database seeds, or schema migrations were run.
+
+**Validation:** Node and default Vercel builds passed with test-only configuration. Fifteen unit tests and the compiled Node runtime smoke passed. The smoke blocks outbound fetch and verifies health, static files, persistent model serving and anonymous API rejection. Private sentinel scan found no embedded test secrets. Full Astro type checking still reports legacy errors outside changed lines; this does not certify all existing features.
+
+**Operations:** See docs/deployment/openship.md for build/runtime configuration, persistent volume, inactive cron behavior, and rollback. Live Clerk login, production DB reads, public ingress and the container build remain deployment checks.

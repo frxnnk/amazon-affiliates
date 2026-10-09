@@ -1,11 +1,9 @@
 import type { APIRoute } from 'astro';
-import { generateListMarkdown, generateListFilename, slugify } from '@utils/markdown';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { getCollection } from 'astro:content';
+import { generateListMarkdown, generateListFilename, parseMarkdownFrontmatter } from '@utils/markdown';
+import { writeList, readList, deleteList, validContentId } from '@lib/persistent-content';
 
 export const PUT: APIRoute = async ({ request, locals, params }) => {
-  const userId = locals.auth?.userId;
+  const userId = locals.auth?.().userId;
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -15,7 +13,7 @@ export const PUT: APIRoute = async ({ request, locals, params }) => {
 
   try {
     const listId = params.id;
-    if (!listId) {
+    if (!validContentId(listId)) {
       return new Response(
         JSON.stringify({ error: 'List ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -33,17 +31,12 @@ export const PUT: APIRoute = async ({ request, locals, params }) => {
     }
 
     const lang = data.lang || 'es';
+    if (!['es', 'en'].includes(lang)) return Response.json({ error: 'Invalid language' }, { status: 400 });
     const now = new Date().toISOString().split('T')[0];
 
-    // Find existing list to get publishedAt
-    let publishedAt = now;
-    try {
-      const lists = await getCollection('lists');
-      const existing = lists.find(l => l.data.listId === listId && l.data.lang === lang);
-      if (existing) {
-        publishedAt = existing.data.publishedAt || now;
-      }
-    } catch {}
+    const existingMarkdown = await readList(listId, lang);
+    const existing = existingMarkdown ? parseMarkdownFrontmatter<{ publishedAt?: string }>(existingMarkdown) : null;
+    const publishedAt = existing?.frontmatter.publishedAt || now;
 
     const frontmatter = {
       listId,
@@ -72,15 +65,7 @@ export const PUT: APIRoute = async ({ request, locals, params }) => {
     const markdownContent = generateListMarkdown(frontmatter as any, data.content || '');
     const relativePath = generateListFilename(listId, lang);
 
-    // Write file locally
-    const absolutePath = path.join(process.cwd(), relativePath);
-    const dir = path.dirname(absolutePath);
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    fs.writeFileSync(absolutePath, markdownContent, 'utf-8');
+    await writeList(listId, lang, markdownContent);
 
     return new Response(
       JSON.stringify({
@@ -101,7 +86,7 @@ export const PUT: APIRoute = async ({ request, locals, params }) => {
 };
 
 export const DELETE: APIRoute = async ({ locals, params }) => {
-  const userId = locals.auth?.userId;
+  const userId = locals.auth?.().userId;
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -111,34 +96,16 @@ export const DELETE: APIRoute = async ({ locals, params }) => {
 
   try {
     const listId = params.id;
-    if (!listId) {
+    if (!validContentId(listId)) {
       return new Response(
         JSON.stringify({ error: 'List ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Find and delete list files for all languages
-    const lists = await getCollection('lists');
-    const listFiles = lists.filter(l => l.data.listId === listId);
-
-    if (listFiles.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'List not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const deletedFiles: string[] = [];
-    for (const list of listFiles) {
-      const relativePath = generateListFilename(listId, list.data.lang);
-      const absolutePath = path.join(process.cwd(), relativePath);
-
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-        deletedFiles.push(relativePath);
-      }
-    }
+    const languages = await deleteList(listId);
+    if (!languages.length) return Response.json({ error: 'List not found' }, { status: 404 });
+    const deletedFiles = languages.map(lang => generateListFilename(listId, lang));
 
     return new Response(
       JSON.stringify({

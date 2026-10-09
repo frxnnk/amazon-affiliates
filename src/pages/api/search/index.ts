@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   try {
-    const PARTNER_TAG = import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
+    const PARTNER_TAG = process.env.AMAZON_PA_API_PARTNER_TAG || 'bestdeal0ee40-20';
     const amazonDomain = lang === 'es' ? 'es' : 'com';
     
     let products: any[] = [];

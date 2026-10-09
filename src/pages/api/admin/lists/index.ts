@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
 import { generateListMarkdown, generateListFilename, slugify } from '@utils/markdown';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { writeList, validContentId } from '@lib/persistent-content';
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const userId = locals.auth?.userId;
+  const userId = locals.auth?.().userId;
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -25,6 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const listId = data.listId || slugify(data.title);
     const lang = data.lang || 'es';
+    if (!validContentId(listId) || !['es', 'en'].includes(lang)) return Response.json({ error: 'Invalid list id or language' }, { status: 400 });
     const now = new Date().toISOString().split('T')[0];
 
     const frontmatter = {
@@ -54,23 +54,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const markdownContent = generateListMarkdown(frontmatter as any, data.content || '');
     const relativePath = generateListFilename(listId, lang);
 
-    // Write file locally (for development)
-    const absolutePath = path.join(process.cwd(), relativePath);
-    const dir = path.dirname(absolutePath);
-
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    fs.writeFileSync(absolutePath, markdownContent, 'utf-8');
+    await writeList(listId, lang, markdownContent);
 
     return new Response(
       JSON.stringify({
         success: true,
         listId,
         filePath: relativePath,
-        message: 'List created locally. Run git commit to save changes.',
+        message: 'List saved successfully.',
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );

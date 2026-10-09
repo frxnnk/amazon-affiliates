@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
         // Build affiliate URL if not provided
         const affiliateUrl = product.affiliateUrl || 
           `https://www.amazon.${marketplace}/dp/${product.asin}?tag=${
-            import.meta.env.AMAZON_PA_API_PARTNER_TAG || 'affiliate-20'
+            process.env.AMAZON_PA_API_PARTNER_TAG || 'affiliate-20'
           }`;
 
         // Create product data for markdown file

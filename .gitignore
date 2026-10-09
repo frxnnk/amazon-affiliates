@@ -1,5 +1,8 @@
 # build output
 dist/
+.data/
+.build-validation.log
+.check-validation.log
 
 # generated types
 .astro/

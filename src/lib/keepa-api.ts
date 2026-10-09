@@ -45,7 +45,7 @@ export interface KeepaConfig {
  * Get Keepa API key from environment
  */
 function getKeepaConfig(): KeepaConfig | null {
-  const apiKey = import.meta.env.KEEPA_API_KEY || process.env.KEEPA_API_KEY;
+  const apiKey = process.env.KEEPA_API_KEY;
   if (!apiKey) return null;
   return { apiKey };
 }

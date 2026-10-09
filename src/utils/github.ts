@@ -1,7 +1,7 @@
 import { Octokit } from '@octokit/rest';
 
 const getOctokit = () => {
-  const token = import.meta.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN;
   if (!token) {
     throw new Error('GITHUB_TOKEN environment variable is not set');
   }
@@ -9,9 +9,9 @@ const getOctokit = () => {
 };
 
 const getConfig = () => ({
-  owner: import.meta.env.GITHUB_OWNER || '',
-  repo: import.meta.env.GITHUB_REPO || '',
-  branch: import.meta.env.GITHUB_BRANCH || 'main',
+  owner: process.env.GITHUB_OWNER || '',
+  repo: process.env.GITHUB_REPO || '',
+  branch: process.env.GITHUB_BRANCH || 'master',
 });
 
 interface FileContent {

@@ -95,7 +95,7 @@ function transformToProductData(data: RainforestProductData, marketplace: string
     .replace(/-$/, '');
 
   const lang = marketplace === 'es' ? 'es' : 'en';
-  const affiliateTag = import.meta.env.AMAZON_PA_API_PARTNER_TAG || '';
+  const affiliateTag = process.env.AMAZON_PA_API_PARTNER_TAG || '';
   const affiliateUrl = affiliateTag
     ? `https://www.amazon.${marketplace}/dp/${data.asin}?tag=${affiliateTag}`
     : `https://www.amazon.${marketplace}/dp/${data.asin}`;

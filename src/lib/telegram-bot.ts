@@ -41,8 +41,8 @@ export interface TelegramResult {
  * Get Telegram configuration from environment
  */
 export function getTelegramConfig(): TelegramConfig | null {
-  const botToken = import.meta.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-  const channelId = import.meta.env.TELEGRAM_CHANNEL_ID || process.env.TELEGRAM_CHANNEL_ID;
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
 
   if (!botToken || !channelId) {
     return null;
