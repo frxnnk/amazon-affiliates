@@ -11,6 +11,9 @@ separate application/repository and is not included in this image.
 - Build: `DEPLOY_TARGET=openship npm run build` (`astro build --remote`).
 - Start: `npm start` (`node dist/server/entry.mjs`).
 - Container: repository `Dockerfile`, HTTP port **4321**, health **/api/health**.
+- OpenShip: a **services** project importing `docker-compose.yml`, one service
+  named `web`. Keep external exposure disabled until HTTPS routing is ready.
+  Compose only exposes container port 4321; it publishes no host port.
 - Supply `HOST=0.0.0.0` behind the reverse proxy, `PORT=4321`, `DATA_DIR=/data`.
 - Terminate public HTTPS at the deployment edge. Preserve the original host and
   protocol headers, permit streaming responses, and avoid caching authenticated
@@ -32,8 +35,12 @@ the build or startup command.
 | Runtime, existing features | `ADMIN_EMAILS`, `AMAZON_PA_API_PARTNER_TAG`, `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_BRANCH`, `GITHUB_TOKEN`, `RAPIDAPI_KEY`, `OPENAI_API_KEY`, `YOUTUBE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID` |
 | Runtime, optional providers | `AMAZON_CREATORS_CREDENTIAL_ID`, `AMAZON_CREATORS_CREDENTIAL_SECRET`, `RAINFOREST_API_KEY`, `KEEPA_API_KEY`, `TRIPO_API_KEY`, `DISCORD_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET` |
 
-Keep runtime values in OpenShip's secret/environment configuration. The image
-build only accepts public arguments and never needs production secret values.
+In OpenShip 0.8.2, project environment values are also passed as build arguments.
+Put **only** `PUBLIC_CLERK_*` and `ASTRO_DB_REMOTE_URL` in project environment.
+Put private credentials in the **web service environment overrides**, which the
+services pipeline injects at runtime. Never add secrets to project environment,
+Compose build arguments, the Dockerfile, or a committed environment file.
+The image build only accepts public arguments and never needs production secrets.
 The libSQL URL is compiled into the server; changing it requires a rebuild.
 Provider credentials and the database token are read at runtime. Clerk 2.x gets
 runtime server configuration through its supported `locals.runtime.env` context.
@@ -46,6 +53,14 @@ The configured GitHub content branch is `master` (also the fallback).
 ## Persistent files
 
 Mount one persistent volume at **/data**, writable by container UID/GID **1000**.
+The Compose volume key is **rewardhive-data** and the service runs as the image's
+`node` user (UID 1000). OpenShip's `namespaceVolumes=true` prefixes that key with
+the project slug. For slug `rewardhive-web`, the physical volume is
+**openship-rewardhive-web-rewardhive-data**, stable across deployments. Preserve
+the slug, volume key and namespace setting; confirm that physical mount before
+cutover. Do not remove volumes during rollback. For direct Compose deployment,
+use the same Compose project name on every release to retain its volume prefix.
+The service restarts unless stopped and allows 120 seconds for shutdown.
 The application writes lists to `/data/content/lists/{es,en}` and generated GLB
 models to `/data/models`. Writes use an atomic rename; IDs and languages cannot
 traverse outside these directories. Models are served by `/models/{id}.glb`.
