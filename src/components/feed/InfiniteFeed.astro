@@ -16,6 +16,7 @@ import { type Lang } from '@i18n/utils';
 import '@styles/feed-brutal.css';
 import FeedSearchBar from './FeedSearchBar.astro';
 import FilterPanel from './FilterPanel.astro';
+import CatalogDisclosure from '../affiliate/CatalogDisclosure.astro';
 
 interface Props {
   lang: Lang;
@@ -90,6 +91,8 @@ const categories = [
 ];
 ---
 
+<div class="catalog-feed-shell">
+<CatalogDisclosure lang={lang} />
 <div class="feed" id="reel-feed" data-catalog-texts={JSON.stringify(t)} data-lang={lang} data-category={category}>
   
   <!-- Floating Top Controls Bar - Search, Sections, Filters, Category -->
@@ -238,10 +241,13 @@ const categories = [
   </div>
   
 </div>
+</div>
 
 <script>
 // @ts-nocheck -- Existing feed controller uses browser DOM state.
 import { escapeHtml, safeCatalogUrl, formatCatalogPrice, readCatalogResponse, catalogUnavailableMessage } from '../../lib/catalog-ui.mjs';
+import { priceDetailsHtml } from '../../lib/amazon-notices.mjs';
+import { readCatalogReferences, writeCatalogReferences } from '../../lib/catalog-references.mjs';
 const t = JSON.parse(document.getElementById('reel-feed')?.dataset.catalogTexts || '{}');
 class Feed {
   constructor() {
@@ -1192,6 +1198,7 @@ class Feed {
           ${discount >= 15 ? `<span class="badge-discount">-${discount}%</span>` : ''}
         </div>
         ${this.getPriceContextHtml(p)}
+        ${priceDetailsHtml(this.lang, p.fetchedAt)}
         <div class="cta-row">
           <button type="button" class="add-cart-btn" data-add-to-cart ${affiliateUrl ? '' : 'disabled'}
             data-asin="${escapeHtml(p.asin)}"
@@ -1201,7 +1208,7 @@ class Feed {
             data-image="${escapeHtml(imageUrl)}"
             data-price="${hasPrice ? p.price : ''}"
             data-currency="${escapeHtml(p.currency)}"
-            data-affiliate-url="${affiliateUrl}"
+            data-affiliate-url="${affiliateUrl}" data-fetched-at="${escapeHtml(p.fetchedAt)}"
             data-marketplace="amazon.com"
             aria-label="${this.texts.addToCart || 'Agregar al carrito'}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cart-icon">
@@ -1313,30 +1320,23 @@ class Feed {
 
     const saveBtn = el.querySelector('.save-btn');
     if (saveBtn) {
-      const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+      const saved = readCatalogReferences(localStorage, 'savedProducts');
       const isSaved = saved.some(item => (typeof item === 'string' ? item : item.asin) === p.asin);
       if (isSaved) saveBtn.classList.add('active');
       saveBtn.addEventListener('click', () => {
-        const items = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+        const items = readCatalogReferences(localStorage, 'savedProducts');
         const existingIndex = items.findIndex(item => (typeof item === 'string' ? item : item.asin) === p.asin);
         if (existingIndex !== -1) {
           items.splice(existingIndex, 1);
-          localStorage.setItem('savedProducts', JSON.stringify(items));
+          writeCatalogReferences(localStorage, 'savedProducts', items);
           saveBtn.classList.remove('active');
         } else {
           // Track save engagement (high-value signal)
           this.trackEngagement(p.asin, 'save', { category: p.category });
 
-          // Save full product object
-          items.push({
-            asin: p.asin,
-            title: p.title,
-            brand: p.brand || '',
-            image: p.featuredImage?.url || '',
-            price: p.formattedPrice || '',
-            affiliateUrl: p.affiliateUrl
-          });
-          localStorage.setItem('savedProducts', JSON.stringify(items));
+          // Persist the user's reference, never Amazon product content.
+          items.push({ asin: p.asin, marketplace: 'amazon.com', quantity: 1 });
+          writeCatalogReferences(localStorage, 'savedProducts', items);
           saveBtn.classList.add('active');
         }
       });
@@ -1372,6 +1372,7 @@ class Feed {
         price: Number.isFinite(parsedPrice) ? parsedPrice : '',
         currency: btn.dataset.currency || '',
         affiliateUrl: btn.dataset.affiliateUrl || '',
+        fetchedAt: btn.dataset.fetchedAt || '',
         marketplace: btn.dataset.marketplace || 'amazon.com',
       };
 

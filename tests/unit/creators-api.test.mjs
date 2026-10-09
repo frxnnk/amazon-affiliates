@@ -109,8 +109,12 @@ test('identical concurrent requests deduplicate, cache for one hour and isolate 
   const [first, second] = await Promise.all([api.getItem(item.asin, 'com', options), api.getItem(item.asin, 'com', options)]);
   assert.deepEqual(first, second);
   assert.equal(calls.length, 2);
+  assert.equal(first.data.fetchedAt, new Date(now).toISOString());
+  const fetchedAt = first.data.fetchedAt;
   first.data.title = 'caller mutation';
+  now += 100;
   assert.equal((await api.getItem(item.asin, 'com', options)).data.title, 'Fixture product');
+  assert.equal((await api.getItem(item.asin, 'com', options)).data.fetchedAt, fetchedAt);
   now += 1001;
   await api.getItem(item.asin, 'com', { partnerTag: 'second-20' });
   assert.equal(calls.filter(c => c.url.includes('/catalog/')).length, 2);

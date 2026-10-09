@@ -1,4 +1,5 @@
 ---
+import CatalogDisclosure from '../affiliate/CatalogDisclosure.astro';
 import { type Lang } from '@i18n/utils';
 import siteConfig from '@data/site-config.json';
 
@@ -67,6 +68,7 @@ const t = {
     </div>
 
     <div class="cart-body">
+      <CatalogDisclosure lang={lang} />
       <!-- Empty state -->
       <div class="cart-empty" id="cart-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="empty-icon">
@@ -454,6 +456,7 @@ const t = {
 <script>
   // @ts-nocheck -- Existing cart controller uses browser DOM state.
   import { escapeHtml, safeCatalogUrl, formatCatalogPrice } from '../../lib/catalog-ui.mjs';
+  import { priceDetailsHtml } from '../../lib/amazon-notices.mjs';
   const modal = document.getElementById('cart-modal');
   const { affiliateTag, marketplace, affiliateTags, t, lang } = JSON.parse(modal?.dataset.catalogConfig || '{}');
   const closeBtn = document.getElementById('cart-close');
@@ -469,12 +472,14 @@ const t = {
   function closeModal() {
     modal?.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    window.cart?.dropContent();
   }
 
   function openModal() {
     modal?.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     renderCart();
+    window.cart?.refresh(lang);
   }
 
   function formatPrice(price, currency) {
@@ -540,6 +545,7 @@ const t = {
                 <button type="button" class="qty-btn qty-plus" data-asin="${escapeHtml(item.asin)}" data-action="increase">+</button>
               </div>
             </div>
+            ${priceDetailsHtml(lang, item.fetchedAt)}
           </div>
           <button type="button" class="item-remove" data-asin="${escapeHtml(item.asin)}" aria-label="${t.remove}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -669,11 +675,16 @@ const t = {
   }
 
   function updateBuyAllUrl(items) {
-    if (!buyAllBtn || items.length === 0) return;
+    if (!buyAllBtn) return;
+    if (items.length === 0) {
+      buyAllBtn.removeAttribute('href');
+      buyAllBtn.setAttribute('aria-disabled', 'true');
+      return;
+    }
 
     // Use the marketplace from the cart items (all items should have the same marketplace)
     const cartMarketplace = items[0]?.marketplace;
-    if (cartMarketplace !== 'amazon.com' || !items.every(item => item.marketplace === cartMarketplace && /^[A-Z0-9]{10}$/.test(item.asin) && Number.isInteger(item.quantity) && item.quantity > 0)) {
+    if (cartMarketplace !== 'amazon.com' || !items.every(item => item.marketplace === cartMarketplace && /^[A-Z0-9]{10}$/.test(item.asin) && Number.isInteger(item.quantity) && item.quantity > 0 && safeCatalogUrl(item.affiliateUrl))) {
       buyAllBtn.removeAttribute('href');
       buyAllBtn.setAttribute('aria-disabled', 'true');
       return;
@@ -691,6 +702,16 @@ const t = {
 
     buyAllBtn.href = `${baseUrl}?${params.toString()}`;
   }
+
+  // Re-check in-memory expiry before following a previously rendered cart link.
+  buyAllBtn?.addEventListener('click', (event) => {
+    const items = window.cart?.getItems() || [];
+    updateBuyAllUrl(items);
+    if (!buyAllBtn.hasAttribute('href')) {
+      event.preventDefault();
+      window.cart?.refresh(lang);
+    }
+  });
 
   // Event listeners
   closeBtn?.addEventListener('click', closeModal);

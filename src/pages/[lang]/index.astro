@@ -1,4 +1,5 @@
 ---
+import CatalogDisclosure from '../../components/affiliate/CatalogDisclosure.astro';
 import InfiniteFeed from '@components/feed/InfiniteFeed.astro';
 import LegalModal from '@components/modals/LegalModal.astro';
 import CartButton from '@components/cart/CartButton.astro';
@@ -204,6 +205,7 @@ const t = texts[lang];
           </div>
 
           <div class="search-body" id="search-content">
+            <CatalogDisclosure lang={lang} />
             
             <!-- Initial State -->
             <div class="search-home" id="search-initial">
@@ -340,6 +342,7 @@ const t = texts[lang];
             </div>
 
             <!-- Content Panels -->
+            <CatalogDisclosure lang={lang} />
             <div class="profile-content" id="profile-content">
               <div class="content-loading" id="profile-loading">
                 <div class="dot-loader"><span></span><span></span><span></span></div>
@@ -395,6 +398,8 @@ const t = texts[lang];
     <script>
       // @ts-nocheck -- Existing home controller uses browser DOM state.
       import { escapeHtml, safeCatalogUrl, formatCatalogPrice, readCatalogResponse, catalogUnavailableMessage } from '../../lib/catalog-ui.mjs';
+      import { priceDetailsHtml } from '../../lib/amazon-notices.mjs';
+      import { readCatalogReferences, writeCatalogReferences, refreshCatalogReferences } from '../../lib/catalog-references.mjs';
       const lang = document.documentElement.lang;
       const t = JSON.parse(document.body.dataset.catalogTexts || '{}');
       function initHome() {
@@ -427,6 +432,14 @@ const t = texts[lang];
           // Focus search input when switching to search
           if (id === 'search') {
             setTimeout(() => document.getElementById('search-input')?.focus(), 100);
+          }
+
+          if (id === 'profile') {
+            updateSavedCount();
+            loadSavedProducts(true);
+          } else {
+            savedController?.abort();
+            savedVersion++;
           }
 
           // Sync header nav active state
@@ -608,6 +621,7 @@ const t = texts[lang];
 
             return `
               <div class="result-item-wrap">
+                <div class="result-product">
                 <a ${affiliateUrl ? `href="${affiliateUrl}"` : 'aria-disabled="true"'} target="_blank" rel="noopener noreferrer nofollow" class="result-item">
                   <div class="result-item-img">
                     ${discount}
@@ -638,7 +652,7 @@ const t = texts[lang];
                   data-image="${imageUrl}"
                   data-price="${hasPrice ? p.price : ''}"
                   data-currency="${escapeHtml(p.currency)}"
-                  data-affiliate-url="${affiliateUrl}"
+                  data-affiliate-url="${affiliateUrl}" data-fetched-at="${escapeHtml(p.fetchedAt)}"
                   aria-label="${addToCartText}"
                   title="${addToCartText}"
                 >
@@ -649,6 +663,8 @@ const t = texts[lang];
                   </svg>
                   <span class="cart-plus">+</span>
                 </button>
+                </div>
+                ${priceDetailsHtml(lang, p.fetchedAt)}
               </div>
             `;
           }).join('');
@@ -678,6 +694,7 @@ const t = texts[lang];
             price: btn.dataset.price ? Number(btn.dataset.price) : null,
             currency: btn.dataset.currency || '',
             affiliateUrl: btn.dataset.affiliateUrl || '',
+            fetchedAt: btn.dataset.fetchedAt || '',
             marketplace: 'amazon.com',
           };
 
@@ -795,7 +812,7 @@ const t = texts[lang];
 
         // Update saved count
         function updateSavedCount() {
-          const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+          const saved = readCatalogReferences(localStorage, 'savedProducts');
           if (profileSavedCount) profileSavedCount.textContent = String(saved.length);
         }
 
@@ -806,10 +823,20 @@ const t = texts[lang];
         }
 
         // Load saved products
-        function loadSavedProducts() {
+        let savedVersion = 0;
+        let savedController = null;
+        async function loadSavedProducts(revalidate = false) {
           if (!profileContent) return;
           
-          const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+          savedController?.abort();
+          const controller = savedController = new AbortController();
+          const version = ++savedVersion;
+          let saved = readCatalogReferences(localStorage, 'savedProducts');
+          if (revalidate && saved.length) {
+            profileContent.textContent = lang === 'es' ? 'Consultando Amazon…' : 'Checking Amazon…';
+            saved = await refreshCatalogReferences(saved, { lang, signal: controller.signal });
+            if (version !== savedVersion || controller.signal.aborted) return;
+          }
           
           if (!saved.length) {
             profileContent.innerHTML = `
@@ -823,11 +850,11 @@ const t = texts[lang];
               const isOldFormat = typeof item === 'string';
               const rawAsin = isOldFormat ? item : item.asin;
               const asin = escapeHtml(rawAsin);
-              const title = isOldFormat ? String(rawAsin) : (item.title || 'Producto');
+              const title = isOldFormat ? String(rawAsin) : (item.title || 'ASIN: ' + rawAsin);
               const brand = isOldFormat ? '' : escapeHtml(item.brand);
               const image = isOldFormat ? '' : escapeHtml(safeCatalogUrl(item.image));
-              const price = isOldFormat ? '' : escapeHtml(item.price);
-              const url = escapeHtml(safeCatalogUrl(isOldFormat ? 'https://www.amazon.com/dp/' + encodeURIComponent(rawAsin) + '?tag=rewardhive-20' : item.affiliateUrl));
+              const price = isOldFormat ? '' : escapeHtml(formatCatalogPrice(item.price, item.currency, lang));
+              const url = escapeHtml(safeCatalogUrl(isOldFormat ? '' : item.affiliateUrl));
               
               let imgHtml = '';
               if (image) {
@@ -839,11 +866,11 @@ const t = texts[lang];
               let priceHtml = price ? '<span class="saved-item-price">' + price + '</span>' : '<span class="saved-item-code">' + asin + '</span>';
               let brandHtml = brand ? '<span class="saved-item-brand">' + brand + '</span>' : '';
               
-              return '<a href="' + url + '" target="_blank" rel="noopener noreferrer nofollow" class="saved-item" data-asin="' + asin + '">' +
+              return '<div class="saved-item-wrap"><a ' + (url ? 'href="' + url + '"' : 'aria-disabled="true"') + ' target="_blank" rel="noopener noreferrer nofollow" class="saved-item" data-asin="' + asin + '">' +
                 '<div class="saved-item-img">' + imgHtml + '</div>' +
                 '<div class="saved-item-info">' + brandHtml + '<h4 class="saved-item-title">' + escapeHtml(truncateTitle(title, 60)) + '</h4>' + priceHtml + '</div>' +
                 '<button class="saved-item-remove" data-asin="' + asin + '" title="' + (lang === 'es' ? 'Eliminar' : 'Remove') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 18L18 6M6 6l12 12"/></svg></button>' +
-              '</a>';
+              '</a>' + priceDetailsHtml(lang, item.fetchedAt) + '</div>';
             }).join('');
             
             profileContent.innerHTML = '<div class="saved-list">' + cardsHtml + '</div>';
@@ -854,10 +881,10 @@ const t = texts[lang];
                 e.stopPropagation();
                 e.preventDefault();
                 const asin = btn.dataset.asin;
-                const items = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+                const items = readCatalogReferences(localStorage, 'savedProducts');
                 const newItems = items.filter(item => (typeof item === 'string' ? item : item.asin) !== asin);
-                localStorage.setItem('savedProducts', JSON.stringify(newItems));
-                btn.closest('.saved-item')?.remove();
+                writeCatalogReferences(localStorage, 'savedProducts', newItems);
+                btn.closest('.saved-item-wrap')?.remove();
                 updateSavedCount();
                 if (newItems.length === 0) loadSavedProducts();
               });
@@ -1483,7 +1510,7 @@ const t = texts[lang];
   }
 
   /* Results - NEO-BRUTALIST */
-  .result-item-wrap {
+  .result-product {
     position: relative;
   }
 
@@ -1656,7 +1683,7 @@ const t = texts[lang];
   /* Cart Button in Search Results */
   .result-cart-btn {
     position: absolute;
-    bottom: 12px;
+    top: 12px;
     right: 12px;
     display: flex;
     align-items: center;

@@ -47,6 +47,8 @@ test('built storefront uses Creators for discovery, search and links without pro
       assert.equal(feed.source, 'creators');
       assert.equal(feed.marketplace, 'www.amazon.com');
       assert.equal(feed.products.length, 5);
+      assert.ok(Number.isFinite(Date.parse(feed.products[0].fetchedAt)), 'Rendered metadata needs its real provider retrieval time');
+      assert.equal(feed.products[0].fetchedAt, discovery[0].products[0].fetchedAt, 'Cache hits must preserve the retrieval timestamp');
       assert.equal(feed.products[1].price, null);
       assert.equal(feed.products[1].rating, null);
       assert.equal(feed.products[1].featuredImage.url, '');

@@ -104,7 +104,7 @@ const t = texts[lang];
 ---
 
 <BaseLayout title={t.title} lang={lang}>
-  <div class="profile-page">
+  <div class="profile-page" data-profile-texts={JSON.stringify(texts[lang])}>
     <SignedOut>
       <div class="auth-prompt">
         <div class="auth-visual">
@@ -320,7 +320,11 @@ const t = texts[lang];
   </div>
 </BaseLayout>
 
-<script define:vars={{ lang, t: texts[lang] }}>
+<script>
+  // @ts-nocheck -- Existing profile controller uses browser DOM state.
+  import { readCatalogReferences, writeCatalogReferences } from '../../lib/catalog-references.mjs';
+  const lang = document.documentElement.lang;
+  const t = JSON.parse(document.querySelector('.profile-page')?.dataset.profileTexts || '{}');
   class ProfileController {
     constructor() {
       this.likesGrid = document.getElementById('likes-grid');
@@ -449,7 +453,7 @@ const t = texts[lang];
     }
 
     loadSaved() {
-      const savedAsins = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+      const savedAsins = readCatalogReferences(localStorage, 'savedProducts').map(item => item.asin);
       
       if (this.statSaved) this.statSaved.textContent = String(savedAsins.length);
 
@@ -485,9 +489,9 @@ const t = texts[lang];
         this.savedGrid.querySelectorAll('.card-remove').forEach(btn => {
           btn.addEventListener('click', () => {
             const asin = btn.dataset.asin;
-            const saved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
-            const newSaved = saved.filter(a => a !== asin);
-            localStorage.setItem('savedProducts', JSON.stringify(newSaved));
+            const saved = readCatalogReferences(localStorage, 'savedProducts');
+            const newSaved = saved.filter(item => item.asin !== asin);
+            writeCatalogReferences(localStorage, 'savedProducts', newSaved);
             
             btn.closest('.product-card')?.remove();
             if (this.statSaved) this.statSaved.textContent = String(newSaved.length);

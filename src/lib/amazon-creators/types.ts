@@ -49,6 +49,7 @@ export interface GetItemsResponse {
   errors?: Array<{ code?: string; message?: string }>;
 }
 export interface CreatorsProductData {
+  fetchedAt?: string;
   asin: string; title: string; brand: string | null; price: number | null; originalPrice: number | null;
   currency: string; rating: number | null; totalReviews: number | null; imageUrl: string | null;
   images: string[]; features: string[]; description: string | null; url: string; availability: string | null;

@@ -1,0 +1,16 @@
+/* Notices stay in normal flow: no overlay or floating obstruction of catalog controls. */
+.amazon-catalog-notice { margin: 0; padding: 8px 14px; background: #fffef9; color: #34332e; border-bottom: 1px solid #ddd9ca; font: 11px/1.4 system-ui, sans-serif; text-align: left; }
+.amazon-catalog-notice p { margin: 0; }
+.amazon-affiliate-notice { font-weight: 650; }
+.amazon-content-notice { margin-top: 3px !important; }
+.amazon-price-details { font: 11px/1.4 system-ui, sans-serif; color: inherit; max-width: 100%; margin: 4px 0 0; }
+.amazon-price-details summary { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; width: fit-content; }
+.amazon-price-details p { max-width: 50ch; margin: 6px 0; padding: 8px; border: 1px solid #ccc8bb; border-radius: 4px; background: #fffef9; color: #34332e; }
+.amazon-price-time { display: block; font: 10px/1.35 system-ui, sans-serif; opacity: .8; margin-top: 3px; }
+.catalog-feed-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.catalog-feed-shell > .amazon-catalog-notice { flex: none; }
+.catalog-feed-shell > .feed { flex: 1; min-height: 0; height: auto; }
+.catalog-feed-shell .slide { height: 100% !important; min-height: 100%; }
+@media (max-width: 767px) {
+  .catalog-feed-shell .slide-footer { max-height: 60dvh; overflow-y: auto; }
+}
