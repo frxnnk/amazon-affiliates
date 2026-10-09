@@ -1,0 +1,10 @@
+---
+import { amazonNotices } from '../../lib/amazon-notices.mjs';
+import '../../styles/amazon-notices.css';
+const { lang = 'en' } = Astro.props;
+const copy = amazonNotices(lang);
+---
+<aside class="amazon-catalog-notice" aria-label={lang === 'es' ? 'Aviso de afiliación' : 'Affiliate disclosure'}>
+  <p class="amazon-affiliate-notice">{copy.affiliate}</p>
+  <p class="amazon-content-notice">{copy.content}</p>
+</aside>

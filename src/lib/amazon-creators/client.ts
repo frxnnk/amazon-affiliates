@@ -37,6 +37,8 @@ async function request(operation: 'getItems' | 'searchItems', parameters: object
       const result = operation === 'searchItems' ? data.searchResult : data.itemsResult;
       if (!result || !Array.isArray(result.items)) return failure(data.errors?.length ? 'ACCESS_DENIED' : 'INVALID_RESPONSE');
       const products = result.items.map(parseCreatorsItem).filter((value): value is CreatorsProductData => value !== null);
+      const fetchedAt = new Date(Date.now()).toISOString();
+      for (const product of products) product.fetchedAt = fetchedAt;
       if (operation === 'getItems' && !products.length) return failure('ITEMS_NOT_FOUND');
       const total = data.searchResult?.totalResultCount;
       return { success: true, data: products, ...(typeof total === 'number' && Number.isFinite(total) && total >= 0 ? { totalResults: total } : {}) };

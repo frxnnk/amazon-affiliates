@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-const ui = await import('../../src/lib/catalog-ui.mjs').catch(() => ({}));
+const ui = { ...await import('../../src/lib/catalog-ui.mjs'), ...await import('../../src/lib/amazon-notices.mjs') };
 
 test('unknown prices remain unknown; zero is formatted only when supplied', () => {
   assert.equal(typeof ui.formatCatalogPrice, 'function');

@@ -83,6 +83,7 @@ export function storefrontProduct(item: CreatorsProductData, lang = 'en', catego
     discountPercent: price !== null && originalPrice !== null && originalPrice > price
       ? Math.round((originalPrice - price) / originalPrice * 100) : 0,
     source: 'creators' as const,
+    fetchedAt: item.fetchedAt || null,
   };
 }
 

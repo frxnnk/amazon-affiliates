@@ -1,4 +1,5 @@
 ---
+import CatalogDisclosure from '../affiliate/CatalogDisclosure.astro';
 import { type Lang, getTranslation } from '@i18n/utils';
 
 interface Props {
@@ -67,6 +68,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     ></div>
 
     <div id="search-results" class="search-results" role="region" aria-label={lang === 'es' ? 'Resultados de búsqueda' : 'Search results'}>
+      <CatalogDisclosure lang={lang} />
       <div class="search-empty" id="search-empty">
         <p>{lang === 'es' ? 'Escribe para buscar productos o pega un link de Amazon' : 'Type to search products or paste an Amazon link'}</p>
       </div>
@@ -415,6 +417,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
   /* Result item styles - will be added dynamically */
   :global(.search-result-item) {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
@@ -422,6 +425,9 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
     margin-bottom: 0.5rem;
     transition: all 150ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
   }
+
+  :global(.search-result-item > .amazon-price-details),
+  :global(.search-result-item > .amazon-price-time) { flex-basis: 100%; }
 
   :global(.search-result-item:hover) {
     background: var(--color-brutal-yellow, #FFE14D);
@@ -561,6 +567,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
 
 <script>
   import { escapeHtml, safeCatalogUrl, formatCatalogPrice, readCatalogResponse, catalogUnavailableMessage } from '../../lib/catalog-ui.mjs';
+  import { priceDetailsHtml } from '../../lib/amazon-notices.mjs';
 
   let searchController: AbortController | null = null;
   let searchVersion = 0;
@@ -727,11 +734,12 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
           </a>
           <button type="button" class="search-result-cart-btn" ${url ? '' : 'disabled'} data-asin="${asin}" data-product-id="${asin}"
             data-title="${title}" data-brand="${brand}" data-image="${image}" data-price="${rawPrice}"
-            data-currency="${escapeHtml(item.currency)}" data-affiliate-url="${url}"
+            data-currency="${escapeHtml(item.currency)}" data-affiliate-url="${url}" data-fetched-at="${escapeHtml(item.fetchedAt)}"
             aria-label="${addToCartText}" title="${addToCartText}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <span class="cart-plus">+</span>
           </button>
+          ${priceDetailsHtml(currentLang, item.fetchedAt)}
         </div>`;
     }).join('');
     resultsContainer.querySelectorAll('.search-result-cart-btn').forEach(btn => {
@@ -759,6 +767,7 @@ const searchingText = lang === 'es' ? 'Buscando...' : 'Searching...';
       price: Number.isFinite(parsedPrice) ? parsedPrice : '',
       currency: btn.dataset.currency || '',
       affiliateUrl: btn.dataset.affiliateUrl || '',
+      fetchedAt: btn.dataset.fetchedAt || '',
       marketplace: 'amazon.com',
     };
 
