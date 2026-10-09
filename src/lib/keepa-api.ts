@@ -45,6 +45,7 @@ export interface KeepaConfig {
  * Get Keepa API key from environment
  */
 function getKeepaConfig(): KeepaConfig | null {
+  if (process.env.AMAZON_DATA_PROVIDER === 'creators') return null;
   const apiKey = process.env.KEEPA_API_KEY;
   if (!apiKey) return null;
   return { apiKey };

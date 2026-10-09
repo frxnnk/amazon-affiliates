@@ -132,6 +132,7 @@ const CATEGORY_MAPPING: Record<string, string> = {
  * Get RapidAPI configuration from environment
  */
 export function getRainforestConfig(): RainforestConfig | null {
+  if (process.env.AMAZON_DATA_PROVIDER === 'creators') return null;
   // Try RAPIDAPI_KEY first, then fall back to RAINFOREST_API_KEY for backwards compatibility
   const apiKey = process.env.RAPIDAPI_KEY || process.env.RAINFOREST_API_KEY;
   

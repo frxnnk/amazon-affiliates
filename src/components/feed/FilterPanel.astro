@@ -1,7 +1,7 @@
 ---
 /**
  * FilterPanel - Advanced filtering options for the feed
- * Includes price range, rating filter, and sort options
+ * Includes the supported price, delivery, discount and sort options
  * Currency is determined by region (not selectable independently)
  */
 
@@ -76,6 +76,7 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
               id="min-price"
               placeholder={t.minPrice}
               min="0"
+              step="0.01"
               class="price-input"
             />
           </div>
@@ -87,24 +88,10 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
               id="max-price"
               placeholder={t.maxPrice}
               min="0"
+              step="0.01"
               class="price-input"
             />
           </div>
-        </div>
-      </div>
-
-      <!-- Rating -->
-      <div class="filter-section">
-        <label class="filter-label">{t.rating}</label>
-        <div class="rating-selector" id="rating-selector">
-          {[1, 2, 3, 4, 5].map(star => (
-            <button type="button" class="star-btn" data-rating={star}>
-              <svg viewBox="0 0 24 24" class="star-icon">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-              </svg>
-            </button>
-          ))}
-          <span class="rating-value" id="rating-value">0+</span>
         </div>
       </div>
 
@@ -115,8 +102,6 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
           <option value="relevance">{t.relevance}</option>
           <option value="price_asc">{t.priceLow}</option>
           <option value="price_desc">{t.priceHigh}</option>
-          <option value="reviews">{t.topRated}</option>
-          <option value="newest">{t.newest}</option>
         </select>
       </div>
 
@@ -158,56 +143,16 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
   function initFilterPanel() {
     const toggle = document.getElementById('filter-toggle');
     const dropdown = document.getElementById('filter-dropdown');
-    const starBtns = document.querySelectorAll('.star-btn');
-    const ratingValue = document.getElementById('rating-value');
     const applyBtn = document.getElementById('btn-apply');
     const resetBtn = document.getElementById('btn-reset');
     const currencySymbols = document.querySelectorAll('[data-price-currency-symbol]');
 
     if (!toggle || !dropdown) return;
 
-    let currentRating = 0;
 
-    // Currency handling - determined by region
-    const currencyData: Record<string, string> = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'MXN': '$',
-    };
+    // The current catalog is US-only, independently of the interface language.
+    currencySymbols.forEach(el => { el.textContent = '$'; });
 
-    function updateCurrencySymbols(currency: string) {
-      const symbol = currencyData[currency] || '€';
-      currencySymbols.forEach((el) => {
-        el.textContent = symbol;
-      });
-    }
-
-    // Get currency from region preference (region determines currency)
-    function getCurrencyFromRegion(): string {
-      try {
-        const savedRegion = localStorage.getItem('preferredRegion');
-        if (savedRegion) {
-          const region = JSON.parse(savedRegion);
-          return region.currency || 'EUR';
-        }
-      } catch (e) {
-        console.error('Error reading region:', e);
-      }
-      // Default based on current lang
-      const currentLang = window.location.pathname.split('/')[1];
-      return currentLang === 'en' ? 'USD' : 'EUR';
-    }
-
-    updateCurrencySymbols(getCurrencyFromRegion());
-
-    // Listen for region changes (region includes currency)
-    window.addEventListener('region:change', ((e: CustomEvent) => {
-      if (e.detail.currency) {
-        updateCurrencySymbols(e.detail.currency);
-      }
-    }) as EventListener);
-    
     // Toggle dropdown
     toggle.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -229,38 +174,6 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
       }
     });
     
-    // Star rating selection
-    starBtns.forEach((btn, index) => {
-      btn.addEventListener('click', () => {
-        currentRating = index + 1;
-        updateStars();
-      });
-      
-      btn.addEventListener('mouseenter', () => {
-        highlightStars(index + 1);
-      });
-      
-      btn.addEventListener('mouseleave', () => {
-        updateStars();
-      });
-    });
-    
-    function highlightStars(count: number) {
-      starBtns.forEach((btn, i) => {
-        btn.classList.toggle('highlighted', i < count);
-      });
-    }
-    
-    function updateStars() {
-      starBtns.forEach((btn, i) => {
-        btn.classList.toggle('active', i < currentRating);
-        btn.classList.remove('highlighted');
-      });
-      if (ratingValue) {
-        ratingValue.textContent = currentRating > 0 ? `${currentRating}+` : '0+';
-      }
-    }
-    
     // Apply filters
     applyBtn?.addEventListener('click', () => {
       const minPrice = (document.getElementById('min-price') as HTMLInputElement)?.value;
@@ -270,9 +183,8 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
       const primeOnly = (document.getElementById('prime-only') as HTMLInputElement)?.checked;
 
       const filters = {
-        minPrice: minPrice ? parseInt(minPrice) : undefined,
-        maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
-        minRating: currentRating > 0 ? currentRating : undefined,
+        minPrice: minPrice !== '' ? Number(minPrice) : undefined,
+        maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
         sortBy,
         dealsOnly,
         primeOnly
@@ -295,8 +207,6 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
       (document.getElementById('sort-select') as HTMLSelectElement).value = 'relevance';
       (document.getElementById('deals-only') as HTMLInputElement).checked = false;
       (document.getElementById('prime-only') as HTMLInputElement).checked = false;
-      currentRating = 0;
-      updateStars();
 
       localStorage.removeItem('feedFilters');
       window.dispatchEvent(new CustomEvent('filters:change', { detail: {} }));
@@ -309,13 +219,9 @@ const t = translations[lang as 'es' | 'en'] || translations.en;
         const filters = JSON.parse(savedFilters);
         if (filters.minPrice) (document.getElementById('min-price') as HTMLInputElement).value = filters.minPrice;
         if (filters.maxPrice) (document.getElementById('max-price') as HTMLInputElement).value = filters.maxPrice;
-        if (filters.sortBy) (document.getElementById('sort-select') as HTMLSelectElement).value = filters.sortBy;
+        if (['relevance', 'price_asc', 'price_desc'].includes(filters.sortBy)) (document.getElementById('sort-select') as HTMLSelectElement).value = filters.sortBy;
         if (filters.dealsOnly) (document.getElementById('deals-only') as HTMLInputElement).checked = true;
         if (filters.primeOnly) (document.getElementById('prime-only') as HTMLInputElement).checked = true;
-        if (filters.minRating) {
-          currentRating = filters.minRating;
-          updateStars();
-        }
       } catch (e) {
         console.error('Error loading saved filters:', e);
       }

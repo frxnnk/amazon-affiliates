@@ -1,7 +1,7 @@
 /**
  * Amazon Creators API Region Configuration
  *
- * Maps marketplaces to their respective OAuth endpoints and API versions.
+ * Marketplace metadata. OAuth endpoint selection uses the explicit credential version, not the marketplace.
  * Reference: https://developer.amazon.com/docs/creators-api
  */
 
@@ -20,8 +20,8 @@ export interface RegionConfig {
 export const REGIONS: Record<RegionName, RegionConfig> = {
   NA: {
     name: 'NA',
-    version: '2.1',
-    authUrl: 'https://creatorsapi.auth.us-east-1.amazoncognito.com/oauth2/token',
+    version: '3.1',
+    authUrl: 'https://api.amazon.com/auth/o2/token',
     marketplaces: [
       'www.amazon.com',
       'www.amazon.ca',
@@ -31,8 +31,8 @@ export const REGIONS: Record<RegionName, RegionConfig> = {
   },
   EU: {
     name: 'EU',
-    version: '2.2',
-    authUrl: 'https://creatorsapi.auth.eu-south-2.amazoncognito.com/oauth2/token',
+    version: '3.2',
+    authUrl: 'https://api.amazon.co.uk/auth/o2/token',
     marketplaces: [
       'www.amazon.co.uk',
       'www.amazon.de',
@@ -53,8 +53,8 @@ export const REGIONS: Record<RegionName, RegionConfig> = {
   },
   FE: {
     name: 'FE',
-    version: '2.3',
-    authUrl: 'https://creatorsapi.auth.us-west-2.amazoncognito.com/oauth2/token',
+    version: '3.3',
+    authUrl: 'https://api.amazon.co.jp/auth/o2/token',
     marketplaces: [
       'www.amazon.co.jp',
       'www.amazon.sg',
@@ -97,7 +97,7 @@ export function getRegionForMarketplace(marketplace: string): RegionConfig {
  */
 export function normalizeMarketplace(input: string): string {
   // Remove protocol if present
-  let marketplace = input.replace(/^https?:\/\//, '');
+  let marketplace = input.trim().toLowerCase().replace(/^https?:\/\//, '');
 
   // Remove trailing slashes and paths
   marketplace = marketplace.split('/')[0];

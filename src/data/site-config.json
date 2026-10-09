@@ -2,8 +2,8 @@
   "site": {
     "name": "RewardHive",
     "tagline": {
-      "es": "Descubre ofertas. Gana recompensas.",
-      "en": "Discover deals. Earn rewards."
+      "es": "Encuentra tu próxima compra.",
+      "en": "Find your next purchase."
     },
     "url": "https://www.rewardhive.store",
     "defaultLocale": "es",
@@ -12,8 +12,8 @@
   "amazon": {
     "associates": {
       "es": {
-        "tag": "bestdeal0ee40-21",
-        "marketplace": "amazon.es"
+        "tag": "rewardhive-20",
+        "marketplace": "amazon.com"
       },
       "en": {
         "tag": "rewardhive-20",

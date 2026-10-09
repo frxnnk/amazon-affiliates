@@ -10,10 +10,9 @@ const { lang } = Astro.props;
 const affiliateTag = siteConfig.amazon.associates[lang]?.tag || siteConfig.amazon.associates.en.tag;
 const marketplace = siteConfig.amazon.associates[lang]?.marketplace || 'amazon.com';
 
-// Tags for both marketplaces (needed for cart with mixed region support)
+// Only the configured US storefront can generate a checkout link.
 const affiliateTags = {
   'amazon.com': siteConfig.amazon.associates.en.tag,
-  'amazon.es': siteConfig.amazon.associates.es.tag,
 };
 
 const t = {
@@ -23,6 +22,7 @@ const t = {
   continueShopping: lang === 'es' ? 'Seguir comprando' : 'Continue shopping',
   clearCart: lang === 'es' ? 'Vaciar carrito' : 'Clear cart',
   total: lang === 'es' ? 'Total estimado' : 'Estimated total',
+  totalUnknown: lang === 'es' ? 'Consulta los precios en Amazon' : 'Check prices on Amazon',
   buyAll: lang === 'es' ? 'Comprar todo en Amazon' : 'Buy all on Amazon',
   disclaimer: lang === 'es'
     ? 'Serás redirigido a Amazon para completar tu compra. Los precios pueden variar.'
@@ -34,6 +34,7 @@ const t = {
 
 <div
   id="cart-modal"
+  data-catalog-config={JSON.stringify({ affiliateTag, marketplace, affiliateTags, t, lang })}
   class="cart-modal"
   role="dialog"
   aria-modal="true"
@@ -88,7 +89,7 @@ const t = {
       <div class="cart-summary">
         <div class="cart-total">
           <span class="total-label">{t.total}:</span>
-          <span class="total-amount" id="cart-total-amount">$0.00</span>
+          <span class="total-amount" id="cart-total-amount">{t.totalUnknown}</span>
         </div>
         <p class="cart-disclaimer">{t.disclaimer}</p>
       </div>
@@ -450,8 +451,11 @@ const t = {
   }
 </style>
 
-<script define:vars={{ affiliateTag, marketplace, affiliateTags, t }}>
+<script>
+  // @ts-nocheck -- Existing cart controller uses browser DOM state.
+  import { escapeHtml, safeCatalogUrl, formatCatalogPrice } from '../../lib/catalog-ui.mjs';
   const modal = document.getElementById('cart-modal');
+  const { affiliateTag, marketplace, affiliateTags, t, lang } = JSON.parse(modal?.dataset.catalogConfig || '{}');
   const closeBtn = document.getElementById('cart-close');
   const continueBtn = document.getElementById('cart-continue');
   const clearBtn = document.getElementById('cart-clear');
@@ -474,10 +478,7 @@ const t = {
   }
 
   function formatPrice(price, currency) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD'
-    }).format(price);
+    return formatCatalogPrice(price, currency, lang);
   }
 
   function renderCart() {
@@ -514,36 +515,33 @@ const t = {
     itemsList?.classList.remove('hidden');
     footer?.classList.remove('hidden');
 
-    // Calculate total (handle NaN prices)
-    const total = items.reduce((sum, item) => {
-      const price = isNaN(item.price) ? 0 : item.price;
-      return sum + (price * item.quantity);
-    }, 0);
-    const currency = items[0]?.currency || 'USD';
-    if (totalAmount) {
-      totalAmount.textContent = formatPrice(total, currency);
-    }
+    const currency = items[0]?.currency;
+    const knownTotal = typeof currency === 'string' && /^[A-Z]{3}$/.test(currency) && items.every(item =>
+      typeof item.price === 'number' && Number.isFinite(item.price) && item.price >= 0 &&
+      item.currency === currency && Number.isInteger(item.quantity) && item.quantity > 0);
+    const total = knownTotal ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) : null;
+    if (totalAmount) totalAmount.textContent = total !== null && Number.isFinite(total) ? formatPrice(total, currency) : t.totalUnknown;
 
     // Render items (sanitize prices)
     if (itemsList) {
       itemsList.innerHTML = items.map(item => {
-        const safePrice = isNaN(item.price) ? 0 : item.price;
+        const image = escapeHtml(safeCatalogUrl(item.image));
         return `
-        <div class="cart-item" data-asin="${item.asin}">
-          <img src="${item.image}" alt="${item.title}" class="item-image" />
+        <div class="cart-item" data-asin="${escapeHtml(item.asin)}">
+          ${image ? `<img src="${image}" alt="${escapeHtml(item.title)}" class="item-image" />` : '<div class="item-image" aria-hidden="true"></div>'}
           <div class="item-content">
-            <span class="item-brand">${item.brand}</span>
-            <h4 class="item-title">${item.title}</h4>
+            <span class="item-brand">${escapeHtml(item.brand)}</span>
+            <h4 class="item-title">${escapeHtml(item.title)}</h4>
             <div class="item-price-row">
-              <span class="item-price">${formatPrice(safePrice, item.currency)}</span>
+              <span class="item-price">${escapeHtml(formatPrice(item.price, item.currency))}</span>
               <div class="item-quantity">
-                <button type="button" class="qty-btn qty-minus" data-asin="${item.asin}" data-action="decrease">-</button>
-                <span class="qty-value">${item.quantity}</span>
-                <button type="button" class="qty-btn qty-plus" data-asin="${item.asin}" data-action="increase">+</button>
+                <button type="button" class="qty-btn qty-minus" data-asin="${escapeHtml(item.asin)}" data-action="decrease">-</button>
+                <span class="qty-value">${escapeHtml(item.quantity)}</span>
+                <button type="button" class="qty-btn qty-plus" data-asin="${escapeHtml(item.asin)}" data-action="increase">+</button>
               </div>
             </div>
           </div>
-          <button type="button" class="item-remove" data-asin="${item.asin}" aria-label="${t.remove}">
+          <button type="button" class="item-remove" data-asin="${escapeHtml(item.asin)}" aria-label="${t.remove}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -674,8 +672,14 @@ const t = {
     if (!buyAllBtn || items.length === 0) return;
 
     // Use the marketplace from the cart items (all items should have the same marketplace)
-    const cartMarketplace = items[0]?.marketplace || marketplace;
-    const cartTag = affiliateTags[cartMarketplace] || affiliateTag;
+    const cartMarketplace = items[0]?.marketplace;
+    if (cartMarketplace !== 'amazon.com' || !items.every(item => item.marketplace === cartMarketplace && /^[A-Z0-9]{10}$/.test(item.asin) && Number.isInteger(item.quantity) && item.quantity > 0)) {
+      buyAllBtn.removeAttribute('href');
+      buyAllBtn.setAttribute('aria-disabled', 'true');
+      return;
+    }
+    buyAllBtn.removeAttribute('aria-disabled');
+    const cartTag = affiliateTags[cartMarketplace];
 
     const baseUrl = `https://www.${cartMarketplace}/gp/aws/cart/add.html`;
     const params = new URLSearchParams({ AssociateTag: cartTag });
