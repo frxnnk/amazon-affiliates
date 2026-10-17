@@ -1,5 +1,5 @@
 FROM node:24-bookworm-slim AS build
-# RewardHive: native OpenShip Actions checks.
+# RewardHive: native OpenShip Actions deployment checks.
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
